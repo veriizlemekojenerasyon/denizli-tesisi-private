@@ -1,0 +1,1087 @@
+/* Kojen Motor Veri Sayfası Stilleri */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+/* Ana Container */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* Sol Navigasyon Menüsü - Yeni Modern Tasarım */
+.sidebar {
+    width: 280px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #e94560, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.sidebar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(233, 69, 96, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(72, 219, 251, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(255, 159, 243, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.sidebar-header {
+    padding: 30px 25px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 1;
+}
+
+.logo-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo {
+    width: 120px;
+    height: 120px;
+    border-radius: 20px;
+    object-fit: contain;
+    border: 3px solid rgba(233, 69, 96, 0.5);
+    box-shadow: 
+        0 8px 32px rgba(233, 69, 96, 0.3),
+        0 0 0 4px rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: white;
+    padding: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.logo:hover {
+    transform: scale(1.08) rotate(3deg);
+    box-shadow: 
+        0 12px 40px rgba(233, 69, 96, 0.4),
+        0 0 0 6px rgba(255, 255, 255, 0.15);
+    border-color: rgba(233, 69, 96, 0.8);
+}
+
+.company-name {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 15px;
+    text-shadow: 0 2px 10px rgba(233, 69, 96, 0.5);
+    letter-spacing: 1px;
+    position: relative;
+    z-index: 1;
+}
+
+.company-name::after {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, #e94560, transparent);
+    margin: 8px auto 0;
+    border-radius: 2px;
+}
+
+.sidebar-menu {
+    flex: 1;
+    padding: 15px 0;
+    list-style: none;
+    position: relative;
+    z-index: 1;
+}
+
+.menu-item {
+    margin-bottom: 8px;
+    padding: 0 15px;
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.menu-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(233, 69, 96, 0.2) 0%, rgba(72, 219, 251, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 12px;
+}
+
+.menu-link:hover {
+    color: #ffffff;
+    transform: translateX(5px);
+}
+
+.menu-link:hover::before {
+    opacity: 1;
+}
+
+.menu-icon {
+    font-size: 20px;
+    margin-right: 12px;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+}
+
+.menu-link:hover .menu-icon {
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 8px rgba(233, 69, 96, 0.8));
+}
+
+.menu-item.active .menu-link {
+    background: linear-gradient(135deg, rgba(233, 69, 96, 0.3) 0%, rgba(233, 69, 96, 0.1) 100%);
+    color: #ffffff;
+    box-shadow: 
+        0 4px 15px rgba(233, 69, 96, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.menu-item.active .menu-link::before {
+    opacity: 1;
+}
+
+.menu-item.active .menu-icon {
+    filter: drop-shadow(0 0 10px rgba(233, 69, 96, 1));
+}
+
+.menu-text {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+    padding: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 1;
+}
+
+.logout-btn {
+    width: 100%;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, rgba(233, 69, 96, 0.8) 0%, rgba(233, 69, 96, 0.6) 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.logout-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.logout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
+}
+
+.logout-btn:hover::before {
+    left: 100%;
+}
+
+/* Ana İçerik Alanı */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f8f9fa;
+}
+
+/* Header */
+.header {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid #e9ecef;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px 40px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.company-info h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.company-info h2 {
+    font-size: 16px;
+    font-weight: 500;
+    color: #7f8c8d;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.welcome-text {
+    font-size: 14px;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.user-info .logout-btn {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.user-info .logout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+
+.header-bottom {
+    padding: 37px 80px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.header-bottom h3 {
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: absolute;
+    left: 40px;
+}
+
+.header-bottom h3::before {
+    content: '⚙️';
+    font-size: 24px;
+}
+
+/* Motor Seçim Butonları */
+.motor-selector-buttons {
+    display: flex;
+    gap: 10px;
+    margin: 0 auto;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.motor-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.motor-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.motor-btn.active {
+    background: rgba(255, 255, 255, 0.9);
+    color: #2980b9;
+    border-color: white;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+}
+
+/* Ana İçerik */
+.dashboard-content {
+    flex: 1;
+    padding: 30px 40px;
+    overflow-y: auto;
+}
+
+/* Kojen Motor Seçici Bölümü */
+.kojen-selector-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e9ecef;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Selector Form */
+.selector-form {
+    background: white;
+    border-radius: 15px;
+    padding: 35px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    border: 1px solid #e9ecef;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    margin-bottom: 25px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form-group label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select {
+    padding: 15px 18px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Butonlar */
+.form-actions {
+    display: flex;
+    gap: 20px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    min-width: 280px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #218838, #1e7e34);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+    min-width: 280px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268, #495057);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    min-width: 280px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c82333, #bd2130);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
+/* Kojen Motor Bölümü */
+.kojen-motor-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+}
+
+.section-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #3498db;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Kojen Motor Tablosu */
+.kojen-table-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.kojen-table-header {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+}
+
+.kojen-table-row {
+    display: grid;
+    grid-template-columns: 80px repeat(16, 1fr);
+    gap: 1px;
+}
+
+.kojen-table-cell {
+    padding: 12px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    border-right: 1px solid #e9ecef;
+    word-wrap: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-cell {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 15px 8px;
+}
+
+.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    border-right: 2px solid #c0392b;
+    padding: 15px 8px;
+}
+
+.current-hour {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    font-weight: 700;
+}
+
+.input-row {
+    background: #f8f9fa;
+}
+
+.input-row .kojen-table-cell {
+    padding: 8px 4px;
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.input-row .sticky-col {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 2px solid #e67e22;
+}
+
+.data-input {
+    width: 100%;
+    padding: 8px 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    text-align: center;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+/* Negatif değer input'ları için özel stil */
+#karterBasinc, #onKamaraFarkBasinc {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+#karterBasinc:focus, #onKamaraFarkBasinc:focus {
+    border-color: #ff9800;
+    box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+    outline: none;
+}
+
+#karterBasinc::placeholder, #onKamaraFarkBasinc::placeholder {
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+.data-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    background: #f8f9ff;
+}
+
+.data-input:hover {
+    border-color: #5dade2;
+}
+
+.kojen-table-body {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.kojen-table-body .kojen-table-row {
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.3s ease;
+}
+
+.kojen-table-body .kojen-table-row:hover {
+    background-color: #f8f9fa;
+}
+
+.kojen-table-body .kojen-table-cell {
+    color: #2c3e50;
+    font-size: 13px;
+    border-right: 1px solid #e9ecef;
+}
+
+.kojen-table-body .kojen-table-cell:last-child {
+    border-right: none;
+}
+
+/* Kojen Butonları */
+.kojen-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #218838, #1e7e34);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268, #495057);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+/* Responsive Tasarım */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 240px;
+    }
+    .kojen-table-row {
+        grid-template-columns: 60px repeat(8, 1fr);
+    }
+    .kojen-table-cell {
+        font-size: 10px;
+        padding: 8px 4px;
+    }
+    .header-cell {
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 70px;
+        overflow: hidden;
+    }
+    .sidebar-header {
+        padding: 20px 10px;
+    }
+    .logo {
+        width: 50px;
+        height: 50px;
+    }
+    .company-name,
+    .menu-text {
+        display: none;
+    }
+    .menu-icon {
+        margin-right: 0;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+    .header-top {
+        padding: 15px 20px;
+    }
+    .company-info h1 {
+        font-size: 14px;
+    }
+    .company-info h2 {
+        font-size: 12px;
+    }
+    .dashboard-content {
+        padding: 20px;
+    }
+    .kojen-actions {
+        flex-direction: column;
+    }
+    .kojen-table-row {
+        grid-template-columns: 50px repeat(4, 1fr);
+    }
+}
+
+/* Vardiya Verileri Görüntüleme Bölümü */
+.vardiya-verileri-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.vardiya-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #e74c3c;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vardiya-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #ecf0f1 0%, #f8f9fa 100%);
+    border-radius: 10px;
+    border-left: 4px solid #3498db;
+}
+
+.vardiya-badge {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+}
+
+.saat-araligi {
+    font-size: 15px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.saat-araligi span {
+    color: #e74c3c;
+    font-weight: 700;
+}
+
+.vardiya-table-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.vardiya-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.vardiya-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.vardiya-table th {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    padding: 14px 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+}
+
+.vardiya-table th:first-child {
+    border-radius: 15px 0 0 0;
+}
+
+.vardiya-table th:last-child {
+    border-radius: 0 15px 0 0;
+    border-right: none;
+}
+
+.vardiya-table td {
+    padding: 12px 10px;
+    text-align: center;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 500;
+    color: #2c3e50;
+    white-space: nowrap;
+    background: white;
+}
+
+.vardiya-table td:first-child {
+    font-weight: 700;
+    color: #e74c3c;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+}
+
+.vardiya-table td:nth-child(2) {
+    font-weight: 700;
+    color: #2980b9;
+    background: linear-gradient(135deg, #f0f7ff 0%, #e0f0ff 100%);
+}
+
+.vardiya-table td:last-child {
+    border-right: none;
+}
+
+.vardiya-table tbody tr:hover td {
+    background-color: #f8f9fa;
+}
+
+.vardiya-table tbody tr:hover td:first-child {
+    background: linear-gradient(135deg, #ffe0e0 0%, #ffd0d0 100%);
+}
+
+.vardiya-table tbody tr:hover td:nth-child(2) {
+    background: linear-gradient(135deg, #e0f0ff 0%, #d0e8ff 100%);
+}
+
+.vardiya-table tbody tr:nth-child(even) td {
+    background-color: #fafbfc;
+}
+
+.vardiya-table tbody tr:nth-child(even) td:first-child {
+    background: linear-gradient(135deg, #fff0f0 0%, #ffe8e8 100%);
+}
+
+.vardiya-table tbody tr:nth-child(even) td:nth-child(2) {
+    background: linear-gradient(135deg, #e8f4ff 0%, #e0f0ff 100%);
+}
+
+/* Motor Çalışmıyor Durumu */
+.vardiya-table tbody tr.motor-calismiyor td {
+    background-color: #ffebee !important;
+    color: #c62828;
+    font-weight: 600;
+}
+
+.vardiya-table tbody tr.motor-calismiyor td:first-child {
+    background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%) !important;
+}
+
+/* Durum Sütunu */
+.vardiya-table td.durum-normal {
+    color: #27ae60;
+    font-weight: 600;
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
+.vardiya-table td.durum-calismiyor {
+    color: #e74c3c;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%);
+}
+
+/* No Data Message */
+.no-data-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #7f8c8d;
+    font-size: 16px;
+    font-weight: 500;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin: 20px;
+}
+
+.no-data-message::before {
+    content: '🔍';
+    display: block;
+    font-size: 32px;
+    margin-bottom: 15px;
+}
+
+/* Responsive Tasarım - Vardiya Tablosu */
+@media (max-width: 1024px) {
+    .vardiya-table th,
+    .vardiya-table td {
+        font-size: 10px;
+        padding: 10px 6px;
+    }
+    
+    .vardiya-info {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .vardiya-verileri-section {
+        padding: 20px;
+    }
+    
+    .vardiya-title {
+        font-size: 18px;
+    }
+    
+    .vardiya-table-container {
+        overflow-x: scroll;
+    }
+    
+    .vardiya-table {
+        min-width: 800px;
+    }
+}
+
+/* Ana Container Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 70px;
+        overflow: hidden;
+    }
+    .sidebar-header {
+        padding: 20px 10px;
+    }
+    .logo {
+        width: 50px;
+        height: 50px;
+    }
+    .company-name,
+    .menu-text {
+        display: none;
+    }
+    .menu-icon {
+        margin-right: 0;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+    .header-top {
+        padding: 15px 20px;
+    }
+    .company-info h1 {
+        font-size: 14px;
+    }
+    .company-info h2 {
+        font-size: 12px;
+    }
+    .dashboard-content {
+        padding: 20px;
+    }
+    .kojen-actions {
+        flex-direction: column;
+    }
+    .kojen-table-row {
+        grid-template-columns: 50px repeat(4, 1fr);
+    }
+    .kojen-table-cell {
+        font-size: 9px;
+        padding: 6px 2px;
+    }
+    .header-cell {
+        font-size: 8px;
+    }
+}

@@ -1,0 +1,344 @@
+/**
+ * SAATLIK VERI GIRISI - Google Sheets Entegrasyonu
+ * Bu dosya saatlik-veri-giris.html için Google Sheets bağlantısını sağlar
+ */
+
+// ============================================
+// YAPILANDIRMA - BU ALANI DOLDURUN
+// ============================================
+const SAATLIK_CONFIG = {
+    // Google Apps Script Web App URL
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbybTVZhw92Sy0zgN1uvUf9bM7ImsNcUWlCSGlnHPu_dyVPvDRfy1o9f5af5ujUVun2A/exec',
+    
+    // Sayfa başlığı
+    PAGE_NAME: 'Saatlik Veri Girişi',
+    
+    // Varsayılan kullanıcı adı
+    DEFAULT_USER: 'Admin'
+};
+
+// ============================================
+// SAATLIK VERI SAYFASI ANA NESNESİ
+// ============================================
+const SaatlikApp = {
+    
+    init: function() {
+        console.log('SaatlikApp başlatılıyor...');
+        
+        this.setupEventListeners();
+        this.setInitialValues();
+        this.loadLastRecords();
+    },
+    
+    setupEventListeners: function() {
+        const form = document.getElementById('saatlikVeriForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        }
+        
+        const tarihInput = document.getElementById('tarih');
+        
+        if (tarihInput) {
+            tarihInput.addEventListener('change', () => this.checkExistingRecord());
+        }
+        
+        const sidebarLogout = document.getElementById('sidebarLogout');
+        const headerLogout = document.getElementById('headerLogout');
+        
+        if (sidebarLogout) sidebarLogout.addEventListener('click', () => this.handleLogout());
+        if (headerLogout) headerLogout.addEventListener('click', () => this.handleLogout());
+    },
+    
+    setInitialValues: function() {
+        const tarihInput = document.getElementById('tarih');
+        const saatInput = document.getElementById('saat');
+        const vardiyaSelect = document.getElementById('vardiya');
+        
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const currentHour = String(today.getHours()).padStart(2, '0') + ':00';
+        
+        if (tarihInput) tarihInput.value = `${year}-${month}-${day}`;
+        
+        if (saatInput) {
+            saatInput.value = currentHour;
+        }
+        
+        if (vardiyaSelect) {
+            vardiyaSelect.value = this.getVardiyaByHour(today.getHours());
+        }
+    },
+    
+    getCurrentHourRounded: function() {
+        return String(new Date().getHours()).padStart(2, '0') + ':00';
+    },
+    
+    getVardiyaByHour: function(hour) {
+        if (hour >= 8 && hour < 16) return '08-16';
+        if (hour >= 16 && hour < 24) return '16-24';
+        return '24-08';
+    },
+    
+    checkExistingRecord: async function() {
+        // Kayıt kontrolü için placeholder
+        // Google Sheets entegrasyonu yapıldığında aktif edilecek
+    },
+    
+    handleFormSubmit: async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const originalBtnText = submitBtn ? submitBtn.textContent : 'Kaydet';
+        
+        if (submitBtn) {
+            submitBtn.textContent = 'KAYDEDİLİYOR...';
+            submitBtn.disabled = true;
+        }
+        
+        const formData = {
+            tarih: document.getElementById('tarih').value,
+            saat: document.getElementById('saat').value,
+            vardiya: document.getElementById('vardiya').value,
+            aktifMwh: document.getElementById('aktifMwh').value,
+            reaktifMwh: document.getElementById('reaktifMwh').value,
+            notlar: document.getElementById('notlar').value
+        };
+        
+        if (!formData.tarih || !formData.saat) {
+            this.showNotification('Hata', 'Lütfen tarih ve saat seçin!', 'error');
+            if (submitBtn) {
+                submitBtn.textContent = originalBtnText;
+                submitBtn.disabled = false;
+            }
+            return;
+        }
+        
+        // Kayıt var mı kontrol et ve Google Sheets'e gönder
+        const isEdit = await this.isExistingRecord(formData.tarih, formData.saat);
+        
+        let result;
+        if (isEdit) {
+            result = await this.updateRecord(formData);
+        } else {
+            result = await this.addRecord(formData);
+        }
+        
+        if (submitBtn) {
+            submitBtn.textContent = originalBtnText;
+            submitBtn.disabled = false;
+        }
+        
+        if (result.success) {
+            this.showNotification('Başarılı', result.message, 'success');
+            this.loadLastRecords();
+            this.lockForm(true);
+        } else {
+            this.showNotification('Hata', result.error || 'İşlem başarısız!', 'error');
+        }
+    },
+    
+    // Kayıt var mı kontrol et (Google Sheets)
+    isExistingRecord: async function(tarih, saat) {
+        try {
+            const url = new URL(SAATLIK_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getRecordByDateTime');
+            url.searchParams.append('tarih', tarih);
+            url.searchParams.append('saat', saat);
+            
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+            
+            return result.success && result.found;
+        } catch (error) {
+            console.error('Kayıt kontrolü hatası:', error);
+            return false;
+        }
+    },
+    
+    // Google Sheets'e yeni kayıt ekle
+    addRecord: async function(data) {
+        try {
+            const url = new URL(SAATLIK_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'addRecord');
+            Object.keys(data).forEach(key => {
+                url.searchParams.append(key, data[key]);
+            });
+            
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            return await response.json();
+        } catch (error) {
+            console.error('Kayıt ekleme hatası:', error);
+            return { success: false, error: error.message };
+        }
+    },
+    
+    // Google Sheets'te kayıt güncelle
+    updateRecord: async function(data) {
+        try {
+            const url = new URL(SAATLIK_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'updateRecord');
+            Object.keys(data).forEach(key => {
+                url.searchParams.append(key, data[key]);
+            });
+            
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            return await response.json();
+        } catch (error) {
+            console.error('Kayıt güncelleme hatası:', error);
+            return { success: false, error: error.message };
+        }
+    },
+    
+    saveToLocal: function(data) {
+        let records = JSON.parse(localStorage.getItem('saatlikVeriler') || '[]');
+        
+        // Aynı tarih/saat varsa güncelle
+        const existingIndex = records.findIndex(r => r.tarih === data.tarih && r.saat === data.saat);
+        
+        if (existingIndex >= 0) {
+            records[existingIndex] = data;
+        } else {
+            records.unshift(data);
+        }
+        
+        // Sadece son 48 kaydı tut
+        if (records.length > 48) {
+            records = records.slice(0, 48);
+        }
+        
+        localStorage.setItem('saatlikVeriler', JSON.stringify(records));
+    },
+    
+    loadLastRecords: async function() {
+        const tableBody = document.getElementById('recordsTableBody');
+        if (!tableBody) return;
+        
+        try {
+            const url = new URL(SAATLIK_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getLastRecords');
+            url.searchParams.append('count', '48');
+            
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+            
+            if (result.success) {
+                this.renderTable(result.data);
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">Kayıtlar yüklenemedi.</td></tr>';
+            }
+        } catch (error) {
+            console.error('Kayıtlar yüklenirken hata:', error);
+            // Hata durumunda localStorage'dan göster
+            const records = JSON.parse(localStorage.getItem('saatlikVeriler') || '[]');
+            this.renderTable(records);
+        }
+    },
+    
+    renderTable: function(records) {
+        const tableBody = document.getElementById('recordsTableBody');
+        if (!tableBody) return;
+        
+        if (!records || records.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">Henüz kayıt bulunmuyor.</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        records.forEach((record, index) => {
+            html += `
+                <tr>
+                    <td class="col-num">${index + 1}</td>
+                    <td class="col-date">${record.tarih || '-'}</td>
+                    <td class="col-time">${record.saat || '-'}</td>
+                    <td class="col-shift">${this.formatVardiya(record.vardiya)}</td>
+                    <td class="col-active">${record.aktifMwh ? parseFloat(record.aktifMwh).toFixed(3) : '-'}</td>
+                    <td class="col-reactive">${record.reaktifMwh ? parseFloat(record.reaktifMwh).toFixed(3) : '-'}</td>
+                    <td class="col-notes" title="${record.notlar || ''}">${record.notlar || '-'}</td>
+                </tr>
+            `;
+        });
+        
+        tableBody.innerHTML = html;
+    },
+    
+    formatVardiya: function(vardiya) {
+        if (!vardiya) return '-';
+        const map = {
+            '08-16': '08:00 - 16:00',
+            '16-24': '16:00 - 24:00',
+            '24-08': '24:00 - 08:00'
+        };
+        return map[vardiya] || vardiya;
+    },
+    
+    handleLogout: function() {
+        if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+            localStorage.removeItem('rememberedEmail');
+            window.location.href = 'giris.html';
+        }
+    },
+    
+    // Form inputlarını kilitle/aç
+    lockForm: function(locked) {
+        const inputs = document.querySelectorAll('#saatlikVeriForm input:not([type="date"]):not(#saat), #saatlikVeriForm select:not(#tarih):not(#saat), #saatlikVeriForm textarea');
+        
+        inputs.forEach(input => {
+            input.readOnly = locked;
+            input.disabled = locked;
+            input.style.backgroundColor = locked ? '#f0f0f0' : '';
+            input.style.opacity = locked ? '0.7' : '1';
+        });
+        
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.style.display = locked ? 'none' : 'inline-block';
+        }
+    },
+    
+    showNotification: function(title, message, type) {
+        const notification = document.createElement('div');
+        notification.innerHTML = `<strong>${title}</strong><br>${message}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            max-width: 350px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        `;
+        
+        const colors = {
+            success: 'linear-gradient(135deg, #10b981, #059669)',
+            error: 'linear-gradient(135deg, #ef4444, #dc2626)',
+            info: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+            warning: 'linear-gradient(135deg, #f59e0b, #d97706)'
+        };
+        
+        notification.style.background = colors[type] || colors.info;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 4000);
+    }
+};
+
+// ============================================
+// SAYFA YÜKLENDİĞİNDE BAŞLAT
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    SaatlikApp.init();
+    
+    // Sayısal inputlara formatlama
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.value) {
+                this.value = parseFloat(this.value).toFixed(3);
+            }
+        });
+    });
+});

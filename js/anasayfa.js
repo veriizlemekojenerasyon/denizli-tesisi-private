@@ -1,0 +1,448 @@
+document.addEventListener('DOMContentLoaded', function() {
+    // Kullanıcı giriş kontrolü
+    checkAuth();
+    
+    // Motor verileri
+    const motorData = {
+        gm1: {
+            totalProduction: 1250.5,
+            dailyHours: 18.5,
+            totalHours: 8760,
+            dailyProduction: 2850,
+            avgProduction: 154,
+            progress: 75,
+            status: 'running'
+        },
+        gm2: {
+            totalProduction: 1180.2,
+            dailyHours: 16.8,
+            totalHours: 7520,
+            dailyProduction: 2680,
+            avgProduction: 160,
+            progress: 68,
+            status: 'running'
+        },
+        gm3: {
+            totalProduction: 980.8,
+            dailyHours: 0,
+            totalHours: 5240,
+            dailyProduction: 0,
+            avgProduction: 0,
+            progress: 0,
+            status: 'stopped'
+        }
+    };
+
+    // Günlük özet verileri
+    const summaryData = {
+        dailyProduction: 5.53,
+        dailySteam: null, // Buhar verisinden çekilecek
+        pendingMaintenance: 3,
+        activeFaults: 1
+    };
+
+    // Buhar verisi config
+    const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWlHRU5gYiqayNFkv26VB2CPB1w-PYaNQbBAmWoeLW0vQs97HHzY5JdAgHZL9Zv_rRTg/exec';
+
+    // Sayfa yüklendiğinde verileri göster
+    setTimeout(() => {
+        updateMotorData();
+        loadBuharData(); // Buhar verisini çek
+        updateSummaryData();
+        animateProgressBars();
+    }, 1000);
+
+    // Motor verilerini güncelle
+    function updateMotorData() {
+        for (const [motorId, data] of Object.entries(motorData)) {
+            // Toplam üretim
+            const totalProductionEl = document.getElementById(`${motorId}-total-production`);
+            if (totalProductionEl) {
+                animateValue(totalProductionEl, 0, data.totalProduction, 1500, ' MWh');
+            }
+
+            // Günlük çalışma
+            const dailyHoursEl = document.getElementById(`${motorId}-daily-hours`);
+            if (dailyHoursEl) {
+                animateValue(dailyHoursEl, 0, data.dailyHours, 1500, ' saat');
+            }
+
+            // Toplam çalışma
+            const totalHoursEl = document.getElementById(`${motorId}-total-hours`);
+            if (totalHoursEl) {
+                animateValue(totalHoursEl, 0, data.totalHours, 1500, ' saat');
+            }
+
+            // Günlük üretim
+            const dailyProductionEl = document.getElementById(`${motorId}-daily-production`);
+            if (dailyProductionEl) {
+                animateValue(dailyProductionEl, 0, data.dailyProduction, 1500, ' kWh');
+            }
+
+            // Ortalama üretim
+            const avgProductionEl = document.getElementById(`${motorId}-avg-production`);
+            if (avgProductionEl) {
+                animateValue(avgProductionEl, 0, data.avgProduction, 1500, ' kWh/saat');
+            }
+
+            // Motor durumunu güncelle
+            const motorCard = document.querySelector(`[data-motor="${motorId}"]`);
+            if (motorCard) {
+                const statusEl = motorCard.querySelector('.motor-status');
+                if (statusEl) {
+                    statusEl.className = `motor-status ${data.status}`;
+                    statusEl.textContent = data.status === 'running' ? 'Çalışıyor' : 'Durdu';
+                }
+            }
+        }
+    }
+
+    // Özet verilerini güncelle
+    function updateSummaryData() {
+        // Günlük üretim
+        const dailyProductionEl = document.getElementById('daily-production-value');
+        if (dailyProductionEl) {
+            animateValue(dailyProductionEl, 0, summaryData.dailyProduction, 1500, ' MWh');
+        }
+
+        // Günlük buhar
+        const dailySteamEl = document.getElementById('daily-steam-value');
+        if (dailySteamEl) {
+            animateValue(dailySteamEl, 0, summaryData.dailySteam, 1500, ' Ton');
+        }
+
+        // Bekleyen bakım
+        const pendingMaintenanceEl = document.getElementById('pending-maintenance-value');
+        if (pendingMaintenanceEl) {
+            animateValue(pendingMaintenanceEl, 0, summaryData.pendingMaintenance, 1500, ' İş Emri');
+        }
+
+        // Aktif arızalar
+        const activeFaultsEl = document.getElementById('active-faults-value');
+        if (activeFaultsEl) {
+            animateValue(activeFaultsEl, 0, summaryData.activeFaults, 1500, ' Arıza');
+        }
+    }
+
+    // Buhar verisini çek (son kayıt)
+    async function loadBuharData() {
+        try {
+            const url = new URL(BUHAR_APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getLastRecords');
+            url.searchParams.append('count', '1');
+            
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+            
+            if (result.success && result.data && result.data.length > 0) {
+                const lastRecord = result.data[0];
+                summaryData.dailySteam = parseFloat(lastRecord.buharMiktari) || 0;
+                
+                // Günlük buhar değerini güncelle
+                const dailySteamEl = document.getElementById('daily-steam-value');
+                if (dailySteamEl) {
+                    dailySteamEl.textContent = summaryData.dailySteam.toFixed(2) + ' Ton';
+                }
+            }
+        } catch (error) {
+            console.error('Buhar verisi yüklenemedi:', error);
+        }
+    }
+    function animateProgressBars() {
+        for (const [motorId, data] of Object.entries(motorData)) {
+            const progressEl = document.getElementById(`${motorId}-progress`);
+            if (progressEl) {
+                setTimeout(() => {
+                    progressEl.style.width = `${data.progress}%`;
+                }, 500);
+            }
+        }
+    }
+
+    // Sayısal değer animasyonu
+    function animateValue(element, start, end, duration, suffix = '') {
+        const startTime = performance.now();
+        const isFloat = end % 1 !== 0;
+
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing fonksiyonu
+            const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+            
+            const currentValue = start + (end - start) * easeOutQuart;
+            
+            if (isFloat) {
+                element.textContent = currentValue.toFixed(1) + suffix;
+            } else {
+                element.textContent = Math.round(currentValue) + suffix;
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    // Çıkış yap butonları
+    const sidebarLogout = document.getElementById('sidebarLogout');
+    const headerLogout = document.getElementById('headerLogout');
+
+    sidebarLogout.addEventListener('click', handleLogout);
+    headerLogout.addEventListener('click', handleLogout);
+
+    function handleLogout() {
+        if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+            localStorage.removeItem('rememberedEmail');
+            window.location.href = 'giris.html';
+        }
+    }
+
+    // Menü navigasyonu
+    const menuLinks = document.querySelectorAll('.menu-link');
+    menuLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            
+            // Sadece # ise veya boşsa engelle, değilse normal yönlendirme yap
+            if (href === '#' || !href) {
+                e.preventDefault();
+                
+                // Aktif menü öğesini güncelle
+                menuLinks.forEach(l => l.parentElement.classList.remove('active'));
+                this.parentElement.classList.add('active');
+                
+                // Menü text'ine göre bildirim göster
+                const menuText = this.querySelector('.menu-text').textContent;
+                if (menuText !== 'Ana Sayfa') {
+                    showNotification(`${menuText} sayfası yapım aşamasında.`, 'info');
+                }
+            }
+            // Diğer durumlarda normal link davranışı devam etsin (sayfa yönlendirmesi)
+        });
+    });
+
+    function handleMenuNavigation(menuText) {
+        switch(menuText) {
+            case 'Ana Sayfa':
+                // Zaten ana sayfadayız
+                break;
+            case 'Motor Durumları':
+                showNotification('Motor durumları sayfası yapım aşamasında.', 'info');
+                break;
+            case 'Raporlar':
+                showNotification('Raporlar sayfası yapım aşamasında.', 'info');
+                break;
+            case 'Bakım':
+                showNotification('Bakım sayfası yapım aşamasında.', 'info');
+                break;
+            case 'Arızalar':
+                showNotification('Arızalar sayfası yapım aşamasında.', 'info');
+                break;
+            case 'Kullanıcı Yönetimi':
+                window.location.href = 'kullanici-yonetimi.html';
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Bildirim sistemi
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            max-width: 300px;
+            animation: slideIn 0.3s ease;
+        `;
+
+        // Bildirim renkleri
+        switch(type) {
+            case 'success':
+                notification.style.background = '#10b981';
+                break;
+            case 'error':
+                notification.style.background = '#ef4444';
+                break;
+            case 'warning':
+                notification.style.background = '#f59e0b';
+                break;
+            case 'info':
+            default:
+                notification.style.background = '#3b82f6';
+                break;
+        }
+
+        document.body.appendChild(notification);
+
+        // Otomatik kaldır
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Motor kartlarına tıklama olayı
+    const motorCards = document.querySelectorAll('.motor-card');
+    motorCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const motorId = this.getAttribute('data-motor');
+            const motorName = this.querySelector('h3').textContent;
+            showNotification(`${motorName} detayları için sayfa yapım aşamasında.`, 'info');
+        });
+    });
+
+    // Özet kartlarına tıklama olayı
+    const summaryCards = document.querySelectorAll('.summary-card');
+    summaryCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const cardTitle = this.querySelector('h3').textContent;
+            showNotification(`${cardTitle} detayları için sayfa yapım aşamasında.`, 'info');
+        });
+    });
+
+    // Gerçek zamanlı veri güncelleme simülasyonu
+    setInterval(() => {
+        // Rastgele veri değişiklikleri
+        const motors = ['gm1', 'gm2', 'gm3'];
+        const randomMotor = motors[Math.floor(Math.random() * motors.length)];
+        
+        if (motorData[randomMotor].status === 'running') {
+            // Günlük üretimi güncelle
+            motorData[randomMotor].dailyProduction += Math.floor(Math.random() * 10);
+            motorData[randomMotor].dailyHours += 0.1;
+            
+            const dailyProductionEl = document.getElementById(`${randomMotor}-daily-production`);
+            if (dailyProductionEl) {
+                dailyProductionEl.textContent = motorData[randomMotor].dailyProduction + ' kWh';
+            }
+            
+            const dailyHoursEl = document.getElementById(`${randomMotor}-daily-hours`);
+            if (dailyHoursEl) {
+                dailyHoursEl.textContent = motorData[randomMotor].dailyHours.toFixed(1) + ' saat';
+            }
+        }
+
+        // Günlük özet verilerini güncelle
+        summaryData.dailyProduction += 0.01;
+        const dailyProductionEl = document.getElementById('daily-production-value');
+        if (dailyProductionEl) {
+            dailyProductionEl.textContent = summaryData.dailyProduction.toFixed(2) + ' MWh';
+        }
+
+    }, 10000); // Her 10 saniyede bir güncelle
+
+    // Klavye kısayolları
+    document.addEventListener('keydown', function(e) {
+        // Ctrl + L: Çıkış yap
+        if (e.ctrlKey && e.key === 'l') {
+            e.preventDefault();
+            handleLogout();
+        }
+        
+        // Ctrl + H: Ana sayfa
+        if (e.ctrlKey && e.key === 'h') {
+            e.preventDefault();
+            window.location.href = 'anasayfa.html';
+        }
+        
+        // Ctrl + U: Kullanıcı yönetimi
+        if (e.ctrlKey && e.key === 'u') {
+            e.preventDefault();
+            window.location.href = 'kullanici-yonetimi.html';
+        }
+    });
+
+    // Sayfa görünürlük değişikliği
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            // Sayfa tekrar görünür olduğunda verileri güncelle
+            updateMotorData();
+            updateSummaryData();
+        }
+    });
+
+    // Responsive menü kontrolü
+    function checkResponsiveMenu() {
+        if (window.innerWidth <= 768) {
+            document.body.classList.add('mobile-view');
+        } else {
+            document.body.classList.remove('mobile-view');
+        }
+    }
+
+    window.addEventListener('resize', checkResponsiveMenu);
+    checkResponsiveMenu();
+});
+
+// CSS animasyonları için stil ekle
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+    
+    .mobile-view .sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: auto;
+        width: 100%;
+        z-index: 1000;
+    }
+    
+    .mobile-view .main-content {
+        margin-bottom: 80px;
+    }
+`;
+document.head.appendChild(style);
+
+// Kimlik doğrulama kontrolü
+function checkAuth() {
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (!loggedInUser) {
+        window.location.href = 'giris.html';
+        return;
+    }
+    
+    // userNameDisplay'i DEĞİŞTİRME - HTML'deki script zaten ayarlıyor
+    console.log('checkAuth: userNameDisplay güncellenmiyor - HTML scripti aktif');
+}
+
+// checkAuth fonksiyonunu çağır
+checkAuth();
