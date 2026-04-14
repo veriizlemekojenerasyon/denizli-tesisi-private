@@ -827,11 +827,7 @@ async function kaydetTumunu() {
         return;
     }
     
-    const operatorSelect = document.getElementById('operator');
-    if (!operatorSelect || !operatorSelect.value) {
-        showNotification('error', 'Hata', 'Lütfen operatör seçin.');
-        return;
-    }
+    // Operatör alanı kaldırıldı - otomatik "Sistem" atanır
     
     // En az bir fotoğraf eklenmiş mi kontrol et
     const fotoSayisi = Object.values(fotografVerileri).filter(f => f !== null).length;
@@ -841,11 +837,6 @@ async function kaydetTumunu() {
     }
     
     showNotification('info', 'Kaydediliyor', 'Veriler kaydediliyor, lütfen bekleyin...');
-    
-    const tarih = document.getElementById('tracking-date').value;
-    const saat = document.getElementById('tracking-time').value;
-    const vardiya = document.getElementById('shift').value;
-    const operator = operatorSelect.value;
     
     try {
         // Her kontrol tipi için ayrı kayıt yap
