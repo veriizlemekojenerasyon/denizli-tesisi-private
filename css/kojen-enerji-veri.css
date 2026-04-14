@@ -795,19 +795,6 @@ body {
         min-width: auto;
     }
 }
-    
-    .dashboard-content {
-        padding: 15px;
-    }
-    
-    .content-section {
-        padding: 15px;
-    }
-    
-    .section-title {
-        font-size: 20px;
-    }
-}
 
 /* Vardiya Verileri Görüntüleme Bölümü */
 .vardiya-verileri-section {
@@ -1033,8 +1020,10 @@ body {
     .vardiya-table {
         min-width: 800px;
     }
-    
-    /* Mobil Sidebar Stilleri */
+}
+
+/* Mobil Sidebar Stilleri */
+@media (max-width: 1200px) {
     .sidebar {
         position: fixed;
         left: -280px;

@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Google Apps Script URLbutonları
     const motorButtons = document.querySelectorAll('.motor-btn');
+    console.log('Motor butonları bulundu:', motorButtons.length, motorButtons);
     let selectedMotor = 'GM-1';
     let isLocked = false;
     
@@ -249,9 +250,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Event listeners
     motorButtons.forEach(button => button.addEventListener('click', async function() {
+        console.log('Motor butonuna tıklandı:', this.dataset.motor);
         motorButtons.forEach(btn => btn.classList.remove('active'));
         this.classList.add('active');
         selectedMotor = this.dataset.motor;
+        console.log('Seçilen motor:', selectedMotor);
         showMessage(`${selectedMotor} motoru seçildi!`, 'info');
         // Inputları temizle
         document.querySelectorAll('.kojen-input').forEach(input => {
@@ -285,7 +288,11 @@ document.addEventListener('DOMContentLoaded', function() {
         await checkAndUpdateFormStatus();
     }
 
-    await otomatikAyarlar();
+    // Otomatik ayarları çalıştır
+    (async () => {
+        await otomatikAyarlar();
+    })();
+    
     setInterval(async () => {
         const hours = String(new Date().getHours()).padStart(2, '0');
         if (currentHourElement && currentHourElement.textContent !== `${hours}:00`) {
