@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
             
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = 'anasayfa.html';
             }, 1500);
         } catch (e) {
             showError('Sunucu hatası: ' + e.message);
