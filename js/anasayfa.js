@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ctrl + H: Ana sayfa
         if (e.ctrlKey && e.key === 'h') {
             e.preventDefault();
-            window.location.href = 'anasayfa.html';
+            window.location.href = 'index.html';
         }
         
         // Ctrl + U: Kullanıcı yönetimi
