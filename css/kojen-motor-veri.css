@@ -768,44 +768,106 @@ body {
 }
 
 @media (max-width: 768px) {
+    .dashboard-container {
+        flex-direction: column;
+    }
+    
     .sidebar {
-        width: 70px;
-        overflow: hidden;
-    }
-    .sidebar-header {
-        padding: 20px 10px;
-    }
-    .logo {
-        width: 50px;
-        height: 50px;
-    }
-    .company-name,
-    .menu-text {
-        display: none;
-    }
-    .menu-icon {
-        margin-right: 0;
-        display: block;
         width: 100%;
+        position: relative;
+    }
+    
+    .sidebar-menu {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .menu-item {
+        flex: 1 1 50%;
+        min-width: 120px;
+    }
+    
+    .menu-link {
+        flex-direction: column;
+        padding: 10px;
         text-align: center;
     }
+    
+    .menu-icon {
+        margin-right: 0;
+        margin-bottom: 5px;
+        font-size: 20px;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+    
     .header-top {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
         padding: 15px 20px;
     }
+    
     .company-info h1 {
+        font-size: 16px;
+    }
+    
+    .company-info h2 {
         font-size: 14px;
     }
-    .company-info h2 {
+    
+    .dashboard-content {
+        padding: 15px;
+    }
+    
+    .kojen-motor-section {
+        padding: 15px;
+    }
+    
+    .kojen-table-container {
+        overflow-x: auto;
+        margin: 0 -15px;
+        padding: 0 15px;
+    }
+    
+    .kojen-table {
+        min-width: 800px;
         font-size: 12px;
     }
-    .dashboard-content {
-        padding: 20px;
+    
+    .kojen-table-row {
+        grid-template-columns: 50px repeat(4, 1fr);
     }
+    
+    .kojen-table-cell {
+        font-size: 10px;
+        padding: 6px 3px;
+    }
+    
+    .header-cell {
+        font-size: 9px;
+    }
+    
+    .motor-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    
     .kojen-actions {
         flex-direction: column;
     }
-    .kojen-table-row {
-        grid-template-columns: 50px repeat(4, 1fr);
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-actions button {
+        width: 100%;
     }
 }
 
@@ -1033,6 +1095,56 @@ body {
     
     .vardiya-table {
         min-width: 800px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-top,
+    .header-bottom {
+        padding: 10px 15px;
+    }
+    
+    .company-info h1 {
+        font-size: 14px;
+    }
+    
+    .company-info h2 {
+        font-size: 12px;
+    }
+    
+    .dashboard-content {
+        padding: 10px;
+    }
+    
+    .kojen-motor-section {
+        padding: 10px;
+    }
+    
+    .kojen-table {
+        font-size: 10px;
+    }
+    
+    .kojen-table-row {
+        grid-template-columns: 40px repeat(3, 1fr);
+    }
+    
+    .kojen-table-cell {
+        font-size: 9px;
+        padding: 4px 2px;
+    }
+    
+    .header-cell {
+        font-size: 8px;
+    }
+    
+    .motor-btn {
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+    
+    .menu-item {
+        flex: 1 1 100%;
+        min-width: auto;
     }
 }
 
