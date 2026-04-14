@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleLogout() {
         if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
             localStorage.removeItem('rememberedEmail');
-            window.location.href = 'giris.html';
+            window.location.href = 'index.html';
         }
     }
     

@@ -90,7 +90,7 @@ function logout() {
     localStorage.removeItem('loggedInUser');
     localStorage.removeItem('currentUser');
     alert('Cikis yapildi!');
-    window.location.href = 'giris.html';
+    window.location.href = 'index.html';
 }
 
 async function loadUsers() {

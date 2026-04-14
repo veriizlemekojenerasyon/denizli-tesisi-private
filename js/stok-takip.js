@@ -457,7 +457,7 @@ function exportToExcel() {
 function handleLogout() {
     if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
         localStorage.removeItem('loggedInUser');
-        window.location.href = 'giris.html';
+        window.location.href = 'index.html';
     }
 }
 

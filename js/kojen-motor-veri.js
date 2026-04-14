@@ -586,7 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sidebarLogout) {
         sidebarLogout.addEventListener('click', function() {
             if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-                window.location.href = 'giris.html';
+                window.location.href = 'index.html';
             }
         });
     }
@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (headerLogout) {
         headerLogout.addEventListener('click', function() {
             if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-                window.location.href = 'giris.html';
+                window.location.href = 'index.html';
             }
         });
     }
