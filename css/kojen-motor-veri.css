@@ -26,8 +26,12 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
     overflow: hidden;
+    z-index: 1000;
 }
 
 .sidebar::before {
@@ -254,12 +258,14 @@ body {
     left: 100%;
 }
 
-/* Ana İçerik Alanı */
+/* Ana Içerik Alaný */
 .main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     background: #f8f9fa;
+    margin-left: 280px;
+    min-height: 100vh;
 }
 
 /* Header */
@@ -1039,8 +1045,13 @@ body {
 /* Ana Container Responsive */
 @media (max-width: 768px) {
     .sidebar {
-        width: 70px;
-        overflow: hidden;
+        position: fixed;
+        width: 280px;
+        z-index: 1000;
+    }
+    
+    .main-content {
+        margin-left: 280px;
     }
     .sidebar-header {
         padding: 20px 10px;
@@ -1081,6 +1092,36 @@ body {
         font-size: 9px;
         padding: 6px 2px;
     }
+    
+    /* Responsive Sidebar */
+    .sidebar {
+        position: fixed;
+        left: -280px;
+        transition: left 0.3s ease;
+    }
+    
+    .sidebar.active {
+        left: 0;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .mobile-menu-toggle {
+        display: block;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1001;
+        background: #1a1a2e;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    
     .header-cell {
         font-size: 8px;
     }

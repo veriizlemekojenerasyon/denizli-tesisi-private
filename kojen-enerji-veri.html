@@ -252,19 +252,5 @@
 
     <script src="js/kojen-enerji-sheets.js"></script>
     <script src="js/kojen-enerji-veri.js"></script>
-    <script>
-        (function displayUserName() {
-            const logged = localStorage.getItem('loggedInUser');
-            const display = document.getElementById('userNameDisplay');
-            if (display && logged) {
-                try {
-                    const user = JSON.parse(logged);
-                    const firstName = user.firstName || user.ad || user['Ad'] || '';
-                    const lastName = user.lastName || user.soyad || user['Soyad'] || '';
-                    display.textContent = (firstName + ' ' + lastName).trim() || user.email || 'Kullanıcı';
-                } catch (e) { display.textContent = 'Kullanıcı'; }
-            } else if (display) { display.textContent = 'Misafir'; }
-        })();
-    </script>
 </body>
 </html>

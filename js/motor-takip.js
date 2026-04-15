@@ -1,6 +1,38 @@
 // Motor Takip JavaScript Fonksiyonları
 
+// Kimlik dogrulama kontrolü
+function checkAuth() {
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (!loggedInUser) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    try {
+        const user = JSON.parse(loggedInUser);
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        
+        // Tüm userNameDisplay elementlerini güncelle
+        const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
+        
+        allUserNameDisplays.forEach((element, index) => {
+            element.textContent = fullName || user.email || 'Kullanici';
+        });
+        
+        console.log('Motor Takip - Kullanici adi ayarlandi:', fullName || user.email || 'Kullanici');
+    } catch (e) {
+        console.error('Motor Takip - Kullanici bilgileri okunamadi:', e);
+        const allElements = document.querySelectorAll('[id="userNameDisplay"]');
+        allElements.forEach(element => {
+            element.textContent = 'Kullanici';
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Önce kimlik dogrulama kontrolü
+    checkAuth();
+    
     // Sayfa yüklendiğinde çalışacak fonksiyonlar
     initializeMotorTracking();
     updateDateTime();

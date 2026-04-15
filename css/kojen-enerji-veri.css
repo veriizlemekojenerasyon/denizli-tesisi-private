@@ -28,8 +28,12 @@ body {
     display: flex;
     flex-direction: column;
     color: white;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
     overflow: hidden;
+    z-index: 1000;
 }
 
 .sidebar::before {
@@ -261,6 +265,8 @@ body {
     display: flex;
     flex-direction: column;
     background: #f8f9fa;
+    margin-left: 280px;
+    min-height: 100vh;
 }
 
 /* Header */
@@ -658,7 +664,13 @@ body {
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar {
-        width: 250px;
+        position: fixed;
+        width: 280px;
+        z-index: 1000;
+    }
+    
+    .main-content {
+        margin-left: 280px;
     }
     
     .menu-icon {

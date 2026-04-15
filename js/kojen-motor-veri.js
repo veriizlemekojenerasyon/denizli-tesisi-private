@@ -1,4 +1,36 @@
+// Kimlik dogrulama kontrolü
+function checkAuth() {
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (!loggedInUser) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    try {
+        const user = JSON.parse(loggedInUser);
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        
+        // Tüm userNameDisplay elementlerini güncelle
+        const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
+        
+        allUserNameDisplays.forEach((element, index) => {
+            element.textContent = fullName || user.email || 'Kullanici';
+        });
+        
+        console.log('Kojen Motor Veri - Kullanici adi ayarlandi:', fullName || user.email || 'Kullanici');
+    } catch (e) {
+        console.error('Kojen Motor Veri - Kullanici bilgileri okunamadi:', e);
+        const allElements = document.querySelectorAll('[id="userNameDisplay"]');
+        allElements.forEach(element => {
+            element.textContent = 'Kullanici';
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Önce kimlik dogrulama kontrolü
+    checkAuth();
+    
     // Elementleri seç
     const tarihSecimi = document.getElementById('tarihSecimi');
     const vardiyaSecimi = document.getElementById('vardiyaSecimi');

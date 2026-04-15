@@ -440,9 +440,28 @@ function checkAuth() {
         return;
     }
     
-    // userNameDisplay'i DEĞİŞTİRME - HTML'deki script zaten ayarlıyor
-    console.log('checkAuth: userNameDisplay güncellenmiyor - HTML scripti aktif');
+    try {
+        const user = JSON.parse(loggedInUser);
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        
+        // Tüm userNameDisplay elementlerini güncelle
+        const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
+        
+        allUserNameDisplays.forEach((element, index) => {
+            element.textContent = fullName || user.email || 'Kullanici';
+        });
+        
+        console.log('Ana Sayfa - Kullanici adi ayarlandi:', fullName || user.email || 'Kullanici');
+    } catch (e) {
+        console.error('Ana Sayfa - Kullanici bilgileri okunamadi:', e);
+        const allElements = document.querySelectorAll('[id="userNameDisplay"]');
+        allElements.forEach(element => {
+            element.textContent = 'Kullanici';
+        });
+    }
 }
 
 // checkAuth fonksiyonunu çağır
 checkAuth();
+
+// ... (geri kalan kod)

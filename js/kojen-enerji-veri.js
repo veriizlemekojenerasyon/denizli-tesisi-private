@@ -1,5 +1,38 @@
 // Kojen Enerji Veri JavaScript - Google Sheets Entegrasyonu
+
+// Kimlik dogrulama kontrolü
+function checkAuth() {
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (!loggedInUser) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    try {
+        const user = JSON.parse(loggedInUser);
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        
+        // Tüm userNameDisplay elementlerini güncelle
+        const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
+        
+        allUserNameDisplays.forEach((element, index) => {
+            element.textContent = fullName || user.email || 'Kullanici';
+        });
+        
+        console.log('Kojen Enerji Veri - Kullanici adi ayarlandi:', fullName || user.email || 'Kullanici');
+    } catch (e) {
+        console.error('Kojen Enerji Veri - Kullanici bilgileri okunamadi:', e);
+        const allElements = document.querySelectorAll('[id="userNameDisplay"]');
+        allElements.forEach(element => {
+            element.textContent = 'Kullanici';
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
+    // Önce kimlik dogrulama kontrolü
+    checkAuth();
+    
     // Motor seçim butonları
     const motorButtons = document.querySelectorAll('.motor-btn');
     let selectedMotor = 'GM-1';

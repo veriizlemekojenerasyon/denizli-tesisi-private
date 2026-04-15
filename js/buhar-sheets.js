@@ -1,11 +1,11 @@
 /**
- * BUHAR VERİSİ - Google Sheets Entegrasyonu
- * Bu dosya buhar-verisi.html için Google Sheets bağlantısını sağlar
+ * BUHAR VERISI - Google Sheets Entegrasyonu
+ * Bu dosya buhar-verisi.html için Google Sheets baglantisini saglar
  * 
  * KURULUM:
- * 1. Google Apps Script'i yayınlayın (Code.gs)
- * 2. Web App URL'ini aşağıdaki APPS_SCRIPT_URL değişkenine yapıştırın
- * 3. Bu dosyayı js/ klasörüne kaydedin
+ * 1. Google Apps Script'i yayinlayin (Code.gs)
+ * 2. Web App URL'ini asagidaki APPS_SCRIPT_URL degiskenine yapistirin
+ * 3. Bu dosyayi js/ klasörüne kaydedin
  */
 
 // ============================================
@@ -15,49 +15,37 @@ const BUHAR_CONFIG = {
     // Google Apps Script Web App URL
     APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbx-_7cvrmHCHCxoV9admm1_Drua5vNepfI9xK_hECfJJSIFSl6wZO5GAD0qVPSGgK2z/exec',
     
-    // Sayfa başlığı
+    // Sayfa basligi
     PAGE_NAME: 'Buhar Verisi',
     
-    // Varsayılan kullanıcı adı
+    // Varsayilan kullanici adi
     DEFAULT_USER: 'Admin'
 };
 
 // ============================================
-// BUHAR SAYFASI ANA NESNESİ
+// BUHAR SAYFASI ANA NESNESI
 // ============================================
 const BuharApp = {
-    // Başlangıç
+    // Baslangic
     init: function() {
-        console.log('BuharApp başlatılıyor...');
-        
-        if (!this.validateConfig()) {
-            this.showNotification('error', 'Hata', 'Apps Script URL ayarlanmamış!');
-            return;
-        }
+        console.log('BuharApp baslatiliyor...');
         
         this.setupEventListeners();
         this.setDefaultDate();
-        this.checkExistingRecord(); // Tarih kontrolü ekle
+        this.checkExistingRecord();
         this.loadLastRecords();
-        this.displayUserName();
         
-        console.log('BuharApp başlatıldı');
-    },
-    
-    // Konfigürasyon kontrolü
-    validateConfig: function() {
-        return BUHAR_CONFIG.APPS_SCRIPT_URL && BUHAR_CONFIG.APPS_SCRIPT_URL.length > 0;
+        console.log('BuharApp baslatildi');
     },
     
     // Olay dinleyicileri
     setupEventListeners: function() {
-        // Form gönderimi
         const form = document.getElementById('buharForm');
         if (form) {
             form.addEventListener('submit', (e) => this.handleFormSubmit(e));
         }
         
-        // Çıkış butonları
+        // Çikis butonlari
         const sidebarLogout = document.getElementById('sidebarLogout');
         const headerLogout = document.getElementById('headerLogout');
         
@@ -69,22 +57,23 @@ const BuharApp = {
         }
     },
     
-    // Varsayılan tarih ayarla (bir gün önce) ve kontrol et
+    // Varsayilan tarih ayarla
     setDefaultDate: function() {
         const tarihInput = document.getElementById('buharTarih');
         if (tarihInput) {
+            // Bir gün önceki tarihi ayarla
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             tarihInput.value = yesterday.toISOString().split('T')[0];
             
-            // Tarih değiştiğinde kontrol et
+            // Tarih degistiginde kontrol et
             tarihInput.addEventListener('change', () => {
                 this.checkExistingRecord();
             });
         }
     },
     
-    // Form gönderimi işleme
+    // Form gönderimi isleme
     handleFormSubmit: async function(e) {
         e.preventDefault();
         
@@ -96,7 +85,7 @@ const BuharApp = {
         
         // Validasyon
         if (!formData.tarih || !formData.buharMiktari) {
-            this.showNotification('error', 'Eksik Bilgi', 'Lütfen tüm alanları doldurun!');
+            this.showNotification('error', 'Eksik Bilgi', 'Lütfen tüm alanlari doldurun!');
             return;
         }
         
@@ -104,16 +93,16 @@ const BuharApp = {
         const result = await this.addRecord(formData);
         
         if (result.success) {
-            this.showNotification('success', 'Başarılı', result.message);
+            this.showNotification('success', 'Basarili', result.message);
             e.target.reset();
             this.setDefaultDate();
             this.loadLastRecords();
         } else {
-            this.showNotification('error', 'Hata', result.error || 'Kayıt yapılamadı!');
+            this.showNotification('error', 'Hata', result.error || 'Kayit yapilamadi!');
         }
     },
     
-    // Kayıt ekle (Google Sheets'e)
+    // Kayit ekle (Google Sheets'e)
     addRecord: async function(data) {
         try {
             const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
@@ -130,12 +119,12 @@ const BuharApp = {
             return await response.json();
             
         } catch (error) {
-            console.error('Kayıt hatası:', error);
-            return { success: false, error: 'Bağlantı hatası: ' + error.message };
+            console.error('Kayit hatasi:', error);
+            return { success: false, error: 'Baglanti hatasi: ' + error.message };
         }
     },
     
-    // Son kayıtları yükle
+    // Son kayitlari yükle
     loadLastRecords: async function() {
         const tableBody = document.getElementById('recordsTableBody');
         if (!tableBody) return;
@@ -155,12 +144,12 @@ const BuharApp = {
             if (result.success) {
                 this.renderTable(result.data);
             } else {
-                console.error('Kayıtlar yüklenemedi:', result.error);
+                console.error('Kayitlar yüklenemedi:', result.error);
             }
             
         } catch (error) {
-            console.error('Kayıt yükleme hatası:', error);
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Kayıtlar yüklenemedi!</td></tr>';
+            console.error('Kayit yükleme hatasi:', error);
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Kayitlar yüklenemedi!</td></tr>';
         }
     },
     
@@ -170,7 +159,7 @@ const BuharApp = {
         if (!tableBody) return;
         
         if (!records || records.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Henüz kayıt bulunmuyor.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Henüz kayit bulunmuyor.</td></tr>';
             return;
         }
         
@@ -193,10 +182,10 @@ const BuharApp = {
     formatDate: function(dateString) {
         if (!dateString) return '-';
         
-        // dd.MM.yyyy formatını parse et (örn: 27.03.2026)
+        // dd.MM.yyyy formatini parse et (örn: 27.03.2026)
         var parts = dateString.split('.');
         if (parts.length === 3) {
-            // Yeni Date oluştur: yıl, ay-1, gün
+            // Yeni Date olustur: yil, ay-1, gün
             var date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
             return date.toLocaleDateString('tr-TR', {
                 day: '2-digit',
@@ -205,11 +194,11 @@ const BuharApp = {
             });
         }
         
-        // Eğer başka formatta gelirse direkt göster
+        // Eger baska formatta gelirse direkt göster
         return dateString;
     },
     
-    // Kullanıcı adı göster
+    // Kullanici adi göster
     displayUserName: function() {
         const display = document.getElementById('user-name-display');
         if (display) {
@@ -217,13 +206,13 @@ const BuharApp = {
         }
     },
     
-    // Kullanıcı adı al
+    // Kullanici adi al
     getUserName: function() {
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
         return currentUser.name || currentUser.username || BUHAR_CONFIG.DEFAULT_USER;
     },
     
-    // Tarih kontrolü - aynı tarihte kayıt varsa inputları kilitle
+    // Tarih kontrolü - ayni tarihte kayit varsa inputlari kilitle
     checkExistingRecord: async function() {
         const tarihInput = document.getElementById('buharTarih');
         const buharInput = document.getElementById('buharMiktari');
@@ -234,7 +223,7 @@ const BuharApp = {
         const currentDate = tarihInput.value;
         
         try {
-            // Tüm kayıtları çek ve kontrol et
+            // Tüm kayitlari çek ve kontrol et
             const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
             url.searchParams.append('action', 'getRecords');
             
@@ -246,26 +235,26 @@ const BuharApp = {
             const result = await response.json();
             
             if (result.success && result.data) {
-                // Aynı tarihte kayıt var mı kontrol et
+                // Ayni tarihte kayit var mi kontrol et
                 const existingRecord = result.data.find(record => record.tarih === currentDate);
                 
                 if (existingRecord) {
-                    // Kayıt varsa inputları kilitle
+                    // Kayit varsa inputlari kilitle
                     this.lockInputs(true);
-                    this.showNotification('warning', 'Kayıt Mevcut!', 
-                        `${this.formatDate(currentDate)} tarihinde zaten bir kayıt bulunuyor. Yeni kayıt yapılamaz.`);
+                    this.showNotification('warning', 'Kayit Mevcut!', 
+                        `${this.formatDate(currentDate)} tarihinde zaten bir kayit bulunuyor. Yeni kayit yapilamaz.`);
                 } else {
-                    // Kayıt yoksa inputları aç
+                    // Kayit yoksa inputlari aç
                     this.lockInputs(false);
                 }
             }
             
         } catch (error) {
-            console.error('Tarih kontrol hatası:', error);
+            console.error('Tarih kontrol hatasi:', error);
         }
     },
     
-    // Inputları kilitle/aç
+    // Inputlari kilitle/aç
     lockInputs: function(locked) {
         const buharInput = document.getElementById('buharMiktari');
         const submitBtn = document.querySelector('#buharForm button[type="submit"]');
@@ -274,7 +263,7 @@ const BuharApp = {
             buharInput.disabled = locked;
             buharInput.style.background = locked ? '#f0f0f0' : '';
             buharInput.style.cursor = locked ? 'not-allowed' : '';
-            buharInput.placeholder = locked ? 'Bu tarih için kayıt mevcut' : '0.00';
+            buharInput.placeholder = locked ? 'Bu tarih için kayit mevcut' : '0.00';
         }
         
         if (submitBtn) {
@@ -284,9 +273,9 @@ const BuharApp = {
         }
     },
     
-    // Çıkış işlemi
+    // Çikis islemi
     handleLogout: function() {
-        if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+        if (confirm('Çikis yapmak istediginizden emin misiniz?')) {
             localStorage.removeItem('loggedInUser');
             window.location.href = 'index.html';
         }
@@ -294,14 +283,46 @@ const BuharApp = {
     
     // Bildirim göster
     showNotification: function(type, title, message) {
-        // Basit alert kullan (daha gelişmiş bildirim için CSS modali eklenebilir)
+        // Basit alert kullan (daha gelismis bildirim için CSS modali eklenebilir)
         alert(`${title}: ${message}`);
     }
 };
 
+// Kimlik dogrulama kontrolü
+function checkAuth() {
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (!loggedInUser) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    try {
+        const user = JSON.parse(loggedInUser);
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        
+        // Tüm userNameDisplay elementlerini güncelle
+        const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
+        
+        allUserNameDisplays.forEach((element, index) => {
+            element.textContent = fullName || user.email || 'Kullanici';
+        });
+        
+        console.log('Buhar Veri - Kullanici adi ayarlandi:', fullName || user.email || 'Kullanici');
+    } catch (e) {
+        console.error('Buhar Veri - Kullanici bilgileri okunamadi:', e);
+        const allElements = document.querySelectorAll('[id="userNameDisplay"]');
+        allElements.forEach(element => {
+            element.textContent = 'Kullanici';
+        });
+    }
+}
+
 // ============================================
-// SAYFA YÜKLENDİĞİNDE BAŞLAT
+// SAYFA YÜKLENDIÐINDE BAÞLAT
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
+    // Önce kimlik dogrulama kontrolü
+    checkAuth();
+    
     BuharApp.init();
 });

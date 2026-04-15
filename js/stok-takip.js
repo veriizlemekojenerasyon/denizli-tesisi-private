@@ -463,13 +463,30 @@ function handleLogout() {
 
 // Kullanıcı adını göster
 function displayUserName() {
-    const userNameDisplay = document.getElementById('userNameDisplay');
-    if (userNameDisplay) {
-        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
-        const firstName = loggedInUser.firstName || loggedInUser.ad || loggedInUser['Ad'] || loggedInUser.name || '';
-        const lastName = loggedInUser.lastName || loggedInUser.soyad || loggedInUser['Soyad'] || loggedInUser.surname || '';
-        const fullName = (firstName + ' ' + lastName).trim() || loggedInUser.email || 'Admin';
-        userNameDisplay.textContent = fullName;
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (!loggedInUser) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    try {
+        const user = JSON.parse(loggedInUser);
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        
+        // Tüm userNameDisplay elementlerini güncelle
+        const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
+        
+        allUserNameDisplays.forEach((element, index) => {
+            element.textContent = fullName || user.email || 'Kullanıcı';
+        });
+        
+        console.log('Stok Takip - Kullanıcı adı ayarlandı:', fullName || user.email || 'Kullanıcı');
+    } catch (e) {
+        console.error('Stok Takip - Kullanıcı bilgileri okunamadı:', e);
+        const allElements = document.querySelectorAll('[id="userNameDisplay"]');
+        allElements.forEach(element => {
+            element.textContent = 'Kullanıcı';
+        });
     }
 }
 
