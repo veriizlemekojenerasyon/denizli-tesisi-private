@@ -457,7 +457,7 @@ function exportToExcel() {
 function handleLogout() {
     if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
         localStorage.removeItem('loggedInUser');
-        window.location.href = 'index.html';
+        window.location.href = 'anasayfa.html';
     }
 }
 
@@ -465,7 +465,7 @@ function handleLogout() {
 function displayUserName() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
-        window.location.href = 'index.html';
+        window.location.href = 'anasayfa.html';
         return;
     }
     

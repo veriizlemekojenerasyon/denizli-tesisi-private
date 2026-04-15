@@ -58,7 +58,7 @@ function showLockScreen(type) {
             <div class="lock-screen">
                 <h2>${msg.title}</h2>
                 <p>${msg.text}</p>
-                <p><a href="index.html">Giris Sayfasina Git</a></p>
+                <p><a href="anasayfa.html">Ana Sayfaya Git</a></p>
             </div>
         </div>`;
 }
@@ -90,7 +90,7 @@ function logout() {
     localStorage.removeItem('loggedInUser');
     localStorage.removeItem('currentUser');
     alert('Cikis yapildi!');
-    window.location.href = 'index.html';
+    window.location.href = 'anasayfa.html';
 }
 
 async function loadUsers() {

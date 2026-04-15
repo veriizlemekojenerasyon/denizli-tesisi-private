@@ -4,13 +4,28 @@
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
-        window.location.href = 'index.html';
+        window.location.href = 'anasayfa.html';
         return;
     }
     
     try {
         const user = JSON.parse(loggedInUser);
         const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        
+        // 🔒 ROL KONTROLÜ - Motor takip sadece admin kullanıcılara açık
+        if (user.role !== 'admin') {
+            document.body.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial; background: #f5f5f5;">
+                    <div style="text-align: center; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <h2 style="color: #e74c3c; margin-bottom: 15px;">🚫 Yetkisiz Erişim</h2>
+                        <p style="color: #666; margin-bottom: 20px;">Motor Takip sayfasına erişim yetkiniz bulunmamaktadır.</p>
+                        <p style="margin-bottom: 20px;">Bu sayfa sadece admin kullanıcılar içindir.</p>
+                        <a href="anasayfa.html" style="display: inline-block; background: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">🏠 Ana Sayfaya Git</a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
         
         // Tüm userNameDisplay elementlerini güncelle
         const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
@@ -37,6 +52,28 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeMotorTracking();
     updateDateTime();
     setInterval(updateDateTime, 1000);
+    
+    // Çıkış yap butonları
+    const sidebarLogout = document.getElementById('sidebarLogout');
+    const headerLogout = document.getElementById('headerLogout');
+    
+    if (sidebarLogout) {
+        sidebarLogout.addEventListener('click', function() {
+            if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                localStorage.removeItem('loggedInUser');
+                window.location.href = 'index.html';
+            }
+        });
+    }
+    
+    if (headerLogout) {
+        headerLogout.addEventListener('click', function() {
+            if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                localStorage.removeItem('loggedInUser');
+                window.location.href = 'index.html';
+            }
+        });
+    }
     
     console.log('Motor Takip sayfası yüklendi');
 });

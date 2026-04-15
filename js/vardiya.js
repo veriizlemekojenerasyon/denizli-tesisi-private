@@ -2,7 +2,7 @@
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
-        window.location.href = 'index.html';
+        window.location.href = 'anasayfa.html';
         return;
     }
     
@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleLogout() {
         if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
             localStorage.removeItem('rememberedEmail');
-            window.location.href = 'index.html';
+            window.location.href = 'anasayfa.html';
         }
     }
 

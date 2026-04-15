@@ -277,7 +277,7 @@ const BuharApp = {
     handleLogout: function() {
         if (confirm('Çikis yapmak istediginizden emin misiniz?')) {
             localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
+            window.location.href = 'anasayfa.html';
         }
     },
     
@@ -292,7 +292,7 @@ const BuharApp = {
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
-        window.location.href = 'index.html';
+        window.location.href = 'anasayfa.html';
         return;
     }
     

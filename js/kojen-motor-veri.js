@@ -2,7 +2,7 @@
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
-        window.location.href = 'index.html';
+        window.location.href = 'anasayfa.html';
         return;
     }
     
@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sidebarLogout) {
         sidebarLogout.addEventListener('click', function() {
             if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-                window.location.href = 'index.html';
+                window.location.href = 'anasayfa.html';
             }
         });
     }
@@ -626,7 +626,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (headerLogout) {
         headerLogout.addEventListener('click', function() {
             if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-                window.location.href = 'index.html';
+                window.location.href = 'anasayfa.html';
             }
         });
     }

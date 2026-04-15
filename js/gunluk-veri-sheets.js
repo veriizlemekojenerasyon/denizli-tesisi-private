@@ -505,7 +505,7 @@ const GunlukApp = {
     handleLogout: function() {
         if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
             localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
+            window.location.href = 'anasayfa.html';
         }
     },
     
@@ -558,7 +558,7 @@ const GunlukApp = {
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
-        window.location.href = 'index.html';
+        window.location.href = 'anasayfa.html';
         return;
     }
     
