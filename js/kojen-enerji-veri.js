@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         kaydetBtn.disabled = true; kaydetBtn.textContent = '💾 KAYDEDİLİYOR...';
         try {
-            const result = await saveEnerjiToSheets({...data, motor: selectedMotor, tarih: tarihSecimi.value, vardiya: vardiyaSecimi.value, saat, kaydeden: 'Admin', durum: 'NORMAL'});
+            const result = await saveEnerjiToSheets({...data, motor: selectedMotor, tarih: tarihSecimi.value, vardiya: vardiyaSecimi.value, saat, kaydeden: getCurrentUserName(), durum: 'NORMAL'});
             if (result.success) {
                 // 🔥 CACHE'İ GÜNCELLE
                 refreshCache();
@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 tarih: tarihSecimi.value, 
                 vardiya: vardiyaSecimi.value, 
                 saat, 
-                kaydeden: 'Admin', 
+                kaydeden: getCurrentUserName(), 
                 durum: 'MOTOR ÇALIŞMIYOR',
                 // Son kayıt değerleri
                 toplamAktifEnerji: toplamAktifEnerji,
@@ -638,6 +638,20 @@ document.addEventListener('DOMContentLoaded', async function() {
                 tableBody.appendChild(row);
             });
         } catch (error) { console.error('Vardiya verileri yüklenirken hata:', error); }
+    }
+
+    // 👤 Giriş yapan kullanıcının adını al
+    function getCurrentUserName() {
+        try {
+            const loggedInUser = localStorage.getItem('loggedInUser');
+            if (!loggedInUser) return 'Admin';
+            const user = JSON.parse(loggedInUser);
+            const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            return fullName || user.email || 'Admin';
+        } catch (e) {
+            console.error('Kullanıcı adı okunamadı:', e);
+            return 'Admin';
+        }
     }
 
     // Event listeners
