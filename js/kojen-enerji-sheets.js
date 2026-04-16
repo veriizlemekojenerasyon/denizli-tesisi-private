@@ -34,8 +34,23 @@ async function saveEnerjiToSheets(data) {
             durum: data.durum || 'NORMAL'
         });
         
-        // Motor çalışmıyor durumunda verileri ekleme
-        if (data.durum !== 'MOTOR ÇALIŞMIYOR') {
+        // Motor çalışmıyor durumunda diğer veriler 0, ama son değerler korunur
+        if (data.durum === 'MOTOR ÇALIŞMIYOR') {
+            // Diğer değerler 0
+            params.append('aydemVoltaji', '0');
+            params.append('aktifGuc', '0');
+            params.append('reaktifGuc', '0');
+            params.append('cosPhi', '0');
+            params.append('ortAkim', '0');
+            params.append('ortGerilim', '0');
+            params.append('notrAkim', '0');
+            params.append('tahrikGerilimi', '0');
+            // Son değerler (kaydedilen)
+            params.append('toplamAktifEnerji', data.toplamAktifEnerji || '0');
+            params.append('calismaSaati', data.calismaSaati || '0');
+            params.append('kalkisSayisi', data.kalkisSayisi || '0');
+        } else {
+            // Normal durumda tüm veriler
             params.append('aydemVoltaji', data.aydemVoltaji || '0');
             params.append('aktifGuc', data.aktifGuc || '0');
             params.append('reaktifGuc', data.reaktifGuc || '0');
