@@ -313,11 +313,26 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 🔍 MOTORUN SON KAYDINI GETİR (Motor Çalışmıyor için)
     async function getLastRecordForMotor(motor) {
         try {
-            // Cache'den bu motorun tüm kayıtlarını bul
-            const motorRecords = cachedRecords.filter(record => 
-                record.motor === motor && 
-                record.durum !== 'MOTOR ÇALIŞMIYOR' // Sadece normal kayıtları al
-            );
+            let motorRecords = [];
+            
+            // Önce cache'den dene
+            if (cachedRecords.length > 0) {
+                motorRecords = cachedRecords.filter(record => 
+                    record.motor === motor && 
+                    record.durum !== 'MOTOR ÇALIŞMIYOR' // Sadece normal kayıtları al
+                );
+            }
+            
+            // Cache'de yoksa API'den çek
+            if (motorRecords.length === 0) {
+                console.log(`⚡ Cache'de kayıt yok, API'den çekiliyor: ${motor}`);
+                const result = await getEnerjiRecordsByMotorAndDate(motor, tarihSecimi.value);
+                if (result.success && result.data) {
+                    motorRecords = result.data.filter(record => 
+                        record.durum !== 'MOTOR ÇALIŞMIYOR'
+                    );
+                }
+            }
             
             if (motorRecords.length === 0) {
                 console.log(`⚠️ ${motor} için normal kayıt bulunamadı`);
