@@ -82,6 +82,15 @@ function doPost(e) {
       case 'validateLogin':
         result = validateLogin(data);
         break;
+      case 'sendResetCode':
+        result = sendResetCode(data);
+        break;
+      case 'verifyResetCode':
+        result = verifyResetCode(data);
+        break;
+      case 'resetPassword':
+        result = resetPassword(data);
+        break;
       default:
         result = { success: false, error: 'Bilinmeyen action: ' + action };
     }
@@ -420,4 +429,140 @@ function testAPI() {
     password: 'admin123'
   });
   Logger.log(login);
+}
+
+/**
+ * 📧 SIFRE SIFIRLAMA - Kod gonderme
+ * En basit yontem: 6 haneli kod gonderme
+ */
+function sendResetCode(data) {
+  try {
+    const email = data.email;
+    if (!email) return { success: false, error: 'Email adresi gerekli!' };
+    
+    // Kullaniciyi bul
+    const user = getUserByEmail(email);
+    if (!user) return { success: false, error: 'Bu email adresi ile kayitli kullanici bulunamadi!' };
+    
+    // 6 haneli rastgele kod olustur
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiryTime = new Date();
+    expiryTime.setMinutes(expiryTime.getMinutes() + 15); // 15 dakika gecerli
+    
+    // Kodu Properties'e kaydet (gecici)
+    const codeKey = 'reset_' + email;
+    PropertiesService.getScriptProperties().setProperty(codeKey, JSON.stringify({
+      code: resetCode,
+      expiry: expiryTime.getTime(),
+      email: email
+    }));
+    
+    // Email gonder - Gonderen adi: Denizli Tesisi Sistem
+    const subject = 'Sifre Sifirlama Kodu - Denizli Tesisi';
+    const body = `
+Sayin ${user.firstName} ${user.lastName},
+
+Sifre sifirlama talebiniz alindi.
+
+Sifirlama Kodunuz: ${resetCode}
+
+Bu kod 15 dakika gecerlidir.
+
+Eger bu talebi siz yapmadisaniz, lutfen bu emaili dikkate almayin.
+
+Saygilarimizla,
+Denizli Tesisi Yonetim Sistemi
+    `;
+    
+    // GmailApp otomatik olarak script sahibinin email adresini kullanir
+    // Gonderen adi olarak "Denizli Tesisi Sistem" gosterilir
+    GmailApp.sendEmail(email, subject, body, {
+      name: 'Denizli Tesisi Sistem'
+    });
+    
+    return { 
+      success: true, 
+      message: 'Sifirlama kodu email adresinize gonderildi!'
+    };
+    
+  } catch (error) {
+    return { success: false, error: 'Kod gonderme hatasi: ' + error.toString() };
+  }
+}
+
+/**
+ * 🔐 SIFRE SIFIRLAMA - Kod dogrulama
+ */
+function verifyResetCode(data) {
+  try {
+    const email = data.email;
+    const code = data.code;
+    
+    if (!email || !code) return { success: false, error: 'Email ve kod gerekli!' };
+    
+    const codeKey = 'reset_' + email;
+    const storedData = PropertiesService.getScriptProperties().getProperty(codeKey);
+    
+    if (!storedData) return { success: false, error: 'Kod bulunamadi veya suresi doldu!' };
+    
+    const resetData = JSON.parse(storedData);
+    const now = new Date().getTime();
+    
+    if (now > resetData.expiry) {
+      PropertiesService.getScriptProperties().deleteProperty(codeKey);
+      return { success: false, error: 'Kod suresi doldu! Lutfen yeni kod talep edin.' };
+    }
+    
+    if (resetData.code !== code) {
+      return { success: false, error: 'Kod hatali!' };
+    }
+    
+    return { success: true, message: 'Kod dogrulandi!' };
+    
+  } catch (error) {
+    return { success: false, error: 'Dogrulama hatasi: ' + error.toString() };
+  }
+}
+
+/**
+ * 🔑 SIFRE SIFIRLAMA - Yeni sifre kaydetme
+ */
+function resetPassword(data) {
+  try {
+    const email = data.email;
+    const code = data.code;
+    const newPassword = data.newPassword;
+    
+    if (!email || !code || !newPassword) {
+      return { success: false, error: 'Email, kod ve yeni sifre gerekli!' };
+    }
+    
+    if (newPassword.length < 6) {
+      return { success: false, error: 'Sifre en az 6 karakter olmali!' };
+    }
+    
+    // Once kodu dogrula
+    const verifyResult = verifyResetCode({ email: email, code: code });
+    if (!verifyResult.success) return verifyResult;
+    
+    // Kullaniciyi bul ve guncelle
+    const sheet = getOrCreateSheet();
+    const users = getAllUsers();
+    const user = users.find(u => u.email === email);
+    
+    if (!user) return { success: false, error: 'Kullanici bulunamadi!' };
+    
+    // Yeni sifreyi hash'le ve kaydet
+    const hashedPassword = hashPassword(newPassword);
+    const rowIndex = user.rowIndex;
+    sheet.getRange(rowIndex, 4).setValue(hashedPassword); // Sifre kolonu
+    
+    // Kodu sil
+    PropertiesService.getScriptProperties().deleteProperty('reset_' + email);
+    
+    return { success: true, message: 'Sifreniz basariyla degistirildi!' };
+    
+  } catch (error) {
+    return { success: false, error: 'Sifre degistirme hatasi: ' + error.toString() };
+  }
 }
