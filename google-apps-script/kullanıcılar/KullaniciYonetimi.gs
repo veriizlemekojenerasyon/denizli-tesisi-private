@@ -152,6 +152,16 @@ function getAllUsers() {
 }
 
 /**
+ * Email ile kullanici bul
+ */
+function getUserByEmail(email) {
+  const users = getAllUsers();
+  if (!users.success) return null;
+  
+  return users.users.find(u => u.email === email) || null;
+}
+
+/**
  * Yeni kullanici kaydet
  */
 function saveUser(data) {
