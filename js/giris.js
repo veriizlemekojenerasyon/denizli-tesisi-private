@@ -1,3 +1,6 @@
+// Google Apps Script URL - Global
+const USER_URL = 'https://script.google.com/macros/s/AKfycbww-tpEOm6c82uenoFLIwTHnACdqcyIxCj_duJtE07CepceQibt-T86tNzeWtCLtxGt/exec';
+
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
     const togglePassword = document.getElementById('togglePassword');
@@ -154,8 +157,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function performLogin(email, password, rememberMe) {
-        const USER_URL = 'https://script.google.com/macros/s/AKfycbww-tpEOm6c82uenoFLIwTHnACdqcyIxCj_duJtE07CepceQibt-T86tNzeWtCLtxGt/exec';
-        
         try {
             const res = await fetch(USER_URL, {
                 method: 'POST',
