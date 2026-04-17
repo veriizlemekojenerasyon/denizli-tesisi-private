@@ -53,16 +53,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    forgotPasswordForm.addEventListener('submit', function(e) {
+    // 📧 Şifremi unuttum - Adım 1: Kod gönder
+    forgotPasswordForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const resetEmail = document.getElementById('resetEmail').value;
         
         if (validateEmail(resetEmail)) {
-            sendPasswordResetLink(resetEmail);
+            await sendPasswordResetCode(resetEmail);
         } else {
             showError('Lütfen geçerli bir e-posta adresi girin.');
         }
+    });
+    
+    // 🔑 Şifremi unuttum - Adım 2: Kod doğrula ve şifreyi sıfırla
+    verifyCodeForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('resetEmail').value;
+        const code = document.getElementById('resetCode').value;
+        const newPassword = document.getElementById('newResetPassword').value;
+        const confirmPassword = document.getElementById('confirmResetPassword').value;
+        
+        if (newPassword !== confirmPassword) {
+            showError('Şifreler eşleşmiyor!');
+            return;
+        }
+        
+        if (newPassword.length < 6) {
+            showError('Şifre en az 6 karakter olmalı!');
+            return;
+        }
+        
+        await resetPasswordWithCode(email, code, newPassword);
     });
 
     changePasswordForm.addEventListener('submit', function(e) {
@@ -131,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function performLogin(email, password, rememberMe) {
-        const USER_URL = 'https://script.google.com/macros/s/AKfycby-XThkMXZTUa1Du2du9FZH57YZHrxnKrSAXCRClhD75f6j-8Ld3DpPL3wMUy2YfzH5/exec';
+        const USER_URL = 'https://script.google.com/macros/s/AKfycbww-tpEOm6c82uenoFLIwTHnACdqcyIxCj_duJtE07CepceQibt-T86tNzeWtCLtxGt/exec';
         
         try {
             const res = await fetch(USER_URL, {
@@ -172,15 +195,80 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function sendPasswordResetLink(email) {
-        console.log('Şifre sıfırlama linki gönderiliyor:', email);
-        
-        showSuccess('Şifre sıfırlama linki e-posta adresinize gönderildi.');
-        
-        setTimeout(() => {
-            closeModal(forgotPasswordModal);
-            forgotPasswordForm.reset();
-        }, 2000);
+    // 📧 Şifre sıfırlama kodu gönder (Adım 1)
+    async function sendPasswordResetCode(email) {
+        try {
+            showSuccess('Kod gönderiliyor...');
+            
+            const response = await fetch(USER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'sendResetCode',
+                    email: email
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showSuccess(result.message || 'Kod gönderildi! E-postanızı kontrol edin.');
+                
+                // İkinci adım modalını aç
+                setTimeout(() => {
+                    closeModal(forgotPasswordModal);
+                    openModal(verifyCodeModal);
+                }, 1500);
+                
+                return true;
+            } else {
+                showError(result.error || 'Kod gönderilemedi!');
+                return false;
+            }
+        } catch (error) {
+            console.error('Kod gönderme hatası:', error);
+            showError('Bağlantı hatası!');
+            return false;
+        }
+    }
+    
+    // 🔑 Şifreyi sıfırla (Adım 2 - Kod + Yeni Şifre)
+    async function resetPasswordWithCode(email, code, newPassword) {
+        try {
+            showSuccess('Şifre güncelleniyor...');
+            
+            const response = await fetch(USER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'resetPassword',
+                    email: email,
+                    code: code,
+                    newPassword: newPassword
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showSuccess(result.message || 'Şifreniz başarıyla değiştirildi!');
+                
+                setTimeout(() => {
+                    closeModal(verifyCodeModal);
+                    verifyCodeForm.reset();
+                    forgotPasswordForm.reset();
+                }, 2000);
+                
+                return true;
+            } else {
+                showError(result.error || 'Şifre değiştirilemedi!');
+                return false;
+            }
+        } catch (error) {
+            console.error('Şifre sıfırlama hatası:', error);
+            showError('Bağlantı hatası!');
+            return false;
+        }
     }
 
     function performPasswordChange(currentPassword, newPassword) {

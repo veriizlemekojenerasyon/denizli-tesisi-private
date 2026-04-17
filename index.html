@@ -51,18 +51,42 @@
         </div>
     </div>
 
-    <!-- Şifremi Unuttum Modal -->
+    <!-- Şifremi Unuttum Modal - Adım 1: Email -->
     <div id="forgotPasswordModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h3>Şifremi Unuttum</h3>
-            <p>E-posta adresinizi girin, şifre sıfırlama linkini size gönderelim.</p>
+            <p id="resetStep1Text">E-posta adresinizi girin, şifre sıfırlama kodu gönderelim.</p>
             <form id="forgotPasswordForm">
                 <div class="form-group">
                     <label for="resetEmail">E-posta</label>
                     <input type="email" id="resetEmail" required placeholder="ornek@email.com">
                 </div>
-                <button type="submit" class="submit-btn">Şifre Sıfırlama Linki Gönder</button>
+                <button type="submit" class="submit-btn" id="sendCodeBtn">Kod Gönder</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Şifremi Unuttum Modal - Adım 2: Kod ve Yeni Şifre -->
+    <div id="verifyCodeModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Şifre Sıfırlama</h3>
+            <p>E-postanıza gelen 6 haneli kodu ve yeni şifrenizi girin.</p>
+            <form id="verifyCodeForm">
+                <div class="form-group">
+                    <label for="resetCode">Sıfırlama Kodu</label>
+                    <input type="text" id="resetCode" required placeholder="123456" maxlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="newResetPassword">Yeni Şifre</label>
+                    <input type="password" id="newResetPassword" required placeholder="Yeni şifreniz" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmResetPassword">Yeni Şifre (Tekrar)</label>
+                    <input type="password" id="confirmResetPassword" required placeholder="Yeni şifrenizi tekrar girin" minlength="6">
+                </div>
+                <button type="submit" class="submit-btn">Şifreyi Sıfırla</button>
             </form>
         </div>
     </div>
