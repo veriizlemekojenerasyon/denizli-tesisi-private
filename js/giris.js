@@ -1,5 +1,5 @@
 // Google Apps Script URL - Global
-const USER_URL = 'https://script.google.com/macros/s/AKfycbww-tpEOm6c82uenoFLIwTHnACdqcyIxCj_duJtE07CepceQibt-T86tNzeWtCLtxGt/exec';
+const USER_URL = 'https://script.google.com/macros/s/AKfycbz1iMTRl0U32pxyuO6mXnkpbzQKtbY6kct2bkLe876KI7fweIiD8L95crTNsaKU53Be/exec';
 
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
@@ -10,8 +10,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const forgotPasswordModal = document.getElementById('forgotPasswordModal');
     const changePasswordModal = document.getElementById('changePasswordModal');
     const forgotPasswordForm = document.getElementById('forgotPasswordForm');
-    const changePasswordForm = document.getElementById('changePasswordForm');
     const closeButtons = document.querySelectorAll('.close');
+    
+    // Şifre Değiştir - 3 Adım Formları
+    const changePasswordStep1Form = document.getElementById('changePasswordStep1Form');
+    const changePasswordStep2Form = document.getElementById('changePasswordStep2Form');
+    const changePasswordStep3Form = document.getElementById('changePasswordStep3Form');
+    const resendChangePassCode = document.getElementById('resendChangePassCode');
 
     togglePassword.addEventListener('click', function() {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -28,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     changePasswordLink.addEventListener('click', function(e) {
         e.preventDefault();
+        resetChangePasswordModal();
         openModal(changePasswordModal);
     });
 
@@ -91,16 +97,46 @@ document.addEventListener('DOMContentLoaded', function() {
         await resetPasswordWithCode(email, code, newPassword);
     });
 
-    changePasswordForm.addEventListener('submit', function(e) {
+    // Şifre Değiştir - Adım 1: Email gönder
+    changePasswordStep1Form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
-        const currentPassword = document.getElementById('currentPassword').value;
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+        const email = document.getElementById('changePassEmail').value;
+        await sendChangePassCode(email);
+    });
 
-        if (validatePasswordChange(currentPassword, newPassword, confirmNewPassword)) {
-            performPasswordChange(currentPassword, newPassword);
+    // Şifre Değiştir - Adım 2: Kod doğrula
+    changePasswordStep2Form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const code = document.getElementById('changePassCode').value;
+        const email = document.getElementById('changePassEmail').value;
+        await verifyChangePassCode(email, code);
+    });
+
+    // Şifre Değiştir - Adım 3: Yeni şifre belirle
+    changePasswordStep3Form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('changePassEmail').value;
+        const code = document.getElementById('changePassCode').value;
+        const newPassword = document.getElementById('changePassNewPassword').value;
+        const confirmPassword = document.getElementById('changePassConfirmPassword').value;
+        
+        if (newPassword !== confirmPassword) {
+            showError('Şifreler eşleşmiyor!');
+            return;
         }
+        
+        if (newPassword.length < 6) {
+            showError('Şifre en az 6 karakter olmalı!');
+            return;
+        }
+        
+        await resetPasswordWithCode(email, code, newPassword);
+    });
+
+    // Kodu tekrar gönder
+    resendChangePassCode.addEventListener('click', async function() {
+        const email = document.getElementById('changePassEmail').value;
+        await sendChangePassCode(email);
     });
 
     function openModal(modal) {
@@ -206,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({
                     action: 'sendResetCode',
-                    email: email
+                    data: JSON.stringify({ email: email })
                 })
             });
             
@@ -243,9 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({
                     action: 'resetPassword',
-                    email: email,
-                    code: code,
-                    newPassword: newPassword
+                    data: JSON.stringify({ email: email, code: code, newPassword: newPassword })
                 })
             });
             
@@ -272,20 +306,84 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function performPasswordChange(currentPassword, newPassword) {
-        const passwordData = {
-            currentPassword: currentPassword,
-            newPassword: newPassword
-        };
-
-        console.log('Şifre değiştirme bilgileri:', passwordData);
-
-        showSuccess('Şifreniz başarıyla değiştirildi!');
+    // Şifre Değiştir - Adım 1: Kod gönder
+    async function sendChangePassCode(email) {
+        if (!email) {
+            showError('E-posta adresi girin!');
+            return;
+        }
         
-        setTimeout(() => {
-            closeModal(changePasswordModal);
-            changePasswordForm.reset();
-        }, 2000);
+        try {
+            showSuccess('Kod gönderiliyor...');
+            
+            const response = await fetch(USER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'sendResetCode',
+                    data: JSON.stringify({ email: email })
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showSuccess(result.message || 'Doğrulama kodu gönderildi!');
+                // Adım 2'ye geç
+                changePasswordStep1Form.style.display = 'none';
+                changePasswordStep2Form.style.display = 'block';
+            } else {
+                showError(result.error || 'Kod gönderilemedi!');
+            }
+        } catch (error) {
+            console.error('Kod gönderme hatası:', error);
+            showError('Bağlantı hatası!');
+        }
+    }
+    
+    // Şifre Değiştir - Adım 2: Kod doğrula
+    async function verifyChangePassCode(email, code) {
+        if (!email || !code) {
+            showError('E-posta ve kod gerekli!');
+            return;
+        }
+        
+        try {
+            showSuccess('Kod doğrulanıyor...');
+            
+            const response = await fetch(USER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'verifyResetCode',
+                    data: JSON.stringify({ email: email, code: code })
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showSuccess(result.message || 'Kod doğrulandı!');
+                // Adım 3'e geç
+                changePasswordStep2Form.style.display = 'none';
+                changePasswordStep3Form.style.display = 'block';
+            } else {
+                showError(result.error || 'Kod doğrulanamadı!');
+            }
+        } catch (error) {
+            console.error('Kod doğrulama hatası:', error);
+            showError('Bağlantı hatası!');
+        }
+    }
+    
+    // Şifre Değiştir modalını sıfırla
+    function resetChangePasswordModal() {
+        changePasswordStep1Form.style.display = 'block';
+        changePasswordStep2Form.style.display = 'none';
+        changePasswordStep3Form.style.display = 'none';
+        changePasswordStep1Form.reset();
+        changePasswordStep2Form.reset();
+        changePasswordStep3Form.reset();
     }
 
     function showError(message) {

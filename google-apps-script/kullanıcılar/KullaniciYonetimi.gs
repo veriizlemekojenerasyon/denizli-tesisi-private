@@ -15,6 +15,19 @@
 const SHEET_NAME_KULLANICILAR = 'Kullanicilar';
 
 /**
+ * Sifreyi hashle - basit hash fonksiyonu
+ */
+function hashPassword(password) {
+  if (!password) return '';
+  try {
+    const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password, Utilities.Charset.UTF_8);
+    return digest.map(function(b) { return (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'); }).join('');
+  } catch (e) {
+    return password;
+  }
+}
+
+/**
  * GET isteklerini handle et (CORS destekli)
  */
 function doGet(e) {
@@ -81,6 +94,9 @@ function doPost(e) {
         break;
       case 'validateLogin':
         result = validateLogin(data);
+        break;
+      case 'changePassword':
+        result = changePassword(data);
         break;
       case 'sendResetCode':
         result = sendResetCode(data);
@@ -155,10 +171,35 @@ function getAllUsers() {
  * Email ile kullanici bul
  */
 function getUserByEmail(email) {
-  const users = getAllUsers();
-  if (!users.success) return null;
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
   
-  return users.users.find(u => u.email === email) || null;
+  if (data.length <= 1) return null;
+  
+  const headers = data[0];
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const user = {};
+    
+    headers.forEach((header, index) => {
+      const key = headerToKey(header);
+      user[key] = row[index] || '';
+    });
+    
+    if (user.id) {
+      user.id = parseInt(user.id, 10) || user.id;
+    }
+    
+    // Satir indeksini ekle (2'den baslar cunku 1. satir header)
+    user.rowIndex = i + 1;
+    
+    if (user.email === email) {
+      return user;
+    }
+  }
+  
+  return null;
 }
 
 /**
@@ -294,11 +335,13 @@ function validateLogin(data) {
   const userData = getAllUsers();
   const inputEmail = String(data.email).toLowerCase().trim();
   const inputPassword = String(data.password).trim();
+  const inputPasswordHashed = hashPassword(inputPassword);
   
   const user = userData.users.find(u => {
     const userEmail = String(u.email || '').toLowerCase().trim();
     const userPassword = String(u.password || '').trim();
-    return userEmail === inputEmail && userPassword === inputPassword;
+    // Hem düz metin hem de hash'li şifre kontrolü
+    return userEmail === inputEmail && (userPassword === inputPassword || userPassword === inputPasswordHashed);
   });
   
   if (user) {
@@ -557,15 +600,14 @@ function resetPassword(data) {
     
     // Kullaniciyi bul ve guncelle
     const sheet = getOrCreateSheet();
-    const users = getAllUsers();
-    const user = users.find(u => u.email === email);
+    const user = getUserByEmail(email);
     
     if (!user) return { success: false, error: 'Kullanici bulunamadi!' };
     
     // Yeni sifreyi hash'le ve kaydet
     const hashedPassword = hashPassword(newPassword);
     const rowIndex = user.rowIndex;
-    sheet.getRange(rowIndex, 4).setValue(hashedPassword); // Sifre kolonu
+    sheet.getRange(rowIndex, 5).setValue(hashedPassword); // Sifre kolonu (5. sütun)
     
     // Kodu sil
     PropertiesService.getScriptProperties().deleteProperty('reset_' + email);
@@ -574,5 +616,56 @@ function resetPassword(data) {
     
   } catch (error) {
     return { success: false, error: 'Sifre degistirme hatasi: ' + error.toString() };
+  }
+}
+
+/**
+ * � DEBUG - Şifre hash değerini kontrol et
+ */
+function debugPasswordHash(password) {
+  return {
+    original: password,
+    hashed: hashPassword(password)
+  };
+}
+
+/**
+ * �🔑 MEVCUT ŞİFREYİ DEĞİŞTİR (Kullanıcı giriş yapmış olmalı)
+ */
+function changePassword(data) {
+  try {
+    const email = data.email;
+    const currentPassword = data.currentPassword;
+    const newPassword = data.newPassword;
+    
+    if (!email || !currentPassword || !newPassword) {
+      return { success: false, error: 'Email, mevcut şifre ve yeni şifre gerekli!' };
+    }
+    
+    if (newPassword.length < 6) {
+      return { success: false, error: 'Yeni şifre en az 6 karakter olmalı!' };
+    }
+    
+    // Kullanıcıyı bul
+    const user = getUserByEmail(email);
+    if (!user) {
+      return { success: false, error: 'Kullanıcı bulunamadı!' };
+    }
+    
+    // Mevcut şifreyi doğrula
+    const hashedCurrentPassword = hashPassword(currentPassword);
+    if (user.password !== hashedCurrentPassword) {
+      return { success: false, error: 'Mevcut şifre hatalı!' };
+    }
+    
+    // Yeni şifreyi hashle ve kaydet
+    const sheet = getOrCreateSheet();
+    const hashedNewPassword = hashPassword(newPassword);
+    sheet.getRange(user.rowIndex, 5).setValue(hashedNewPassword); // 5. sütun = Şifre
+    
+    return { success: true, message: 'Şifreniz başarıyla değiştirildi!' };
+    
+  } catch (error) {
+    return { success: false, error: 'Şifre değiştirme hatası: ' + error.toString() };
   }
 }

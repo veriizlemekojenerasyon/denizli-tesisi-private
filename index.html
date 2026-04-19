@@ -91,23 +91,41 @@
         </div>
     </div>
 
-    <!-- Şifre Değiştir Modal -->
+    <!-- Şifre Değiştir Modal - 3 Adım -->
     <div id="changePasswordModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h3>Şifre Değiştir</h3>
-            <form id="changePasswordForm">
+            
+            <!-- Adım 1: Email -->
+            <form id="changePasswordStep1Form">
                 <div class="form-group">
-                    <label for="currentPassword">Mevcut Şifre</label>
-                    <input type="password" id="currentPassword" required placeholder="Mevcut şifreniz">
+                    <label for="changePassEmail">E-posta Adresiniz</label>
+                    <input type="email" id="changePassEmail" required placeholder="E-posta adresinizi girin">
+                </div>
+                <button type="submit" class="submit-btn">Kod Gönder</button>
+            </form>
+            
+            <!-- Adım 2: Kod Doğrulama -->
+            <form id="changePasswordStep2Form" style="display: none;">
+                <p class="info-text">E-posta adresinize 6 haneli doğrulama kodu gönderildi.</p>
+                <div class="form-group">
+                    <label for="changePassCode">Doğrulama Kodu</label>
+                    <input type="text" id="changePassCode" required placeholder="6 haneli kod" maxlength="6">
+                </div>
+                <button type="submit" class="submit-btn">Kodu Doğrula</button>
+                <button type="button" id="resendChangePassCode" class="link-btn">Kodu Tekrar Gönder</button>
+            </form>
+            
+            <!-- Adım 3: Yeni Şifre -->
+            <form id="changePasswordStep3Form" style="display: none;">
+                <div class="form-group">
+                    <label for="changePassNewPassword">Yeni Şifre</label>
+                    <input type="password" id="changePassNewPassword" required placeholder="Yeni şifreniz (en az 6 karakter)" minlength="6">
                 </div>
                 <div class="form-group">
-                    <label for="newPassword">Yeni Şifre</label>
-                    <input type="password" id="newPassword" required placeholder="Yeni şifreniz">
-                </div>
-                <div class="form-group">
-                    <label for="confirmNewPassword">Yeni Şifre (Tekrar)</label>
-                    <input type="password" id="confirmNewPassword" required placeholder="Yeni şifrenizi tekrar girin">
+                    <label for="changePassConfirmPassword">Yeni Şifre (Tekrar)</label>
+                    <input type="password" id="changePassConfirmPassword" required placeholder="Yeni şifrenizi tekrar girin">
                 </div>
                 <button type="submit" class="submit-btn">Şifreyi Değiştir</button>
             </form>
