@@ -11,7 +11,9 @@ const DRIVE_FOLDERS = {
 };
 
 const SHEET_NAMES = {
-  MAINTENANCE: "Bakımlar",
+  PERIODIC_MAINTENANCE: "Periyodik Bakım Kayıtları",
+  NORMAL_MAINTENANCE: "Normal Bakım Kayıtları", 
+  FAULT_MAINTENANCE: "Arıza Bakım Kayıtları",
   STATISTICS: "İstatistikler",
   SETTINGS: "Ayarlar",
   MOTOR_HOURS: "Motor Saatleri"
@@ -45,7 +47,7 @@ function doPost(e) {
       case 'save':
         return saveMaintenanceRecord(ss, params);
       case 'getStats':
-        return getMaintenanceStats(ss);
+        return getMaintenanceStats(ss, params);
       case 'getReport':
         return getMaintenanceReport(ss, params);
       case 'getActiveRecords':
@@ -130,32 +132,46 @@ function getOrCreateSpreadsheet() {
 
 // Sayfaları oluştur
 function createSheets(ss) {
-  // Bakımlar sayfası
-  let maintenanceSheet = ss.getSheetByName(SHEET_NAMES.MAINTENANCE);
+  // Her bakım türü için ayrı sayfalar oluştur
+  const maintenanceSheets = [
+    { name: SHEET_NAMES.PERIODIC_MAINTENANCE, title: 'Periyodik Bakım Kayıtları' },
+    { name: SHEET_NAMES.NORMAL_MAINTENANCE, title: 'Normal Bakım Kayıtları' },
+    { name: SHEET_NAMES.FAULT_MAINTENANCE, title: 'Arıza Bakım Kayıtları' }
+  ];
   
-  if (maintenanceSheet) {
+  maintenanceSheets.forEach(sheetInfo => {
+    createMaintenanceSheet(ss, sheetInfo.name, sheetInfo.title);
+  });
+}
+
+function createMaintenanceSheet(ss, sheetName, sheetTitle) {
+  let sheet = ss.getSheetByName(sheetName);
+  
+  if (sheet) {
     // Mevcut sayfayı kontrol et ve düzelt
-    Logger.log('Mevcut Bakımlar sayfası kontrol ediliyor...');
+    Logger.log('Mevcut ' + sheetName + ' sayfası kontrol ediliyor...');
     
     // Mevcut sütun sayısını kontrol et
-    const lastColumn = maintenanceSheet.getLastColumn();
+    const lastColumn = sheet.getLastColumn();
     Logger.log('Mevcut sütun sayısı: ' + lastColumn);
     
-    if (lastColumn > 12) {
+    if (lastColumn > 21) {
       // Fazla sütunları temizle
       Logger.log('Fazla sütunlar temizleniyor...');
-      maintenanceSheet.deleteColumns(13, lastColumn - 12);
+      sheet.deleteColumns(22, lastColumn - 21);
     }
     
     // Header'ları kontrol et ve güncelle
-    const currentHeaders = maintenanceSheet.getRange('A1:L1').getValues()[0];
+    const currentHeaders = sheet.getRange('A1:U1').getValues()[0];
     const expectedHeaders = [
-      'Kayıt No', 'Tarih', 'Saat', 'Motor', 'Bakım Türü', 'Bakım Tipi',
-      'Teknisyen', 'Firma', 'Notlar', 'Dosyalar', 'Durum', 'Oluşturulma Tarihi'
+      'Kayıt No', 'Tarih', 'Motor', 'Bakım Türü', 'Bakım Tipi',
+      'Teknisyen', 'Firma', 'Notlar', 'Dosyalar', 'Durum', 'Oluşturulma Tarihi',
+      'Motor Saati', 'Barkod No', 'Alt. Ön (cm³)', 'Alt. Arka (cm³)', 'Alt. Toplam (cm³)',
+      'Filtre Motor Saati', 'Filtre Yağ Saati', 'HT Sıcaklık (°C)', 'LT Sıcaklık (°C)', 'Ceket Suyu (°C)'
     ];
     
     // Header'ları güncelle
-    maintenanceSheet.getRange('A1:L1')
+    sheet.getRange('A1:U1')
       .setValues([expectedHeaders])
       .setFontWeight('bold')
       .setBackground('#4285f4')
@@ -163,12 +179,11 @@ function createSheets(ss) {
       
   } else {
     // Yeni sayfa oluştur
-    maintenanceSheet = ss.insertSheet(SHEET_NAMES.MAINTENANCE);
+    sheet = ss.insertSheet(sheetName);
     
     const maintenanceHeaders = [
       'Kayıt No',
       'Tarih',
-      'Saat', 
       'Motor',
       'Bakım Türü',
       'Bakım Tipi',
@@ -177,29 +192,50 @@ function createSheets(ss) {
       'Notlar',
       'Dosyalar',
       'Durum',
-      'Oluşturulma Tarihi'
+      'Oluşturulma Tarihi',
+      'Motor Saati',
+      'Barkod No',
+      'Alt. Ön (cm³)',
+      'Alt. Arka (cm³)',
+      'Alt. Toplam (cm³)',
+      'Filtre Motor Saati',
+      'Filtre Yağ Saati',
+      'HT Sıcaklık (°C)',
+      'LT Sıcaklık (°C)',
+      'Ceket Suyu (°C)'
     ];
     
-    maintenanceSheet.getRange('A1:L1')
+    sheet.getRange('A1:U1')
       .setValues([maintenanceHeaders])
       .setFontWeight('bold')
       .setBackground('#4285f4')
       .setFontColor('white');
+      
+    Logger.log('Yeni ' + sheetName + ' sayfası oluşturuldu');
   }
   
-  // Sütun genişlikleri (12 sütun)
-  maintenanceSheet.setColumnWidth(1, 120);
-  maintenanceSheet.setColumnWidth(2, 100);
-  maintenanceSheet.setColumnWidth(3, 80);
-  maintenanceSheet.setColumnWidth(4, 80);
-  maintenanceSheet.setColumnWidth(5, 100);
-  maintenanceSheet.setColumnWidth(6, 120);
-  maintenanceSheet.setColumnWidth(7, 150);
-  maintenanceSheet.setColumnWidth(8, 100);
-  maintenanceSheet.setColumnWidth(9, 300);
-  maintenanceSheet.setColumnWidth(10, 200);
-  maintenanceSheet.setColumnWidth(11, 80);
-  maintenanceSheet.setColumnWidth(12, 150);
+  // Sütun genişlikleri (16 sütun)
+  sheet.setColumnWidth(1, 120);  // Kayıt No
+  sheet.setColumnWidth(2, 100);  // Tarih
+  sheet.setColumnWidth(3, 80);   // Motor
+  sheet.setColumnWidth(4, 80);   // Bakım Türü
+  sheet.setColumnWidth(5, 100);  // Bakım Tipi
+  sheet.setColumnWidth(6, 120);  // Teknisyen
+  sheet.setColumnWidth(7, 150);  // Firma
+  sheet.setColumnWidth(8, 100);  // Notlar
+  sheet.setColumnWidth(9, 300);  // Dosyalar
+  sheet.setColumnWidth(10, 200); // Durum
+  sheet.setColumnWidth(11, 80);  // Oluşturulma Tarihi
+  sheet.setColumnWidth(12, 80);  // Motor Saati
+  sheet.setColumnWidth(13, 100); // Barkod No
+  sheet.setColumnWidth(14, 80);  // Alt. Ön (cm³)
+  sheet.setColumnWidth(15, 80);  // Alt. Arka (cm³)
+  sheet.setColumnWidth(16, 90);  // Alt. Toplam (cm³)
+  sheet.setColumnWidth(17, 90);  // Filtre Motor Saati
+  sheet.setColumnWidth(18, 90);  // Filtre Yağ Saati
+  sheet.setColumnWidth(19, 80);  // HT Sıcaklık (°C)
+  sheet.setColumnWidth(20, 80);  // LT Sıcaklık (°C)
+  sheet.setColumnWidth(21, 90);  // Ceket Suyu (°C)
   
   // İstatistikler sayfası
   let statsSheet = ss.getSheetByName(SHEET_NAMES.STATISTICS);
@@ -361,9 +397,24 @@ function saveMaintenanceRecord(ss, params) {
       return String(val);
     };
     
-    const sheet = ss.getSheetByName(SHEET_NAMES.MAINTENANCE);
+    // Bakım türüne göre doğru sayfayı seç
+    const maintenanceType = getParam('type');
+    let sheetName;
+    
+    if (maintenanceType && maintenanceType.toLowerCase().includes('periyodik')) {
+      sheetName = SHEET_NAMES.PERIODIC_MAINTENANCE;
+    } else if (maintenanceType && maintenanceType.toLowerCase().includes('normal')) {
+      sheetName = SHEET_NAMES.NORMAL_MAINTENANCE;
+    } else if (maintenanceType && maintenanceType.toLowerCase().includes('arıza')) {
+      sheetName = SHEET_NAMES.FAULT_MAINTENANCE;
+    } else {
+      sheetName = SHEET_NAMES.PERIODIC_MAINTENANCE; // Varsayılan
+    }
+    
+    Logger.log('Seçilen bakım türü: ' + maintenanceType + ', Sayfa: ' + sheetName);
+    const sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
-      throw new Error('Bakımlar sayfası bulunamadı');
+      throw new Error(sheetName + ' sayfası bulunamadı');
     }
     
     Logger.log('Sayfa bulundu: ' + sheet.getName());
@@ -372,7 +423,7 @@ function saveMaintenanceRecord(ss, params) {
     const lastRow = sheet.getLastRow();
     Logger.log('Son satır: ' + lastRow);
     
-    const recordNo = lastRow === 1 ? 'BK-00001' : generateRecordNo(sheet.getRange(lastRow, 1).getValue());
+    const recordNo = lastRow === 1 ? generateRecordNo('', maintenanceType) : generateRecordNo(sheet.getRange(lastRow, 1).getValue(), maintenanceType);
     Logger.log('Kayıt numarası: ' + recordNo);
     
     // Dosya yükleme (varsa)
@@ -388,7 +439,6 @@ function saveMaintenanceRecord(ss, params) {
     const record = [
       recordNo || '',
       getParam('date') || new Date().toLocaleDateString('tr-TR'),
-      getParam('time') || new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}),
       getParam('motor') || '',
       getParam('type') || '',
       getParam('subtype') || '',
@@ -397,7 +447,17 @@ function saveMaintenanceRecord(ss, params) {
       getParam('notes') || '',
       uploadedFiles,
       getParam('status') || 'Aktif',
-      new Date().toLocaleString('tr-TR')
+      new Date().toLocaleDateString('tr-TR'),
+      getParam('motorHours') || '',  // Motor Saati
+      getParam('barcodeNumber') || '',  // Barkod No
+      getParam('alternatorFront') || '',  // Alt. Ön (cm³)
+      getParam('alternatorRear') || '',  // Alt. Arka (cm³)
+      getParam('alternatorTotal') || '',  // Alt. Toplam (cm³)
+      getParam('filterMotorHours') || '',  // Filtre Motor Saati
+      getParam('filterOilHours') || '',  // Filtre Yağ Saati
+      getParam('htTemperature') || '',  // HT Sıcaklık (°C)
+      getParam('ltTemperature') || '',  // LT Sıcaklık (°C)
+      getParam('jacketTemperature') || ''  // Ceket Suyu (°C)
     ];
     
     Logger.log('Kayıt dizisi oluşturuldu, uzunluk: ' + record.length);
@@ -409,7 +469,7 @@ function saveMaintenanceRecord(ss, params) {
     
     // Formatlama
     const newRow = sheet.getLastRow();
-    sheet.getRange(newRow, 1, 1, 12).setFontFamily('Arial').setFontSize(10);
+    sheet.getRange(newRow, 1, 1, 21).setFontFamily('Arial').setFontSize(10);
     Logger.log('Formatlama yapıldı');
     
     // Kayıt numarasını güncelle
@@ -424,7 +484,7 @@ function saveMaintenanceRecord(ss, params) {
     
     return createResponse(true, "Kayıt başarıyla eklendi", {
       recordNo: recordNo,
-      timestamp: new Date().toLocaleString('tr-TR'),
+      timestamp: new Date().toLocaleDateString('tr-TR'),
       files: uploadedFiles
     });
     
@@ -534,14 +594,34 @@ function uploadFilesToDrive(params, maintenanceType) {
 }
 
 // Kayıt numarası oluştur
-function generateRecordNo(lastRecordNo) {
-  if (!lastRecordNo) return 'BK-00001';
+function generateRecordNo(lastRecordNo, maintenanceType) {
+  if (!lastRecordNo) {
+    // İlk kayıt için bakım türüne göre prefix
+    switch(maintenanceType) {
+      case 'Periyodik': return 'PB-00001';
+      case 'Normal': return 'NB-00001';
+      case 'Arıza': return 'AB-00001';
+      default: return 'BK-00001';
+    }
+  }
   
-  const match = lastRecordNo.match(/BK-(\d+)/);
-  if (!match) return 'BK-00001';
+  // Mevcut kayıt numarasından prefix ve numarayı ayır
+  let prefix = 'BK';
+  let match = lastRecordNo.match(/([A-Z]+)-(\d+)/);
   
-  const nextNumber = parseInt(match[1]) + 1;
-  return 'BK-' + nextNumber.toString().padStart(5, '0');
+  if (match) {
+    prefix = match[1];
+    const nextNumber = parseInt(match[2]) + 1;
+    return prefix + '-' + nextNumber.toString().padStart(5, '0');
+  } else {
+    // Eğer format uymazsa, bakım türüne göre yeni kayıt oluştur
+    switch(maintenanceType) {
+      case 'Periyodik': return 'PB-00001';
+      case 'Normal': return 'NB-00001';
+      case 'Arıza': return 'AB-00001';
+      default: return 'BK-00001';
+    }
+  }
 }
 
 // Son kayıt numarasını güncelle
@@ -551,108 +631,406 @@ function updateLastRecordNo(ss, recordNo) {
   recordNoCell.setValues([['Son Kayıt No', recordNo]]);
 }
 
-// İstatistikleri güncelle
+// Belirli bir aydaki istatistikleri hesapla
+function calculateMonthlyStatistics(ss, year, month) {
+  try {
+    Logger.log(`=== ${year}-${month} AYI İSTATİSTİKLERİ HESAPLANIYOR ===`);
+    
+    // Sayfaları al
+    const periodicSheet = ss.getSheetByName(SHEET_NAMES.PERIODIC_MAINTENANCE);
+    const normalSheet = ss.getSheetByName(SHEET_NAMES.NORMAL_MAINTENANCE);
+    const faultSheet = ss.getSheetByName(SHEET_NAMES.FAULT_MAINTENANCE);
+    
+    Logger.log('Sayfa durumları:');
+    Logger.log('  - Periyodik: ' + (periodicSheet ? 'BULUNDU' : 'YOK'));
+    Logger.log('  - Normal: ' + (normalSheet ? 'BULUNDU' : 'YOK'));
+    Logger.log('  - Arıza: ' + (faultSheet ? 'BULUNDU' : 'YOK'));
+    
+    // İstatistikleri tutacak obje
+    const stats = {
+      total: 0,
+      periodic: 0,
+      normal: 0,
+      fault: 0,
+      gm1: 0,
+      gm2: 0,
+      gm3: 0
+    };
+    
+    // Yardımcı fonksiyon: Motor kodunu normalize et
+    function normalizeMotor(motorValue) {
+      if (!motorValue) return '';
+      return String(motorValue).toLowerCase().replace(/[-\s]/g, '');
+    }
+    
+    // Yardımcı fonksiyon: Sayfadaki kayıtları say
+    function countRecords(sheet, type, typeLabel) {
+      if (!sheet) {
+        Logger.log(typeLabel + ' sayfası bulunamadı, atlanıyor');
+        return;
+      }
+      
+      const lastRow = sheet.getLastRow();
+      Logger.log(`${typeLabel} sayfası son satır: ${lastRow}`);
+      
+      if (lastRow <= 1) {
+        Logger.log(typeLabel + ' sayfasında kayıt yok');
+        return;
+      }
+      
+      // 3 kolon oku: Kayıt No(0), Tarih(1), Motor(2)
+      const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+      Logger.log(`${typeLabel} sayfasından ${data.length} satır okundu`);
+      
+      let count = 0;
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        // Tarih değerini olduğu gibi al (Date objesi veya string olabilir)
+        const recordDate = row[1];
+        const motorRaw = row[2];
+        const motor = normalizeMotor(motorRaw);
+        
+        Logger.log(`${typeLabel} Satır ${i+2}: Tarih="${recordDate}" (tip: ${typeof recordDate}), Motor="${motorRaw}" -> normalize="${motor}"`);
+        
+        // Tarih kontrolü - Date objesi veya string olarak geçir
+        const inMonth = isDateInMonth(recordDate, year, month);
+        Logger.log(`  -> isDateInMonth sonucu = ${inMonth}`);
+        
+        if (inMonth) {
+          count++;
+          stats[type]++;
+          stats.total++;
+          
+          // Motor bazında say (gm1, gm2, gm3 formatında)
+          if (motor.includes('gm1')) {
+            stats.gm1++;
+            Logger.log('  -> GM1 sayıldı');
+          } else if (motor.includes('gm2')) {
+            stats.gm2++;
+            Logger.log('  -> GM2 sayıldı');
+          } else if (motor.includes('gm3')) {
+            stats.gm3++;
+            Logger.log('  -> GM3 sayıldı');
+          } else {
+            Logger.log('  -> Motor eşleşmedi: ' + motor);
+          }
+        }
+      }
+      
+      Logger.log(`${typeLabel} sayfasında ${count} kayıt sayıldı`);
+    }
+    
+    // Tüm sayfalardan kayıtları say
+    countRecords(periodicSheet, 'periodic', 'Periyodik');
+    countRecords(normalSheet, 'normal', 'Normal');
+    countRecords(faultSheet, 'fault', 'Arıza');
+    
+    Logger.log('=== HESAPLANAN İSTATİSTİKLER ===');
+    Logger.log('  - Toplam: ' + stats.total);
+    Logger.log('  - Periyodik: ' + stats.periodic);
+    Logger.log('  - Normal: ' + stats.normal);
+    Logger.log('  - Arıza: ' + stats.fault);
+    Logger.log('  - GM1: ' + stats.gm1);
+    Logger.log('  - GM2: ' + stats.gm2);
+    Logger.log('  - GM3: ' + stats.gm3);
+    
+    return stats;
+  } catch (error) {
+    Logger.log('❌ calculateMonthlyStatistics hatası: ' + error.toString());
+    Logger.log('Hata stack: ' + error.stack);
+    return { total: 0, periodic: 0, normal: 0, fault: 0, gm1: 0, gm2: 0, gm3: 0 };
+  }
+}
+
+// Tarih belirli ay/yıl içinde mi kontrol et (Date objesi veya DD.MM.YYYY formatı)
+function isDateInMonth(dateInput, year, month) {
+  try {
+    if (!dateInput || dateInput === '') return false;
+    
+    let recordYear, recordMonth;
+    
+    // Eğer Date objesi geldiyse
+    if (dateInput instanceof Date) {
+      recordYear = dateInput.getFullYear();
+      recordMonth = dateInput.getMonth() + 1; // JavaScript aylar 0-11
+      Logger.log(`  -> Date objesi algılandı: ${dateInput} -> Yıl: ${recordYear}, Ay: ${recordMonth}`);
+    } else {
+      // String formatı - DD.MM.YYYY formatını parse et
+      const dateStr = String(dateInput).trim();
+      const parts = dateStr.split('.');
+      if (parts.length !== 3) {
+        Logger.log(`  -> Geçersiz tarih formatı: ${dateStr}`);
+        return false;
+      }
+      
+      recordYear = parseInt(parts[2], 10);
+      recordMonth = parseInt(parts[1], 10);
+    }
+    
+    // Ay ve yıl eşleşiyor mu?
+    const result = recordYear === year && recordMonth === month;
+    Logger.log(`  -> Karşılaştırma: ${recordYear} === ${year} && ${recordMonth} === ${month} = ${result}`);
+    return result;
+  } catch (error) {
+    Logger.log('❌ Tarih parse hatası: ' + dateInput + ' - ' + error.toString());
+    return false;
+  }
+}
+
+// İstatistikleri güncelle - Bakım tarihine göre ay bazlı hesaplama
 function updateStatistics(ss, params) {
   try {
-    const statsSheet = ss.getSheetByName(SHEET_NAMES.STATISTICS);
-    const today = new Date().toLocaleDateString('tr-TR');
+    Logger.log('=== İSTATİSTİKLER GÜNCELLENİYOR ===');
+    Logger.log('Params: ' + JSON.stringify(params));
     
-    // Bugünün kaydını bul veya oluştur
+    let statsSheet = ss.getSheetByName(SHEET_NAMES.STATISTICS);
+    
+    // İstatistikler sayfası yoksa oluştur
+    if (!statsSheet) {
+      Logger.log('İstatistikler sayfası bulunamadı, oluşturuluyor...');
+      statsSheet = ss.insertSheet(SHEET_NAMES.STATISTICS);
+      // Başlıkları oluştur
+      statsSheet.getRange(1, 1, 1, 8).setValues([['Ay', 'Toplam', 'Periyodik', 'Normal', 'Arıza', 'GM1', 'GM2', 'GM3']]);
+      statsSheet.getRange(1, 1, 1, 8).setFontWeight('bold');
+      // Sütun genişlikleri
+      statsSheet.setColumnWidth(1, 12);
+      statsSheet.setColumnWidths(2, 7, 10);
+      Logger.log('İstatistikler sayfası oluşturuldu');
+    }
+    
+    // Bakım tarihini params'dan al (DD.MM.YYYY formatında)
+    const maintenanceDateStr = Array.isArray(params.date) ? params.date[0] : (params.date || '');
+    Logger.log('Bakım tarihi (raw): ' + maintenanceDateStr);
+    
+    let year, month, monthLabel, fullMonthLabel;
+    
+    if (maintenanceDateStr && maintenanceDateStr.includes('.')) {
+      // DD.MM.YYYY formatını parse et
+      const dateParts = maintenanceDateStr.split('.');
+      if (dateParts.length === 3) {
+        year = parseInt(dateParts[2], 10);
+        month = parseInt(dateParts[1], 10);
+        monthLabel = month.toString().padStart(2, '0') + '.' + year;
+        fullMonthLabel = getMonthName(month) + ' ' + year;
+        Logger.log(`✅ Bakım tarihi parse edildi: ${maintenanceDateStr} -> Ay: ${month}, Yıl: ${year}, Label: ${monthLabel}`);
+      } else {
+        // Format uymazsa bugünün tarihini kullan
+        const today = new Date();
+        year = today.getFullYear();
+        month = today.getMonth() + 1;
+        monthLabel = month.toString().padStart(2, '0') + '.' + year;
+        fullMonthLabel = getMonthName(month) + ' ' + year;
+        Logger.log('⚠️ Tarih formatı uyumsuz, bugünün tarihi kullanılıyor: ' + monthLabel);
+      }
+    } else {
+      // Tarih yoksa bugünün tarihini kullan
+      const today = new Date();
+      year = today.getFullYear();
+      month = today.getMonth() + 1;
+      monthLabel = month.toString().padStart(2, '0') + '.' + year;
+      fullMonthLabel = getMonthName(month) + ' ' + year;
+      Logger.log('⚠️ Bakım tarihi bulunamadı, bugünün tarihi kullanılıyor: ' + monthLabel);
+    }
+    
+    Logger.log(`📊 İstatistikler hesaplanıyor: ${fullMonthLabel} (${monthLabel})`);
+    
+    // Bakım tarihinin olduğu ayın istatistiklerini hesapla
+    const calculatedStats = calculateMonthlyStatistics(ss, year, month);
+    
+    Logger.log('Hesaplanan istatistikler: ' + JSON.stringify(calculatedStats));
+    
+    // Ay kaydını bul veya oluştur
     const lastRow = statsSheet.getLastRow();
-    let todayRow = -1;
+    let monthRow = -1;
     
-    for (let i = 2; i <= lastRow; i++) {
-      if (statsSheet.getRange(i, 1).getValue() === today) {
-        todayRow = i;
+    Logger.log(`İstatistikler sayfası son satır: ${lastRow}`);
+    
+    // İlk satır başlık kontrolü
+    if (lastRow === 0 || lastRow === 1) {
+      // Başlıkları oluştur
+      statsSheet.getRange(1, 1, 1, 8).setValues([['Ay', 'Toplam', 'Periyodik', 'Normal', 'Arıza', 'GM1', 'GM2', 'GM3']]);
+      statsSheet.getRange(1, 1, 1, 8).setFontWeight('bold');
+      Logger.log('Başlıklar oluşturuldu');
+    }
+    
+    // Mevcut ayı ara
+    for (let i = 2; i <= statsSheet.getLastRow(); i++) {
+      const rowValue = statsSheet.getRange(i, 1).getValue();
+      // Date objesini stringe çevir (Google Sheets bazen tarih olarak algılar)
+      const rowValueStr = rowValue instanceof Date ? 
+        (rowValue.getMonth() + 1).toString().padStart(2, '0') + '.' + rowValue.getFullYear() :
+        String(rowValue).trim();
+      Logger.log(`Satır ${i} kontrol ediliyor: "${rowValueStr}" === "${monthLabel}"?`);
+      if (rowValueStr === monthLabel || rowValueStr === fullMonthLabel) {
+        monthRow = i;
+        Logger.log(`✅ Mevcut ay bulundu: Satır ${monthRow}`);
         break;
       }
     }
     
-    if (todayRow === -1) {
-      // Yeni gün kaydı oluştur
-      statsSheet.appendRow([today, 0, 0, 0, 0, 0, 0, 0]);
-      todayRow = statsSheet.getLastRow();
+    if (monthRow === -1) {
+      // Yeni ay kaydı oluştur
+      Logger.log(`Yeni ay kaydı oluşturuluyor: ${monthLabel}`);
+      statsSheet.appendRow([monthLabel, 0, 0, 0, 0, 0, 0, 0]);
+      monthRow = statsSheet.getLastRow();
+      Logger.log(`✅ Yeni ay kaydı oluşturuldu: ${monthLabel} (satır: ${monthRow})`);
     }
     
-    // İstatistikleri güncelle
-    const currentValues = statsSheet.getRange(todayRow, 2, 1, 7).getValues()[0];
+    // Hesaplanan istatistikleri yaz
+    const values = [
+      calculatedStats.total,
+      calculatedStats.periodic,
+      calculatedStats.normal,
+      calculatedStats.fault,
+      calculatedStats.gm1,
+      calculatedStats.gm2,
+      calculatedStats.gm3
+    ];
     
-    currentValues[0]++; // Toplam bakım
+    Logger.log(`İstatistikler yazılıyor: Satır ${monthRow}, Kolon 2-8, Değerler: ${JSON.stringify(values)}`);
+    statsSheet.getRange(monthRow, 2, 1, 7).setValues([values]);
     
-    // Bakım türüne göre artır - array kontrolü ekle
-    const maintenanceType = Array.isArray(params.type) ? params.type[0] : (params.type || '');
-    Logger.log('updateStatistics - type: ' + maintenanceType);
+    Logger.log(`✅ ${fullMonthLabel} istatistikleri güncellendi: Toplam=${calculatedStats.total}, Periyodik=${calculatedStats.periodic}, Normal=${calculatedStats.normal}, Arıza=${calculatedStats.fault}, GM1=${calculatedStats.gm1}, GM2=${calculatedStats.gm2}, GM3=${calculatedStats.gm3}`);
+    Logger.log('=== İSTATİSTİKLER GÜNCELLENDİ ===');
     
-    if (maintenanceType.toLowerCase().includes('periyodik')) {
-      currentValues[1]++;
-    } else if (maintenanceType.toLowerCase().includes('normal')) {
-      currentValues[2]++;
-    } else if (maintenanceType.toLowerCase().includes('ariza')) {
-      currentValues[3]++;
-    }
-    
-    // Motor bazında artır - array kontrolü ekle
-    const motor = Array.isArray(params.motor) ? params.motor[0] : (params.motor || '');
-    Logger.log('updateStatistics - motor: ' + motor);
-    
-    if (motor.toLowerCase() === 'gm1' || motor.toLowerCase().includes('gm-1')) {
-      currentValues[4]++;
-    } else if (motor.toLowerCase() === 'gm2' || motor.toLowerCase().includes('gm-2')) {
-      currentValues[5]++;
-    } else if (motor.toLowerCase() === 'gm3' || motor.toLowerCase().includes('gm-3')) {
-      currentValues[6]++;
-    }
-    
-    // Değerleri geri yaz
-    statsSheet.getRange(todayRow, 2, 1, 7).setValues([currentValues]);
-    Logger.log('İstatistikler güncellendi');
   } catch (error) {
     Logger.log('❌ updateStatistics hatası: ' + error.toString());
+    Logger.log('❌ Hata stack: ' + error.stack);
   }
 }
 
-// İstatistikleri al
-function getMaintenanceStats(ss) {
-  try {
-    const statsSheet = ss.getSheetByName(SHEET_NAMES.STATISTICS);
-    const maintenanceSheet = ss.getSheetByName(SHEET_NAMES.MAINTENANCE);
+// Ay ismini getir (Türkçe)
+function getMonthName(monthNumber) {
+  const months = [
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+  ];
+  return months[monthNumber - 1] || 'Bilinmiyor';
+}
+
+// Türkçe tarih formatını parse et (DD.MM.YYYY -> Date)
+function parseTurkishDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  
+  // DD.MM.YYYY formatını parse et
+  const parts = dateStr.split('.');
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // JavaScript aylar 0-11
+    const year = parseInt(parts[2], 10);
     
-    // Eğer sheet yoksa boş yanıt dön
-    if (!statsSheet || !maintenanceSheet) {
-      Logger.log('Sheet bulunamadı, boş istatistik dönülüyor');
-      return createResponse(true, "Henüz veri yok", {
-        stats: { total: 0, monthly: 0, faults: 0, technicians: 0 },
-        chartData: { labels: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz'], data: [0, 0, 0, 0, 0, 0] }
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      return new Date(year, month, day);
+    }
+  }
+  
+  // Alternatif: Standart Date parse dene
+  const standardDate = new Date(dateStr);
+  if (!isNaN(standardDate.getTime())) {
+    return standardDate;
+  }
+  
+  return null;
+}
+
+// İstatistikleri al - Ayrı sayfalardan oku
+function getMaintenanceStats(ss, params = {}) {
+  try {
+    Logger.log('🔍 getMaintenanceStats başlatıldı - Ayrı sayfalardan okuma');
+    Logger.log('📋 ss parametresi: ' + (ss ? 'VAR' : 'YOK'));
+    Logger.log('📋 SHEET_NAMES.PERIODIC_MAINTENANCE: ' + SHEET_NAMES.PERIODIC_MAINTENANCE);
+    Logger.log('📋 SHEET_NAMES.NORMAL_MAINTENANCE: ' + SHEET_NAMES.NORMAL_MAINTENANCE);
+    Logger.log('📋 SHEET_NAMES.FAULT_MAINTENANCE: ' + SHEET_NAMES.FAULT_MAINTENANCE);
+    
+    // Spreadsheet tüm sayfalarını listele
+    if (ss) {
+      const allSheets = ss.getSheets();
+      Logger.log('📊 Tüm sayfalar (' + allSheets.length + '):');
+      allSheets.forEach(sheet => {
+        Logger.log('  - ' + sheet.getName());
       });
     }
     
-    // Genel istatistikler
-    const totalMaintenance = Math.max(0, maintenanceSheet.getLastRow() - 1); // Başlık satırını çıkar
+    // Ayrı bakım sayfalarını al
+    const periodicSheet = ss.getSheetByName(SHEET_NAMES.PERIODIC_MAINTENANCE);
+    const normalSheet = ss.getSheetByName(SHEET_NAMES.NORMAL_MAINTENANCE);
+    const faultSheet = ss.getSheetByName(SHEET_NAMES.FAULT_MAINTENANCE);
+    
+    Logger.log('📊 Sayfa durumları:');
+    Logger.log('  - Periyodik: ' + (periodicSheet ? 'BULUNDU' : 'BULUNAMADI'));
+    Logger.log('  - Normal: ' + (normalSheet ? 'BULUNDU' : 'BULUNAMADI'));
+    Logger.log('  - Arıza: ' + (faultSheet ? 'BULUNDU' : 'BULUNAMADI'));
+    
+    // Eğer hiç sheet yoksa boş yanıt dön
+    if (!periodicSheet && !normalSheet && !faultSheet) {
+      Logger.log('❌ Hiçbir bakım sayfası bulunamadı');
+      return createResponse(true, "Henüz veri yok", {
+        stats: { total: 0, monthly: 0, faults: 0, technicians: 0 },
+        chartData: { 
+          labels: ['Oca.2026', 'Şub.2026', 'Mar.2026', 'Nis.2026', 'May.2026', 'Haz.2026'], 
+          periodic: [0, 0, 0, 0, 0, 0],
+          normal: [0, 0, 0, 0, 0, 0],
+          fault: [0, 0, 0, 0, 0, 0]
+        }
+      });
+    }
     
     // Bu ayki bakımlar
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
+    
+    let totalMaintenance = 0;
     let monthlyCount = 0;
     let faultCount = 0;
-    
     const technicians = new Set();
     
-    for (let i = 2; i <= maintenanceSheet.getLastRow(); i++) {
-      const row = maintenanceSheet.getRange(i, 1, 1, 12).getValues()[0];
-      const recordDate = new Date(row[1]); // Tarih kolonu
+    // Yardımcı fonksiyon: Sayfadaki kayıtları say
+    function countRecords(sheet, typeFilter) {
+      if (!sheet) return;
       
-      if (recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear) {
-        monthlyCount++;
-      }
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return;
       
-      if (row[4] && row[4].toLowerCase().includes('ariza')) {
-        faultCount++;
-      }
+      const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
       
-      if (row[6]) { // Teknisyen kolonu
-        technicians.add(row[6]);
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        
+        // Tarih kontrolü
+        if (row[1] && row[1] !== "") {
+          try {
+            const recordDate = parseTurkishDate(row[1]);
+            if (recordDate && !isNaN(recordDate.getTime())) {
+              totalMaintenance++;
+              
+              // Bu ayki bakımlar
+              if (recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear) {
+                monthlyCount++;
+              }
+            }
+          } catch (e) {
+            Logger.log('❌ Tarih hatası: ' + row[1]);
+          }
+        }
+        
+        // Arıza sayısı
+        if (typeFilter === 'fault' && row[5]) {
+          faultCount++;
+        }
+        
+        // Teknisyen ekle
+        if (row[6]) {
+          technicians.add(row[6]);
+        }
       }
     }
+    
+    // Tüm sayfalardan kayıtları say
+    countRecords(periodicSheet, 'periodic');
+    countRecords(normalSheet, 'normal');
+    countRecords(faultSheet, 'fault');
+    
+    Logger.log('📊 İstatistikler: Toplam=' + totalMaintenance + ', Aylık=' + monthlyCount + ', Arıza=' + faultCount + ', Teknisyen=' + technicians.size);
     
     const stats = {
       total: totalMaintenance,
@@ -661,8 +1039,13 @@ function getMaintenanceStats(ss) {
       technicians: technicians.size
     };
     
-    // Grafik verisi (son 6 ay)
-    const chartData = generateChartData(statsSheet);
+    // Grafik verisi
+    let period = 6;
+    if (params && params.period) {
+      period = parseInt(params.period);
+    }
+    
+    const chartData = generateChartDataFromSheets(periodicSheet, normalSheet, faultSheet, period);
     
     return createResponse(true, "İstatistikler alındı", {
       stats: stats,
@@ -671,75 +1054,135 @@ function getMaintenanceStats(ss) {
     
   } catch (error) {
     Logger.log('❌ getMaintenanceStats hatası: ' + error.toString());
-    // Hata durumunda boş ama geçerli bir yanıt dön
     return createResponse(true, "Henüz veri yok", {
       stats: { total: 0, monthly: 0, faults: 0, technicians: 0 },
-      chartData: { labels: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz'], data: [0, 0, 0, 0, 0, 0] }
+      chartData: { 
+        labels: ['Oca.2026', 'Şub.2026', 'Mar.2026', 'Nis.2026', 'May.2026', 'Haz.2026'], 
+        periodic: [0, 0, 0, 0, 0, 0],
+        normal: [0, 0, 0, 0, 0, 0],
+        fault: [0, 0, 0, 0, 0, 0]
+      }
     });
   }
 }
 
-// Grafik verisi oluştur
-function generateChartData(statsSheet) {
-  const labels = [];
-  const data = [];
-  const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz'];
+// Grafik verisi oluştur - Ayrı sayfalardan oku
+function generateChartDataFromSheets(periodicSheet, normalSheet, faultSheet, period = 6) {
+  Logger.log('📊 generateChartDataFromSheets başlatıldı - Periyot: ' + period);
   
-  // Son 6 ayın verisini al
-  for (let i = 5; i >= 0; i--) {
+  const labels = [];
+  const periodicData = [];
+  const normalData = [];
+  const faultData = [];
+  const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  
+  // Belirtilen periyot kadar ayın verisini al
+  for (let i = period - 1; i >= 0; i--) {
     const date = new Date();
     date.setMonth(date.getMonth() - i);
     const monthStr = months[date.getMonth()];
-    const dateStr = date.toLocaleDateString('tr-TR');
+    const yearStr = date.getFullYear().toString();
     
-    labels.push(monthStr);
+    // Türkçe format: "Oca.2026"
+    labels.push(monthStr + '.' + yearStr);
     
-    // Bu ayın verisini bul
-    let monthTotal = 0;
-    const lastRow = statsSheet.getLastRow();
+    let periodicCount = 0;
+    let normalCount = 0;
+    let faultCount = 0;
     
-    for (let j = 2; j <= lastRow; j++) {
-      if (statsSheet.getRange(j, 1).getValue() === dateStr) {
-        monthTotal = statsSheet.getRange(j, 2).getValue();
-        break;
+    // Periyodik sayfasından say
+    if (periodicSheet) {
+      const lastRow = periodicSheet.getLastRow();
+      const data = periodicSheet.getRange(2, 1, lastRow - 1, 2).getValues();
+      for (let j = 0; j < data.length; j++) {
+        if (data[j][1]) {
+          try {
+            const recordDate = parseTurkishDate(data[j][1]);
+            if (recordDate && !isNaN(recordDate.getTime()) &&
+                recordDate.getMonth() === date.getMonth() && 
+                recordDate.getFullYear() === date.getFullYear()) {
+              periodicCount++;
+            }
+          } catch (e) {}
+        }
       }
     }
     
-    data.push(monthTotal || 0);
+    // Normal sayfasından say
+    if (normalSheet) {
+      const lastRow = normalSheet.getLastRow();
+      const data = normalSheet.getRange(2, 1, lastRow - 1, 2).getValues();
+      for (let j = 0; j < data.length; j++) {
+        if (data[j][1]) {
+          try {
+            const recordDate = parseTurkishDate(data[j][1]);
+            if (recordDate && !isNaN(recordDate.getTime()) &&
+                recordDate.getMonth() === date.getMonth() && 
+                recordDate.getFullYear() === date.getFullYear()) {
+              normalCount++;
+            }
+          } catch (e) {}
+        }
+      }
+    }
+    
+    // Arıza sayfasından say
+    if (faultSheet) {
+      const lastRow = faultSheet.getLastRow();
+      const data = faultSheet.getRange(2, 1, lastRow - 1, 2).getValues();
+      for (let j = 0; j < data.length; j++) {
+        if (data[j][1]) {
+          try {
+            const recordDate = parseTurkishDate(data[j][1]);
+            if (recordDate && !isNaN(recordDate.getTime()) &&
+                recordDate.getMonth() === date.getMonth() && 
+                recordDate.getFullYear() === date.getFullYear()) {
+              faultCount++;
+            }
+          } catch (e) {}
+        }
+      }
+    }
+    
+    // Verileri ekle
+    periodicData.push(periodicCount || 0);
+    normalData.push(normalCount || 0);
+    faultData.push(faultCount || 0);
   }
+  
+  Logger.log('📊 Grafik verisi oluşturuldu');
+  Logger.log('📈 Periyodik: ' + periodicData.join(','));
+  Logger.log('📈 Normal: ' + normalData.join(','));
+  Logger.log('📈 Arıza: ' + faultData.join(','));
   
   return {
     labels: labels,
-    data: data
+    periodic: periodicData,
+    normal: normalData,
+    fault: faultData
   };
 }
 
-// Rapor al
+// Rapor al - Ayrı sayfalardan oku
 function getMaintenanceReport(ss, params) {
   try {
-    const sheet = ss.getSheetByName(SHEET_NAMES.MAINTENANCE);
-    const lastRow = sheet.getLastRow();
+    // Ayrı bakım sayfalarını al
+    const periodicSheet = ss.getSheetByName(SHEET_NAMES.PERIODIC_MAINTENANCE);
+    const normalSheet = ss.getSheetByName(SHEET_NAMES.NORMAL_MAINTENANCE);
+    const faultSheet = ss.getSheetByName(SHEET_NAMES.FAULT_MAINTENANCE);
     
-    if (lastRow <= 1) {
-      return createResponse(true, "Kayıt bulunamadı", {
-        summary: { total: 0, periodic: 0, normal: 0, fault: 0 },
-        records: []
-      });
-    }
-    
-    // Filtreleme - array parametreleri düzelt
+    // Filtreleme parametreleri
     let motor = (Array.isArray(params.motor) ? params.motor[0] : params.motor) || '';
     let type = (Array.isArray(params.type) ? params.type[0] : params.type) || '';
     const range = parseInt(Array.isArray(params.range) ? params.range[0] : params.range) || 30;
     
-    // Tür filtresi mapping - frontend'den gelen değerleri sheet değerlerine çevir
+    // Tür filtresi mapping
     const typeMapping = {
       'periodic': 'Periyodik',
       'normal': 'Normal',
       'fault': 'Arıza'
     };
     
-    // Eğer mapping varsa kullan, yoksa orijinal değeri kullan
     if (type && typeMapping[type.toLowerCase()]) {
       type = typeMapping[type.toLowerCase()];
     }
@@ -754,40 +1197,59 @@ function getMaintenanceReport(ss, params) {
     const records = [];
     let summary = { total: 0, periodic: 0, normal: 0, fault: 0 };
     
-    // Son kayıttan başlayarak geriye doğru oku (12 sütun)
-    for (let i = lastRow; i >= 2; i--) {
-      const row = sheet.getRange(i, 1, 1, 12).getValues()[0];
-      const recordDate = new Date(row[1]);
+    // Yardımcı fonksiyon: Sayfadan kayıtları oku
+    function readRecords(sheet, typeLabel) {
+      if (!sheet) return;
       
-      // Tarih aralığı kontrolü
-      if (recordDate >= startDate && recordDate <= endDate) {
-        // Motor filtresi
-        if (motor && !row[3].toLowerCase().includes(motor.toLowerCase())) {
-          continue;
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return;
+      
+      // Son kayıttan başlayarak geriye doğru oku
+      for (let i = lastRow; i >= 2; i--) {
+        const row = sheet.getRange(i, 1, 1, 12).getValues()[0];
+        
+        if (!row[1]) continue; // Tarih yoksa atla
+        
+        try {
+          const recordDate = parseTurkishDate(row[1]);
+          
+          // Tarih aralığı kontrolü
+          if (recordDate && recordDate >= startDate && recordDate <= endDate) {
+            // Motor filtresi
+            if (motor && row[2] && !String(row[2]).toLowerCase().includes(motor.toLowerCase())) {
+              continue;
+            }
+            
+            // Tür filtresi
+            if (type && !typeLabel.toLowerCase().includes(type.toLowerCase())) {
+              continue;
+            }
+            
+            // Özeti güncelle
+            summary.total++;
+            if (typeLabel === 'Periyodik') summary.periodic++;
+            else if (typeLabel === 'Normal') summary.normal++;
+            else if (typeLabel === 'Arıza') summary.fault++;
+            
+            // Kayıt ekle
+            records.push({
+              date: row[1],
+              motor: row[2],
+              type: typeLabel,
+              technician: row[5],
+              operation: row[4] || row[7]
+            });
+          }
+        } catch (e) {
+          Logger.log('Tarih hatası: ' + row[1]);
         }
-        
-        // Tür filtresi
-        if (type && !row[4].toLowerCase().includes(type.toLowerCase())) {
-          continue;
-        }
-        
-        // Özeti güncelle
-        summary.total++;
-        const maintenanceType = row[4] ? row[4].toLowerCase() : '';
-        if (maintenanceType.includes('periyodik')) summary.periodic++;
-        else if (maintenanceType.includes('normal')) summary.normal++;
-        else if (maintenanceType.includes('ariza')) summary.fault++;
-        
-        // Kayıt ekle
-        records.push({
-          date: row[1],
-          motor: row[3],
-          type: row[4],
-          technician: row[6],
-          operation: row[5] || row[8] // Bakım tipi veya notlar
-        });
       }
     }
+    
+    // Tüm sayfalardan kayıtları oku
+    readRecords(periodicSheet, 'Periyodik');
+    readRecords(normalSheet, 'Normal');
+    readRecords(faultSheet, 'Arıza');
     
     return createResponse(true, "Rapor oluşturuldu", {
       summary: summary,
@@ -799,18 +1261,13 @@ function getMaintenanceReport(ss, params) {
   }
 }
 
-// Aktif kayıtları getir (Durum = Aktif)
+// Aktif kayıtları getir - Ayrı sayfalardan oku
 function getActiveRecords(ss, params) {
   try {
-    const sheet = ss.getSheetByName(SHEET_NAMES.MAINTENANCE);
-    if (!sheet) {
-      return createResponse(false, 'Bakımlar sayfası bulunamadı');
-    }
-    
-    const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) {
-      return createResponse(true, 'Kayıt bulunamadı', { records: [] });
-    }
+    // Ayrı bakım sayfalarını al
+    const periodicSheet = ss.getSheetByName(SHEET_NAMES.PERIODIC_MAINTENANCE);
+    const normalSheet = ss.getSheetByName(SHEET_NAMES.NORMAL_MAINTENANCE);
+    const faultSheet = ss.getSheetByName(SHEET_NAMES.FAULT_MAINTENANCE);
     
     // Filtreleme parametreleri
     const motor = (Array.isArray(params.motor) ? params.motor[0] : params.motor) || '';
@@ -818,41 +1275,52 @@ function getActiveRecords(ss, params) {
     
     Logger.log('Aktif kayıtlar filtresi - Motor: ' + motor + ', Tip: ' + type);
     
-    // Verileri oku
-    const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
     const records = [];
     
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const recordStatus = row[10]; // Durum sütunu (11. sütun, index 10)
+    // Yardımcı fonksiyon: Sayfadan aktif kayıtları oku
+    function readActiveRecords(sheet, typeLabel) {
+      if (!sheet) return;
       
-      // Sadece Aktif kayıtları göster
-      if (recordStatus !== 'Aktif') continue;
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return;
       
-      const recordMotor = row[3]; // Motor
-      const recordType = row[4]; // Tür
+      const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
       
-      // Motor filtresi
-      if (motor && recordMotor !== motor) continue;
-      
-      // Tür filtresi
-      if (type && recordType !== type) continue;
-      
-      records.push({
-        recordNo: row[0],
-        date: row[1],
-        time: row[2],
-        motor: recordMotor,
-        type: recordType,
-        subtype: row[5],
-        technician: row[6],
-        company: row[7],
-        notes: row[8],
-        files: row[9],
-        status: recordStatus,
-        timestamp: row[11]
-      });
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const recordStatus = row[9]; // Durum sütunu (10. sütun, index 9)
+        
+        // Sadece Aktif kayıtları göster
+        if (recordStatus !== 'Aktif') continue;
+        
+        const recordMotor = row[2]; // Motor (3. sütun, index 2)
+        
+        // Motor filtresi
+        if (motor && recordMotor !== motor) continue;
+        
+        // Tür filtresi (sayfa türüne göre)
+        if (type && !typeLabel.toLowerCase().includes(type.toLowerCase())) continue;
+        
+        records.push({
+          recordNo: row[0],
+          date: row[1],
+          motor: recordMotor,
+          type: typeLabel,
+          subtype: row[4],
+          technician: row[5],
+          company: row[6],
+          notes: row[7],
+          files: row[8],
+          status: recordStatus,
+          timestamp: row[10]
+        });
+      }
     }
+    
+    // Tüm sayfalardan aktif kayıtları oku
+    readActiveRecords(periodicSheet, 'Periyodik');
+    readActiveRecords(normalSheet, 'Normal');
+    readActiveRecords(faultSheet, 'Arıza');
     
     Logger.log('Bulunan aktif kayıt sayısı: ' + records.length);
     
@@ -864,7 +1332,7 @@ function getActiveRecords(ss, params) {
   }
 }
 
-// Kayıt kapat (durumu Pasif yap)
+// Kayıt kapat - Kayıt prefixine göre doğru sayfayı bul
 function closeRecord(ss, params) {
   try {
     const recordNo = (Array.isArray(params.recordNo) ? params.recordNo[0] : params.recordNo) || '';
@@ -875,24 +1343,63 @@ function closeRecord(ss, params) {
     
     Logger.log('Kayıt kapatılıyor: ' + recordNo);
     
-    const sheet = ss.getSheetByName(SHEET_NAMES.MAINTENANCE);
-    if (!sheet) {
-      return createResponse(false, 'Bakımlar sayfası bulunamadı');
+    // Kayıt prefixine göre doğru sayfayı belirle
+    let targetSheet;
+    if (recordNo.startsWith('PB-')) {
+      targetSheet = ss.getSheetByName(SHEET_NAMES.PERIODIC_MAINTENANCE);
+    } else if (recordNo.startsWith('NB-')) {
+      targetSheet = ss.getSheetByName(SHEET_NAMES.NORMAL_MAINTENANCE);
+    } else if (recordNo.startsWith('AB-')) {
+      targetSheet = ss.getSheetByName(SHEET_NAMES.FAULT_MAINTENANCE);
+    } else {
+      // Eski BK- formatı veya bilinmeyen prefix - tüm sayfalarda ara
+      targetSheet = ss.getSheetByName(SHEET_NAMES.PERIODIC_MAINTENANCE);
     }
     
-    const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) {
-      return createResponse(false, 'Kayıt bulunamadı');
+    if (!targetSheet) {
+      return createResponse(false, 'Bakım sayfası bulunamadı');
     }
     
-    // Kayıt numarasını bul
-    const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
     let foundRow = -1;
+    let sheetName = '';
     
-    for (let i = 0; i < data.length; i++) {
-      if (data[i][0] === recordNo) {
-        foundRow = i + 2; // +2 çünkü başlık satırı var ve 1-indexed
-        break;
+    // Önce belirlenen sayfada ara
+    const lastRow = targetSheet.getLastRow();
+    if (lastRow > 1) {
+      const data = targetSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (let i = 0; i < data.length; i++) {
+        if (data[i][0] === recordNo) {
+          foundRow = i + 2;
+          sheetName = targetSheet.getName();
+          break;
+        }
+      }
+    }
+    
+    // Bulunamazsa diğer sayfalarda da ara
+    if (foundRow === -1) {
+      const sheets = [
+        ss.getSheetByName(SHEET_NAMES.PERIODIC_MAINTENANCE),
+        ss.getSheetByName(SHEET_NAMES.NORMAL_MAINTENANCE),
+        ss.getSheetByName(SHEET_NAMES.FAULT_MAINTENANCE)
+      ];
+      
+      for (const sheet of sheets) {
+        if (!sheet || sheet.getName() === targetSheet.getName()) continue;
+        
+        const lr = sheet.getLastRow();
+        if (lr <= 1) continue;
+        
+        const data = sheet.getRange(2, 1, lr - 1, 1).getValues();
+        for (let i = 0; i < data.length; i++) {
+          if (data[i][0] === recordNo) {
+            foundRow = i + 2;
+            sheetName = sheet.getName();
+            targetSheet = sheet;
+            break;
+          }
+        }
+        if (foundRow !== -1) break;
       }
     }
     
@@ -900,11 +1407,11 @@ function closeRecord(ss, params) {
       return createResponse(false, 'Kayıt bulunamadı: ' + recordNo);
     }
     
-    // Durum sütununu güncelle (11. sütun, index 10)
-    sheet.getRange(foundRow, 11).setValue('Pasif');
-    sheet.getRange(foundRow, 12).setValue(new Date().toLocaleString('tr-TR'));
+    // Durum sütununu güncelle (10. sütun, index 9)
+    targetSheet.getRange(foundRow, 10).setValue('Pasif');
+    targetSheet.getRange(foundRow, 11).setValue(new Date().toLocaleString('tr-TR'));
     
-    Logger.log('Kayıt kapatıldı: ' + recordNo + ' (Satır: ' + foundRow + ')');
+    Logger.log('Kayıt kapatıldı: ' + recordNo + ' (Sayfa: ' + sheetName + ', Satır: ' + foundRow + ')');
     
     return createResponse(true, 'Kayıt başarıyla kapatıldı', { 
       recordNo: recordNo,
@@ -934,7 +1441,7 @@ function getMotorHours(ss) {
       
       // Yağ numune hesaplamaları
       const lastOilSample = parseInt(row[2]) || 0;
-      const nextOilSample = parseInt(row[4]) || 500;
+      const nextOilSample = parseInt(row[5]) || 500;
       const remainingOilHours = nextOilSample - (currentHours - lastOilSample);
       const needsOilSample = remainingOilHours <= 50; // 50 saat kala uyarı
       
@@ -1128,6 +1635,12 @@ function updateAlternatorGrease(ss, params) {
 // Sistemi başlat
 function initializeSystem(ss) {
   try {
+    // Eğer ss parametresi yoksa, spreadsheet'i al
+    if (!ss) {
+      Logger.log('initializeSystem: ss parametresi yok, getOrCreateSpreadsheet() çağrılıyor...');
+      ss = getOrCreateSpreadsheet();
+    }
+    
     createSheets(ss);
     
     const spreadsheetId = ss.getId();
@@ -1167,7 +1680,7 @@ function testConnection(ss) {
       spreadsheetUrl: spreadsheetUrl,
       sheetNames: sheetNames,
       totalSheets: sheets.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toLocaleDateString('tr-TR')
     });
     
   } catch (error) {
@@ -1180,7 +1693,7 @@ function createResponse(success, message, data = null) {
   const response = {
     success: success,
     message: message,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toLocaleDateString('tr-TR')
   };
   
   if (data) {

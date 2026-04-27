@@ -167,9 +167,44 @@
 
                     <!-- Grafik Paneli -->
                     <div class="chart-panel">
-                        <h2>📈 Bakım Grafiği</h2>
+                        <div class="chart-header">
+                            <h2>📈 Bakım Grafiği</h2>
+                            <div class="chart-controls">
+                                <button class="chart-btn active" data-period="6">6 Ay</button>
+                                <button class="chart-btn" data-period="12">1 Yıl</button>
+                                <button class="chart-btn" data-period="3">3 Ay</button>
+                            </div>
+                        </div>
                         <div class="chart-container">
-                            <canvas id="maintenance-chart" width="400" height="200"></canvas>
+                            <canvas id="maintenance-chart" width="800" height="300"></canvas>
+                            <div class="chart-loading" id="chart-loading">
+                                <div class="loading-spinner"></div>
+                                <span>Grafik yükleniyor...</span>
+                            </div>
+                            <div class="chart-empty" id="chart-empty" style="display: none;">
+                                <div class="empty-icon">📊</div>
+                                <h3>Veri Bulunamadı</h3>
+                                <p>Gösterilecek bakım verisi bulunmuyor</p>
+                            </div>
+                        </div>
+                        <div class="chart-footer">
+                            <div class="chart-legend">
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: #4285f4;"></div>
+                                    <span>Periyodik</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: #34a853;"></div>
+                                    <span>Normal</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: #ea4335;"></div>
+                                    <span>Arıza</span>
+                                </div>
+                            </div>
+                            <div class="chart-info">
+                                <span id="chart-total">Toplam: 0 kayıt</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -211,7 +246,7 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="periodic-type">Bakım Tipi</label>
-                                    <select id="periodic-type" name="periodic-type" required>
+                                    <select id="periodic-type" name="type" required>
                                         <option value="">Bakım tipi seçin...</option>
                                         <option value="2000">2000 Saat</option>
                                         <option value="6000">6000 Saat</option>
@@ -223,14 +258,14 @@
                                 <div class="form-group">
                                     <label for="periodic-technician">Teknisyen</label>
                                     <div class="technician-input-group">
-                                        <select id="periodic-technician" name="periodic-technician" required>
+                                        <select id="periodic-technician" name="technician" required>
                                             <option value="">Teknisyen seçin...</option>
                                             <option value="ibrahim-ogun">İbrahim Ogün Şahin</option>
                                             <option value="yakup-can">Yakup Can Cin</option>
                                             <option value="oguzhan-yaylali">Oğuzhan Yaylalı</option>
                                             <option value="altan-hunoglu">Altan Hunoğlu</option>
                                         </select>
-                                        <select id="periodic-technician-company" name="periodic-technician-company">
+                                        <select id="periodic-technician-company" name="technician-company">
                                             <option value="">Firma seçin...</option>
                                             <option value="internal">İç Destek</option>
                                             <option value="external">Dış Destek</option>
@@ -296,7 +331,7 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="normal-priority">Bakım Tipi</label>
-                                    <select id="normal-priority" name="normal-priority" required>
+                                    <select id="normal-priority" name="type" required>
                                         <option value="">Bakım tipi seçin...</option>
                                         <option value="alternator-grease">Alternatör Gresleme</option>
                                         <option value="oil-sample">Yağ Numune Alma</option>
@@ -309,14 +344,14 @@
                                 <div class="form-group">
                                     <label for="normal-technician">Teknisyen</label>
                                     <div class="technician-input-group">
-                                        <select id="normal-technician" name="normal-technician" required>
+                                        <select id="normal-technician" name="technician" required>
                                             <option value="">Teknisyen seçin...</option>
                                             <option value="ibrahim-ogun">İbrahim Ogün Şahin</option>
                                             <option value="yakup-can">Yakup Can Cin</option>
                                             <option value="oguzhan-yaylali">Oğuzhan Yaylalı</option>
                                             <option value="altan-hunoglu">Altan Hunoğlu</option>
                                         </select>
-                                        <select id="normal-technician-company" name="normal-technician-company">
+                                        <select id="normal-technician-company" name="technician-company">
                                             <option value="">Firma seçin...</option>
                                             <option value="internal">İç Destek</option>
                                             <option value="external">Dış Destek</option>
@@ -447,43 +482,41 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="fault-technician">Teknisyen</label>
-                                    <div class="technician-input-group">
-                                        <select id="fault-technician" name="fault-technician" required>
-                                            <option value="">Teknisyen seçin...</option>
-                                            <option value="ibrahim-ogun">İbrahim Ogün Şahin</option>
-                                            <option value="yakup-can">Yakup Can Cin</option>
-                                            <option value="oguzhan-yaylali">Oğuzhan Yaylalı</option>
-                                            <option value="altan-hunoglu">Altan Hunoğlu</option>
-                                        </select>
-                                        <select id="fault-technician-company" name="fault-technician-company">
-                                            <option value="">Firma seçin...</option>
-                                            <option value="internal">İç Destek</option>
-                                            <option value="external">Dış Destek</option>
-                                        </select>
-                                        <select id="fault-external-company" name="fault-external-company" style="display: none;">
-                                            <option value="">Firma seçin...</option>
-                                            <option value="topkapi">Topkapı</option>
-                                            <option value="other">Diğer</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="fault-reason">Arıza Nedeni</label>
-                                    <select id="fault-reason" name="fault-reason" required>
-                                        <option value="">Arıza nedeni seçin...</option>
-                                        <option value="electrical">Elektriksel</option>
-                                        <option value="mechanical">Mekanik</option>
-                                        <option value="electronic">Elektronik</option>
-                                        <option value="hydraulic">Hidrolik</option>
-                                        <option value="pneumatic">Pnömatik</option>
-                                        <option value="software">Yazılım</option>
-                                        <option value="maintenance">Bakım kaynaklı</option>
+                            <div class="form-group full-width">
+                                <label for="fault-technician">Teknisyen</label>
+                                <div class="technician-input-group">
+                                    <select id="fault-technician" name="technician" required>
+                                        <option value="">Teknisyen seçin...</option>
+                                        <option value="ibrahim-ogun">İbrahim Ogün Şahin</option>
+                                        <option value="yakup-can">Yakup Can Cin</option>
+                                        <option value="oguzhan-yaylali">Oğuzhan Yaylalı</option>
+                                        <option value="altan-hunoglu">Altan Hunoğlu</option>
+                                    </select>
+                                    <select id="fault-technician-company" name="technician-company">
+                                        <option value="">Firma seçin...</option>
+                                        <option value="internal">İç Destek</option>
+                                        <option value="external">Dış Destek</option>
+                                    </select>
+                                    <select id="fault-external-company" name="fault-external-company" style="display: none;">
+                                        <option value="">Firma seçin...</option>
+                                        <option value="topkapi">Topkapı</option>
                                         <option value="other">Diğer</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="fault-reason">Arıza Nedeni</label>
+                                <select id="fault-reason" name="type" required>
+                                    <option value="">Arıza nedeni seçin...</option>
+                                    <option value="electrical">Elektriksel</option>
+                                    <option value="mechanical">Mekanik</option>
+                                    <option value="electronic">Elektronik</option>
+                                    <option value="hydraulic">Hidrolik</option>
+                                    <option value="pneumatic">Pnömatik</option>
+                                    <option value="software">Yazılım</option>
+                                    <option value="maintenance">Bakım kaynaklı</option>
+                                    <option value="other">Diğer</option>
+                                </select>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
@@ -614,142 +647,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Yağ Numune Kontrol Paneli -->
-                                <div class="oil-sample-panel" style="margin-top: 20px; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-left: 4px solid #ea4335;">
-                                    <h3 style="margin-top: 0; color: #333; display: flex; align-items: center; gap: 10px;">
-                                        <span style="font-size: 1.5rem;">🛢️</span> Yağ Numune Kontrolü
-                                    </h3>
-                                    <p style="color: #666; margin-bottom: 20px; font-size: 0.9rem;">
-                                        Motor çalışma saatlerini güncelleyin ve yağ numune alma zamanlarını takip edin. 
-                                        <strong>450 saat</strong> kala bildirim alacaksınız.
-                                    </p>
-                                    
-                                    <div class="motor-hours-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                                        <!-- GM-1 -->
-                                        <div class="motor-hour-card" style="background: white; border-radius: 8px; padding: 15px; border: 2px solid #e0e0e0;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                <strong style="color: #333; font-size: 1.1rem;">GM-1</strong>
-                                                <span id="gm1-oil-status" class="oil-status" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32;">✓ Normal</span>
-                                            </div>
-                                            <div style="margin-bottom: 10px;">
-                                                <label style="display: block; font-size: 0.85rem; color: #666; margin-bottom: 5px;">Çalışma Saati:</label>
-                                                <input type="number" id="gm1-hours" placeholder="0" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
-                                            </div>
-                                            <div style="font-size: 0.85rem; color: #888; margin-bottom: 10px;">
-                                                Son yağ numune: <span id="gm1-last-oil">-</span><br>
-                                                Bir sonraki: <span id="gm1-next-oil">500</span> saat
-                                            </div>
-                                            <div style="display: flex; gap: 8px;">
-                                                <button onclick="updateMotorHours('GM-1', document.getElementById('gm1-hours').value)" style="flex: 1; padding: 8px; background: #4285f4; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">💾 Saat Güncelle</button>
-                                                <button onclick="recordOilSample('GM-1', document.getElementById('gm1-hours').value)" style="flex: 1; padding: 8px; background: #34a853; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">🛢️ Numune Al</button>
-                                            </div>
-                                        </div>
-
-                                        <!-- GM-2 -->
-                                        <div class="motor-hour-card" style="background: white; border-radius: 8px; padding: 15px; border: 2px solid #e0e0e0;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                <strong style="color: #333; font-size: 1.1rem;">GM-2</strong>
-                                                <span id="gm2-oil-status" class="oil-status" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32;">✓ Normal</span>
-                                            </div>
-                                            <div style="margin-bottom: 10px;">
-                                                <label style="display: block; font-size: 0.85rem; color: #666; margin-bottom: 5px;">Çalışma Saati:</label>
-                                                <input type="number" id="gm2-hours" placeholder="0" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
-                                            </div>
-                                            <div style="font-size: 0.85rem; color: #888; margin-bottom: 10px;">
-                                                Son yağ numune: <span id="gm2-last-oil">-</span><br>
-                                                Bir sonraki: <span id="gm2-next-oil">500</span> saat
-                                            </div>
-                                            <div style="display: flex; gap: 8px;">
-                                                <button onclick="updateMotorHours('GM-2', document.getElementById('gm2-hours').value)" style="flex: 1; padding: 8px; background: #4285f4; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">💾 Saat Güncelle</button>
-                                                <button onclick="recordOilSample('GM-2', document.getElementById('gm2-hours').value)" style="flex: 1; padding: 8px; background: #34a853; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">🛢️ Numune Al</button>
-                                            </div>
-                                        </div>
-
-                                        <!-- GM-3 -->
-                                        <div class="motor-hour-card" style="background: white; border-radius: 8px; padding: 15px; border: 2px solid #e0e0e0;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                <strong style="color: #333; font-size: 1.1rem;">GM-3</strong>
-                                                <span id="gm3-oil-status" class="oil-status" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32;">✓ Normal</span>
-                                            </div>
-                                            <div style="margin-bottom: 10px;">
-                                                <label style="display: block; font-size: 0.85rem; color: #666; margin-bottom: 5px;">Çalışma Saati:</label>
-                                                <input type="number" id="gm3-hours" placeholder="0" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
-                                            </div>
-                                            <div style="font-size: 0.85rem; color: #888; margin-bottom: 10px;">
-                                                Son yağ numune: <span id="gm3-last-oil">-</span><br>
-                                                Bir sonraki: <span id="gm3-next-oil">500</span> saat
-                                            </div>
-                                            <div style="display: flex; gap: 8px;">
-                                                <button onclick="updateMotorHours('GM-3', document.getElementById('gm3-hours').value)" style="flex: 1; padding: 8px; background: #4285f4; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">💾 Saat Güncelle</button>
-                                                <button onclick="recordOilSample('GM-3', document.getElementById('gm3-hours').value)" style="flex: 1; padding: 8px; background: #34a853; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">🛢️ Numune Al</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 12px; border-radius: 4px; margin-top: 15px;">
-                                        <strong>💡 Bilgi:</strong> Yağ numunesi 500 saatte bir alınır. 450 saat kala uyarı verilir. Saati güncelleyin ve numune aldığınızda "Numune Al" butonuna tıklayın.
-                                    </div>
-                                </div>
-
-                                <!-- Alternatör Gresleme Kontrol Paneli -->
-                                <div class="alternator-grease-panel" style="margin-top: 20px; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-left: 4px solid #2196f3;">
-                                    <h3 style="margin-top: 0; color: #333; display: flex; align-items: center; gap: 10px;">
-                                        <span style="font-size: 1.5rem;">🔧</span> Alternatör Gresleme Kontrolü
-                                    </h3>
-                                    <p style="color: #666; margin-bottom: 20px; font-size: 0.9rem;">
-                                        Alternatör gresleme zamanlarını takip edin. 
-                                        <strong>1000 saatte bir</strong> gresleme yapılır. <strong>100 saat</strong> kala bildirim alacaksınız.
-                                    </p>
-                                    
-                                    <div class="alternator-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                                        <!-- GM-1 Alternatör -->
-                                        <div class="alternator-card" style="background: white; border-radius: 8px; padding: 15px; border: 2px solid #e0e0e0;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                <strong style="color: #333; font-size: 1.1rem;">GM-1</strong>
-                                                <span id="gm1-alt-status" class="alt-status" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32;">✓ Normal</span>
-                                            </div>
-                                            <div style="font-size: 0.85rem; color: #888; margin-bottom: 10px;">
-                                                Son gresleme: <span id="gm1-last-alt">-</span><br>
-                                                Bir sonraki: <span id="gm1-next-alt">1000</span> saat<br>
-                                                Kalan: <span id="gm1-remaining-alt">1000</span> saat
-                                            </div>
-                                            <button onclick="recordAlternatorGrease('GM-1', document.getElementById('gm1-hours').value)" style="width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">🔧 Gresleme Yapıldı</button>
-                                        </div>
-
-                                        <!-- GM-2 Alternatör -->
-                                        <div class="alternator-card" style="background: white; border-radius: 8px; padding: 15px; border: 2px solid #e0e0e0;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                <strong style="color: #333; font-size: 1.1rem;">GM-2</strong>
-                                                <span id="gm2-alt-status" class="alt-status" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32;">✓ Normal</span>
-                                            </div>
-                                            <div style="font-size: 0.85rem; color: #888; margin-bottom: 10px;">
-                                                Son gresleme: <span id="gm2-last-alt">-</span><br>
-                                                Bir sonraki: <span id="gm2-next-alt">1000</span> saat<br>
-                                                Kalan: <span id="gm2-remaining-alt">1000</span> saat
-                                            </div>
-                                            <button onclick="recordAlternatorGrease('GM-2', document.getElementById('gm2-hours').value)" style="width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">🔧 Gresleme Yapıldı</button>
-                                        </div>
-
-                                        <!-- GM-3 Alternatör -->
-                                        <div class="alternator-card" style="background: white; border-radius: 8px; padding: 15px; border: 2px solid #e0e0e0;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                <strong style="color: #333; font-size: 1.1rem;">GM-3</strong>
-                                                <span id="gm3-alt-status" class="alt-status" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32;">✓ Normal</span>
-                                            </div>
-                                            <div style="font-size: 0.85rem; color: #888; margin-bottom: 10px;">
-                                                Son gresleme: <span id="gm3-last-alt">-</span><br>
-                                                Bir sonraki: <span id="gm3-next-alt">1000</span> saat<br>
-                                                Kalan: <span id="gm3-remaining-alt">1000</span> saat
-                                            </div>
-                                            <button onclick="recordAlternatorGrease('GM-3', document.getElementById('gm3-hours').value)" style="width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">🔧 Gresleme Yapıldı</button>
-                                        </div>
-                                    </div>
-                                    
-                                    <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; border-radius: 4px; margin-top: 15px;">
-                                        <strong>💡 Bilgi:</strong> Alternatör greslemesi 1000 saatte bir yapılır. 100 saat kala uyarı verilir. Gresleme yapıldığında "Gresleme Yapıldı" butonuna tıklayın.
-                                    </div>
-                                </div>
-
+                                
+                                
                                 <!-- Aktif Kayıtlar Yönetim Paneli -->
                                 <div class="active-records-panel" style="margin-top: 30px; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
                                     <h3>🔧 Aktif Kayıtlar (Kapatma)</h3>
