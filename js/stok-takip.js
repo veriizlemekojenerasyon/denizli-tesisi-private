@@ -1,27 +1,30 @@
 // Stok Takip JavaScript
 
-document.addEventListener('DOMContentLoaded', function() {
+// Google Apps Script URL
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4oQE1MFZYojKLTveo7oBpCnzXDpA0EtqRzFsJp9eQCRQhDS3aQU1jnVHcvypv00h-/exec";
+
+document.addEventListener('DOMContentLoaded', async function() {
     // Başlangıç değerlerini ayarla
-    initializePage();
+    await initializePage();
     
     // Event listener'ları ekle
     setupEventListeners();
     
     // Stok listesini yükle
-    loadStockList();
+    await loadStockList();
     
     // Son işlemleri yükle
-    loadRecentTransactions();
+    await loadRecentTransactions();
     
     // Özet kartları güncelle
-    updateSummaryCards();
+    await updateSummaryCards();
     
     // Kullanıcı adını göster
     displayUserName();
 });
 
 // Sayfa başlangıç ayarları
-function initializePage() {
+async function initializePage() {
     // Tarih alanını bugün olarak ayarla
     const dateInputs = document.querySelectorAll('input[type="date"]');
     const today = new Date().toISOString().split('T')[0];
@@ -32,7 +35,10 @@ function initializePage() {
     });
     
     // İşlem formundaki malzeme select'ini doldur
-    populateMaterialSelect();
+    await populateMaterialSelect();
+    
+    // Personel select'ini doldur
+    populatePersonnelSelect();
 }
 
 // Event listener'ları ekle
@@ -79,141 +85,177 @@ function setupEventListeners() {
 }
 
 // Malzeme ekleme formu gönderimi
-function handleStockSubmit(e) {
+async function handleStockSubmit(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
-    const material = {
-        id: Date.now(),
-        code: formData.get('material-code'),
-        name: formData.get('material-name'),
-        category: formData.get('material-category'),
-        quantity: parseFloat(formData.get('material-quantity')),
-        unit: formData.get('material-unit'),
-        minStock: parseFloat(formData.get('min-stock')),
-        description: formData.get('material-description'),
-        createdAt: new Date().toISOString()
-    };
     
-    // Malzeme kodu benzersiz mi kontrol et
-    const materials = getMaterials();
-    if (materials.some(m => m.code === material.code)) {
-        showNotification('error', 'Hata', 'Bu malzeme kodu zaten kullanılıyor!');
-        return;
+    try {
+        // Backend'e malzeme ekle
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'addMaterial',
+                materialCode: formData.get('material-code'),
+                materialName: formData.get('material-name'),
+                materialCategory: formData.get('material-category'),
+                materialQuantity: formData.get('material-quantity'),
+                materialUnit: formData.get('material-unit'),
+                minStock: formData.get('min-stock'),
+                materialDescription: formData.get('material-description'),
+                createdBy: 'Admin'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Başarılı', result.message);
+            
+            // Formu temizle ve listeyi güncelle
+            e.target.reset();
+            await loadStockList();
+            await populateMaterialSelect();
+            await updateSummaryCards();
+        } else {
+            showNotification('error', 'Hata', result.error || 'Malzeme eklenemedi!');
+        }
+        
+    } catch (error) {
+        console.error('Malzeme ekleme hatası:', error);
+        showNotification('error', 'Hata', 'Bağlantı hatası! Lütfen tekrar deneyin.');
     }
-    
-    // Malzemeyi kaydet
-    materials.push(material);
-    localStorage.setItem('stockMaterials', JSON.stringify(materials));
-    
-    showNotification('success', 'Başarılı', 'Malzeme başarıyla eklendi!');
-    
-    // Formu temizle ve listeyi güncelle
-    e.target.reset();
-    loadStockList();
-    populateMaterialSelect();
-    updateSummaryCards();
 }
 
 // Stok giriş/çıkış formu gönderimi
-function handleTransactionSubmit(e) {
+async function handleTransactionSubmit(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
-    const materialId = formData.get('transaction-material');
-    const type = formData.get('transaction-type');
-    const quantity = parseFloat(formData.get('transaction-quantity'));
     
-    const materials = getMaterials();
-    const material = materials.find(m => m.id.toString() === materialId);
-    
-    if (!material) {
-        showNotification('error', 'Hata', 'Malzeme bulunamadı!');
-        return;
+    try {
+        // Backend'e işlem ekle
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'addTransaction',
+                materialId: formData.get('transaction-material'),
+                materialName: document.querySelector('#transaction-material option:checked')?.text.split(' - ')[1] || '',
+                transactionType: formData.get('transaction-type'),
+                transactionQuantity: formData.get('transaction-quantity'),
+                materialUnit: 'adet', // Bu dinamik olabilir
+                transactionDate: formData.get('transaction-date'),
+                transactionPerson: formData.get('transaction-person'),
+                transactionReason: formData.get('transaction-reason')
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Başarılı', result.message);
+            
+            // Formu temizle ve listeleri güncelle
+            e.target.reset();
+            document.getElementById('transaction-date').value = new Date().toISOString().split('T')[0];
+            await loadStockList();
+            await populateMaterialSelect();
+            await loadRecentTransactions();
+            await updateSummaryCards();
+        } else {
+            showNotification('error', 'Hata', result.error || 'İşlem kaydedilemedi!');
+        }
+        
+    } catch (error) {
+        console.error('Stok işlemi hatası:', error);
+        showNotification('error', 'Hata', 'Bağlantı hatası! Lütfen tekrar deneyin.');
     }
-    
-    // Çıkış işlemi için yeterli stok var mı?
-    if (type === 'out' && material.quantity < quantity) {
-        showNotification('error', 'Yetersiz Stok', 
-            `${material.name} için yeterli stok yok! Mevcut: ${material.quantity} ${material.unit}`);
-        return;
-    }
-    
-    // Stok miktarını güncelle
-    if (type === 'in') {
-        material.quantity += quantity;
-    } else {
-        material.quantity -= quantity;
-    }
-    
-    // Malzemeyi güncelle
-    const updatedMaterials = materials.map(m => 
-        m.id.toString() === materialId ? material : m
-    );
-    localStorage.setItem('stockMaterials', JSON.stringify(updatedMaterials));
-    
-    // İşlemi kaydet
-    const transaction = {
-        id: Date.now(),
-        materialId: material.id,
-        materialName: material.name,
-        materialCode: material.code,
-        type: type,
-        quantity: quantity,
-        date: formData.get('transaction-date'),
-        person: formData.get('transaction-person'),
-        reason: formData.get('transaction-reason'),
-        createdAt: new Date().toISOString()
-    };
-    
-    const transactions = getTransactions();
-    transactions.unshift(transaction);
-    localStorage.setItem('stockTransactions', JSON.stringify(transactions));
-    
-    showNotification('success', 'Başarılı', 
-        `${material.name} için ${type === 'in' ? 'giriş' : 'çıkış'} işlemi kaydedildi!`);
-    
-    // Formu temizle ve listeleri güncelle
-    e.target.reset();
-    document.getElementById('transaction-date').value = new Date().toISOString().split('T')[0];
-    loadStockList();
-    loadRecentTransactions();
-    updateSummaryCards();
 }
 
 // Malzeme select'ini doldur
-function populateMaterialSelect() {
+async function populateMaterialSelect() {
     const select = document.getElementById('transaction-material');
     if (!select) return;
     
-    const materials = getMaterials();
+    try {
+        // Backend'den malzemeleri getir
+        const response = await fetch(SCRIPT_URL + '?action=getMaterials');
+        const result = await response.json();
+        
+        select.innerHTML = '<option value="">Malzeme seçin</option>';
+        
+        if (result.success && result.data) {
+            result.data.forEach(material => {
+                const option = document.createElement('option');
+                option.value = material.id;
+                option.textContent = `${material.code} - ${material.name} (${material.quantity} ${material.unit})`;
+                select.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Malzeme select doldurma hatası:', error);
+        select.innerHTML = '<option value="">Malzemeler yüklenemedi</option>';
+    }
+}
+
+// Personel select'ini doldur
+function populatePersonnelSelect() {
+    const select = document.getElementById('transaction-person');
+    if (!select) return;
     
-    select.innerHTML = '<option value="">Malzeme seçin</option>';
-    materials.forEach(material => {
+    // Mevcut kullanıcıları al
+    const users = getUsers();
+    
+    select.innerHTML = '<option value="">Personel seçin</option>';
+    
+    // Kullanıcıları listele
+    users.forEach(user => {
         const option = document.createElement('option');
-        option.value = material.id;
-        option.textContent = `${material.code} - ${material.name} (${material.quantity} ${material.unit})`;
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Bilinmeyen Kullanıcı';
+        option.value = fullName;
+        option.textContent = fullName;
         select.appendChild(option);
     });
 }
 
 // Stok listesini yükle
-function loadStockList() {
+async function loadStockList() {
     const tbody = document.getElementById('stock-tbody');
     if (!tbody) return;
     
-    const materials = getMaterials();
-    
-    if (materials.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #7f8c8d;">Henüz malzeme eklenmemiş</td></tr>';
-        return;
+    try {
+        // Backend'den malzemeleri getir
+        const response = await fetch(SCRIPT_URL + '?action=getMaterials');
+        const result = await response.json();
+        
+        if (result.success) {
+            const materials = result.data || [];
+            
+            if (materials.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #7f8c8d;">Henüz malzeme eklenmemiş</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            materials.forEach(material => {
+                const row = createStockRow(material);
+                tbody.appendChild(row);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #e74c3c;">Malzemeler yüklenemedi: ' + (result.error || 'Bilinmeyen hata') + '</td></tr>';
+        }
+        
+    } catch (error) {
+        console.error('Stok listesi yükleme hatası:', error);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #e74c3c;">Bağlantı hatası! Lütfen sayfayı yenileyin.</td></tr>';
     }
-    
-    tbody.innerHTML = '';
-    materials.forEach(material => {
-        const row = createStockRow(material);
-        tbody.appendChild(row);
-    });
 }
 
 // Stok satırı oluştur
@@ -296,22 +338,36 @@ function filterStockList() {
 }
 
 // Son işlemleri yükle
-function loadRecentTransactions() {
+async function loadRecentTransactions() {
     const tbody = document.getElementById('transactions-tbody');
     if (!tbody) return;
     
-    const transactions = getTransactions().slice(0, 10); // Son 10 işlem
-    
-    if (transactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #7f8c8d;">Henüz işlem yapılmamış</td></tr>';
-        return;
+    try {
+        // Backend'den işlemleri getir
+        const response = await fetch(SCRIPT_URL + '?action=getTransactions');
+        const result = await response.json();
+        
+        if (result.success) {
+            const transactions = result.data || [];
+            
+            if (transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #7f8c8d;">Henüz işlem yapılmamış</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            transactions.forEach(transaction => {
+                const row = createTransactionRow(transaction);
+                tbody.appendChild(row);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #e74c3c;">İşlemler yüklenemedi: ' + (result.error || 'Bilinmeyen hata') + '</td></tr>';
+        }
+        
+    } catch (error) {
+        console.error('Son işlemler yükleme hatası:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #e74c3c;">Bağlantı hatası! Lütfen sayfayı yenileyin.</td></tr>';
     }
-    
-    tbody.innerHTML = '';
-    transactions.forEach(transaction => {
-        const row = createTransactionRow(transaction);
-        tbody.appendChild(row);
-    });
 }
 
 // İşlem satırı oluştur
@@ -344,38 +400,6 @@ function getReasonName(reason) {
         'diger': 'Diğer'
     };
     return reasons[reason] || reason;
-}
-
-// Özet kartları güncelle
-function updateSummaryCards() {
-    const materials = getMaterials();
-    const transactions = getTransactions();
-    
-    // Toplam malzeme sayısı
-    document.getElementById('total-materials').textContent = materials.length;
-    
-    // Kritik stok sayısı
-    const lowStock = materials.filter(m => m.quantity <= m.minStock).length;
-    document.getElementById('low-stock-count').textContent = lowStock;
-    
-    // Bu ay giriş/çıkış
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    
-    const monthlyTransactions = transactions.filter(t => {
-        const tDate = new Date(t.date);
-        return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
-    });
-    
-    const monthlyIn = monthlyTransactions
-        .filter(t => t.type === 'in')
-        .reduce((sum, t) => sum + t.quantity, 0);
-    const monthlyOut = monthlyTransactions
-        .filter(t => t.type === 'out')
-        .reduce((sum, t) => sum + t.quantity, 0);
-    
-    document.getElementById('monthly-in').textContent = monthlyIn.toFixed(0);
-    document.getElementById('monthly-out').textContent = monthlyOut.toFixed(0);
 }
 
 // Malzeme düzenle
@@ -499,8 +523,53 @@ function getTransactions() {
     return JSON.parse(localStorage.getItem('stockTransactions') || '[]');
 }
 
+function getUsers() {
+    // Gerçek kullanıcı listesi
+    const realUsers = [
+        { firstName: 'admin', lastName: '', email: 'admin@sistem.com' },
+        { firstName: 'YAKUP CAN', lastName: 'CİN', email: 'yakup@sistem.com' },
+        { firstName: 'İBRAHİM OGÜN', lastName: 'ŞAHİN', email: 'i.ogun@sistem.com' },
+        { firstName: 'OGUZHAN', lastName: 'YAYLALI', email: 'o.yaylali@sistem.com' },
+        { firstName: 'ALTAN', lastName: 'HUNOĞLU', email: 'a.hunoglu@sistem.com' },
+        { firstName: 'KADİR', lastName: 'KORKMAZ', email: 'k.korkmaz@sistem.com' },
+        { firstName: 'MURAT', lastName: 'COŞKUN', email: 'mrtcsk0320@gmail.com' }
+    ];
+    
+    // Mevcut logged in kullanıcıyı kontrol et ve ekle
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (loggedInUser) {
+        try {
+            const user = JSON.parse(loggedInUser);
+            const exists = realUsers.some(realUser => 
+                realUser.email === user.email || 
+                `${realUser.firstName} ${realUser.lastName}`.trim() === `${user.firstName || ''} ${user.lastName || ''}`.trim()
+            );
+            if (!exists) {
+                realUsers.push(user);
+            }
+        } catch (e) {
+            console.error('Kullanıcı bilgileri okunamadı:', e);
+        }
+    }
+    
+    return realUsers;
+}
+
 function formatDate(dateString) {
+    // dd.MM.yyyy formatını parse et
+    if (!dateString) return '';
+    
+    // Eğer zaten dd.MM.yyyy formatındaysa
+    if (typeof dateString === 'string' && dateString.includes('.')) {
+        return dateString;
+    }
+    
+    // Diğer formatları dene
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return dateString; // Parse edilemezse orijinali döndür
+    }
+    
     return date.toLocaleDateString('tr-TR', {
         day: '2-digit',
         month: '2-digit',
