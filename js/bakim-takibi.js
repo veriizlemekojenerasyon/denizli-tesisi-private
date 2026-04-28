@@ -1,5 +1,5 @@
 // Bakım Takibi JavaScript - ÇALIŞAN VERSİYON
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDXFglMdljKBPjRGVae7lCsgzhQCGELIMyewGymK_tMfJoz9LSW7GchbmuV5BEBm_y/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyw5EYX-9pG62GqHhDMJ2vzcVSIE2owGonrw2k8oA4tKqtxIMBW22W3g71V431utYr_/exec";
 
 // Sistem başlatma fonksiyonu
 async function initializeSystem() {
@@ -250,6 +250,14 @@ async function saveMaintenanceData(formType, formElement) {
             // Dosya listelerini temizle
             clearFileLists(formType);
             
+            // İstatistikleri otomatik yenile
+            setTimeout(() => {
+                if (window.maintenanceStats) {
+                    console.log('📊 Kayıt başarılı, istatistikler yenileniyor...');
+                    window.maintenanceStats.loadStats(6);
+                }
+            }, 1000);
+            
         } else {
             showNotification('Hata', result.message, 'error');
         }
@@ -349,8 +357,9 @@ class MaintenanceStats {
             console.log('Stats API yanıtı:', data);
             
             if (data.success) {
-                console.log('Stats verisi:', data.stats);
-                console.log('Chart verisi:', data.chartData);
+                console.log('📊 Stats verisi:', data.stats);
+                console.log('📊 Chart verisi:', data.chartData);
+                console.log('📊 Chart JSON:', JSON.stringify(data.chartData, null, 2));
                 
                 // Chart verisini sakla
                 this.chartData = data.chartData;
@@ -387,15 +396,28 @@ class MaintenanceStats {
 
     // İstatistik kartlarını güncelle
     updateStatCards(stats) {
+        console.log('📊 updateStatCards çağrıldı, gelen stats:', stats);
+        console.log('📊 Stats JSON:', JSON.stringify(stats, null, 2));
+        
         if (!stats) {
             console.warn('Stats verisi yok, demo veriler gösteriliyor');
             this.showDemoStats();
             return;
         }
+        
+        console.log('📊 Stats değerleri:');
+        console.log('  - total:', stats.total);
+        console.log('  - monthly:', stats.monthly);
+        console.log('  - faults:', stats.faults);
+        console.log('  - fault:', stats.fault);
+        console.log('  - technicians:', stats.technicians);
+        
         document.getElementById('total-maintenance').textContent = stats.total || 0;
         document.getElementById('monthly-maintenance').textContent = stats.monthly || 0;
-        document.getElementById('fault-count').textContent = stats.faults || 0;
+        document.getElementById('fault-count').textContent = stats.faults || stats.fault || 0;  // Her iki formatı da destekle
         document.getElementById('technician-count').textContent = stats.technicians || 0;
+        
+        console.log('✅ İstatistik kartları güncellendi');
     }
 
     // Demo istatistikler göster - SADECE hata durumunda
