@@ -186,11 +186,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Motor seçim butonlarını pasif yap
+        // 🔥 MOTOR SEÇİM BUTONLARINI HER ZAMAN AKTIF TUT (BAŞLANGIÇTA DA)
         motorButtons.forEach(btn => {
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            btn.style.cursor = 'not-allowed';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
         });
     }
     
@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // ⚡ Butonları hızlıca kilitle
+        // ⚡ Butonları hızlıca kilitle (AMA MOTOR SEÇİM BUTONLARINI AKTIF TUT)
         const buttons = [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn];
         buttons.forEach(btn => {
             if (btn) {
@@ -365,6 +365,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         motorCalismiyorKaydetBtn.style.opacity = '0.5';
         motorCalismiyorKaydetBtn.style.cursor = 'not-allowed';
+        
+        // 🔥 MOTOR SEÇİM BUTONLARINI HER ZAMAN AKTIF TUT
+        motorButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        });
         
         // Sadece istendiğinde mesaj göster
         if (showMessageFlag) {
@@ -564,6 +571,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Seçili motoru güncelle
             selectedMotor = this.dataset.motor;
             
+            // 🔥 TÜM INPUT'LARI TEMİZLE
+            const allInputs = document.querySelectorAll('.data-input');
+            allInputs.forEach(input => {
+                input.value = '';
+                input.style.background = 'white';
+                input.style.color = '';
+                input.removeAttribute('data-calismiyor');
+                input.disabled = false;
+            });
+            
             showMessage(`${selectedMotor} motoru seçildi!`, 'info');
             
             // Vardiya verilerini güncelle (seçili motor için)
@@ -571,6 +588,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Kayıt kontrolü yap (form durumunu güncelle)
             await checkAndUpdateFormStatus();
+            
+            // 🔥 KONTROL SONRASI INPUT'LARI TEKRAR AKTIF ET
+            allInputs.forEach(input => {
+                input.disabled = false;
+                input.style.background = 'white';
+                input.style.color = '';
+            });
         });
     });
 
@@ -669,6 +693,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Formu kilitle (mesaj göstermeden)
                 lockForm(false);
+                
+                // 🔥 OTOMATİK SONRAKİ MOTORA GEÇİŞ
+                setTimeout(() => {
+                    moveToNextMotor(data.motor);
+                }, 1500);
             } else {
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
             }
@@ -683,6 +712,88 @@ document.addEventListener('DOMContentLoaded', function() {
             kaydetBtn.textContent = '💾 KAYDET';
         }
     });
+
+    // 🔥 SONRAKİ MOTORA OTOMATİK GEÇİŞ FONKSİYONU
+    function moveToNextMotor(currentMotor) {
+        const motorOrder = ['GM-1', 'GM-2', 'GM-3'];
+        const currentIndex = motorOrder.indexOf(currentMotor);
+        
+        if (currentIndex < motorOrder.length - 1) {
+            // Sonraki motora geç
+            const nextMotor = motorOrder[currentIndex + 1];
+            const nextButton = document.querySelector(`[data-motor="${nextMotor}"]`);
+            
+            if (nextButton) {
+                // 🔥 FORM KİLİDİNİ AÇ
+                isLocked = false;
+                
+                // 🔥 TÜM INPUT'LARI TEMİZLE
+                const allInputs = document.querySelectorAll('.data-input');
+                allInputs.forEach(input => {
+                    input.value = '';
+                    input.style.background = 'white';
+                    input.style.color = '';
+                    input.removeAttribute('data-calismiyor');
+                    input.disabled = false;
+                });
+                
+                // 🔥 BUTONLARI AKTİF ET
+                const buttons = [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn];
+                buttons.forEach(btn => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    }
+                });
+                
+                // Motor seçim butonlarını aktif yap
+                motorButtons.forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                });
+                
+                // Active class'ını kaldır
+                motorButtons.forEach(btn => btn.classList.remove('active'));
+                // Yeni motora active class'ını ekle
+                nextButton.classList.add('active');
+                // Seçili motoru güncelle
+                selectedMotor = nextMotor;
+                
+                showMessage(`Otomatik geçiş: ${nextMotor} motoru seçildi!`, 'info');
+                
+                // Vardiya verilerini güncelle
+                setTimeout(async () => {
+                    await loadVardiyaData();
+                    
+                    // 🔥 FORM DURUMUNU KONTROL ET AMA BUTONLARI AKTIF TUT
+                    setTimeout(async () => {
+                        await checkAndUpdateFormStatus();
+                        
+                        // 🔥 KONTROL SONRASI BUTONLARI TEKRAR AKTIF ET
+                        motorButtons.forEach(btn => {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        });
+                        
+                        const buttons = [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn];
+                        buttons.forEach(btn => {
+                            if (btn) {
+                                btn.disabled = false;
+                                btn.style.opacity = '1';
+                                btn.style.cursor = 'pointer';
+                            }
+                        });
+                    }, 500);
+                }, 300);
+            }
+        } else {
+            // Son motor ise bildir
+            showMessage('Tüm motorlar için kayıt tamamlandı!', 'success');
+        }
+    }
 
     // TEMİZLE butonu
     temizleBtn.addEventListener('click', function() {
@@ -754,6 +865,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 lockForm(false);
+                
+                // 🔥 OTOMATİK SONRAKİ MOTORA GEÇİŞ
+                setTimeout(() => {
+                    moveToNextMotor(data.motor);
+                }, 1500);
             } else {
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
             }
