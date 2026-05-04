@@ -271,10 +271,10 @@ function getRecords() {
           aydemVoltaji: row[4],
           aktifGuc: row[5],
           reaktifGuc: row[6],
-          cosFi: row[7],
+          cosPhi: row[7],
           ortAkim: row[8],
           ortGerilim: row[9],
-          notrAkimi: row[10],
+          notrAkim: row[10],
           tahrikGerilimi: row[11],
           toplamAktifEnerji: row[12],
           calismaSaati: row[13],
@@ -283,6 +283,11 @@ function getRecords() {
           kaydeden: row[16],
           kayitTarihi: row[17]
         });
+        
+        // Debug: Cos φ ve NÖTR AKIMI değerlerini kontrol et
+        console.log('🔍 Debug - row[7] (Cos φ):', row[7]);
+        console.log('🔍 Debug - row[8] (ORT.AKIM):', row[8]);
+        console.log('🔍 Debug - row[10] (NÖTR AKIMI):', row[10]);
       }
     }
     

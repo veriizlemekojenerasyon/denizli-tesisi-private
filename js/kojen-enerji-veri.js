@@ -68,7 +68,7 @@ async function loadVardiyaData() {
     const tarih = tarihSecimi?.value;
     const motor = window.selectedMotor || 'GM-1'; // Global selectedMotor kullan
     
-    console.log('DEBUG loadVardiyaData:', { vardiya, tarih, motor });
+    console.log('DEBUG loadVardiyaData:', vardiya, tarih, motor);
     
     if (!vardiya || !tarih || !motor) { 
         console.log('DEBUG: Eksik parametre'); 
@@ -87,7 +87,7 @@ async function loadVardiyaData() {
     
     try {
         const result = await getAllEnerjiRecords();
-        console.log('DEBUG getAllEnerjiRecords result:', result);
+        console.log('DEBUG getAllEnerjiRecords success:', result.success);
         
         if (!result.success || !result.data?.length) { 
             console.log('DEBUG: Veri yok veya başarısız'); 
@@ -152,7 +152,7 @@ async function loadVardiyaData() {
                 kalkisSayisi = sonKayit.kalkisSayisi || '-';
             }
             
-            row.innerHTML = `<td>${record.saat || '-'}</td><td>${record.motor || '-'}</td><td>${record.aydemVoltaji || '-'}</td><td>${record.aktifGuc || '-'}</td><td>${record.reaktifGuc || '-'}</td><td>${record.cosPhi || '-'}</td><td>${record.ortAkif || '-'}</td><td>${record.ortGerilim || '-'}</td><td>${record.notrAkim || '-'}</td><td>${record.tahrikGerilimi || '-'}</td><td>${toplamAktifEnerji}</td><td>${calismaSaati}</td><td>${kalkisSayisi}</td><td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td>`;
+            row.innerHTML = `<td>${record.saat || '-'}</td><td>${record.motor || '-'}</td><td>${record.aydemVoltaji || '-'}</td><td>${record.aktifGuc || '-'}</td><td>${record.reaktifGuc || '-'}</td><td>${record.cosPhi || '-'}</td><td>${record.ortAkim || '-'}</td><td>${record.ortGerilim || '-'}</td><td>${record.notrAkim || '-'}</td><td>${record.tahrikGerilimi || '-'}</td><td>${toplamAktifEnerji}</td><td>${calismaSaati}</td><td>${kalkisSayisi}</td><td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td>`;
             tableBody.appendChild(row);
         });
         
@@ -562,18 +562,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Input değerlerini al
     function getAllInputValues() {
         const inputs = document.querySelectorAll('.kojen-input');
+        
+        // 🔥 Virgülü noktaya çevirme fonksiyonu
+        const virguldenNoktaya = (deger) => {
+            if (!deger) return '';
+            return deger.replace(',', '.');
+        };
+        
         return {
-            aydemVoltaji: inputs[0]?.value || '',
-            aktifGuc: inputs[1]?.value || '',
-            reaktifGuc: inputs[2]?.value || '',
-            cosPhi: inputs[3]?.value || '',
-            ortAkim: inputs[4]?.value || '',
-            ortGerilim: inputs[5]?.value || '',
-            notrAkim: inputs[6]?.value || '',
-            tahrikGerilimi: inputs[7]?.value || '',
-            toplamAktifEnerji: inputs[8]?.value || '',
-            calismaSaati: inputs[9]?.value || '',
-            kalkisSayisi: inputs[10]?.value || ''
+            aydemVoltaji: virguldenNoktaya(inputs[0]?.value || ''),
+            aktifGuc: virguldenNoktaya(inputs[1]?.value || ''),
+            reaktifGuc: virguldenNoktaya(inputs[2]?.value || ''),
+            cosPhi: virguldenNoktaya(inputs[3]?.value || ''),
+            ortAkim: virguldenNoktaya(inputs[4]?.value || ''),
+            ortGerilim: virguldenNoktaya(inputs[5]?.value || ''),
+            notrAkim: virguldenNoktaya(inputs[6]?.value || ''),
+            tahrikGerilimi: virguldenNoktaya(inputs[7]?.value || ''),
+            toplamAktifEnerji: virguldenNoktaya(inputs[8]?.value || ''),
+            calismaSaati: virguldenNoktaya(inputs[9]?.value || ''),
+            kalkisSayisi: virguldenNoktaya(inputs[10]?.value || '')
         };
     }
 
@@ -772,14 +779,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function loadVardiyaData() {
         const vardiya = vardiyaSecimi.value, tarih = tarihSecimi.value, motor = selectedMotor;
-        console.log('DEBUG loadVardiyaData:', { vardiya, tarih, motor });
+        console.log('DEBUG loadVardiyaData:', vardiya, tarih, motor);
         if (!vardiya || !tarih || !motor) { console.log('DEBUG: Eksik parametre'); return; }
         const tableBody = document.getElementById('vardiyaTableBody'), noDataMessage = document.getElementById('noDataMessage');
         if (!tableBody) { console.log('DEBUG: tableBody bulunamadı'); return; }
         tableBody.innerHTML = '';
         try {
             const result = await getAllEnerjiRecords();
-            console.log('DEBUG getAllEnerjiRecords result:', result);
+            console.log('DEBUG getAllEnerjiRecords success:', result.success);
             if (!result.success || !result.data?.length) { console.log('DEBUG: Veri yok veya başarısız'); if (noDataMessage) noDataMessage.style.display = 'block'; return; }
             let searchTarih = tarih;
             if (searchTarih.includes('-')) { const parts = searchTarih.split('-'); searchTarih = `${parts[2]}.${parts[1]}.${parts[0]}`; }
@@ -789,7 +796,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const matchTarih = (r.tarih || '') === searchTarih;
                 const matchVardiya = kayitVardiyaAraligindaMi(r.saat || '', vardiya);
                 const matchMotor = (r.motor || '') === motor;
-                console.log('DEBUG filter:', { rTarih: r.tarih, rSaat: r.saat, rMotor: r.motor, matchTarih, matchVardiya, matchMotor });
+                // Filter debug kaldırıldı - console spam'i azaltıldı
                 return matchTarih && matchVardiya && matchMotor;
             });
             console.log('DEBUG filtered:', filtered);
@@ -832,7 +839,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }
                 
-                row.innerHTML = `<td>${record.saat || '-'}</td><td>${record.motor || '-'}</td><td>${record.aydemVoltaji || '-'}</td><td>${record.aktifGuc || '-'}</td><td>${record.reaktifGuc || '-'}</td><td>${record.cosPhi || '-'}</td><td>${record.ortAkif || '-'}</td><td>${record.ortGerilim || '-'}</td><td>${record.notrAkim || '-'}</td><td>${record.tahrikGerilimi || '-'}</td><td>${toplamAktifEnerji}</td><td>${calismaSaati}</td><td>${kalkisSayisi}</td><td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td>`;
+                row.innerHTML = `<td>${record.saat || '-'}</td><td>${record.motor || '-'}</td><td>${record.aydemVoltaji || '-'}</td><td>${record.aktifGuc || '-'}</td><td>${record.reaktifGuc || '-'}</td><td>${record.cosPhi || '-'}</td><td>${record.ortAkim || '-'}</td><td>${record.ortGerilim || '-'}</td><td>${record.notrAkim || '-'}</td><td>${record.tahrikGerilimi || '-'}</td><td>${toplamAktifEnerji}</td><td>${calismaSaati}</td><td>${kalkisSayisi}</td><td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td>`;
                 tableBody.appendChild(row);
             });
         } catch (error) { console.error('Vardiya verileri yüklenirken hata:', error); }
@@ -1160,6 +1167,12 @@ async function handleModalKaydet() {
                         return { success: true, skipped: true, reason: 'Cache\'de zaten var' };
                     }
                     
+                    // 🔥 Virgülü noktaya çevirme fonksiyonu
+                    const virguldenNoktaya = (deger) => {
+                        if (!deger) return '0';
+                        return deger.replace(',', '.');
+                    };
+                    
                     return saveEnerjiToSheets({
                         motor: motor,
                         tarih: modalTarih,
@@ -1168,17 +1181,17 @@ async function handleModalKaydet() {
                         kaydeden: getCurrentUserName(),
                         durum: 'MOTOR ÇALIŞMIYOR',
                         not: modalNot || 'Motor çalışmıyor',
-                        // Son kayıt değerleri
-                        toplamAktifEnerji: sonKayit.toplamAktifEnerji || '0',
-                        toplamReaktifEnerji: sonKayit.toplamReaktifEnerji || '0',
-                        ortakPuan: sonKayit.ortakPuan || '0',
-                        yakitTuketimi: sonKayit.yakitTuketimi || '0',
-                        suSicakligi: sonKayit.suSicakligi || '0',
-                        egzostGazSicakligi: sonKayit.egzostGazSicakligi || '0',
-                        karterBasinc: sonKayit.karterBasinc || '0',
-                        onKamaraFarkBasinc: sonKayit.onKamaraFarkBasinc || '0',
-                        calismaSaati: sonKayit.calismaSaati || '0',
-                        kalkisSayisi: sonKayit.kalkisSayisi || '0'
+                        // Son kayıt değerleri - virgül düzeltmesi
+                        toplamAktifEnerji: virguldenNoktaya(sonKayit.toplamAktifEnerji || '0'),
+                        toplamReaktifEnerji: virguldenNoktaya(sonKayit.toplamReaktifEnerji || '0'),
+                        ortakPuan: virguldenNoktaya(sonKayit.ortakPuan || '0'),
+                        yakitTuketimi: virguldenNoktaya(sonKayit.yakitTuketimi || '0'),
+                        suSicakligi: virguldenNoktaya(sonKayit.suSicakligi || '0'),
+                        egzostGazSicakligi: virguldenNoktaya(sonKayit.egzostGazSicakligi || '0'),
+                        karterBasinc: virguldenNoktaya(sonKayit.karterBasinc || '0'),
+                        onKamaraFarkBasinc: virguldenNoktaya(sonKayit.onKamaraFarkBasinc || '0'),
+                        calismaSaati: virguldenNoktaya(sonKayit.calismaSaati || '0'),
+                        kalkisSayisi: virguldenNoktaya(sonKayit.kalkisSayisi || '0')
                     });
                 })
             );

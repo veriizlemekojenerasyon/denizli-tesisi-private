@@ -4,7 +4,7 @@
  */
 
 const KojenEnerjiSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbz-OjM8ZptpnYboE8KKLM23Oe2wO-jK1EPbM8NqqTIFQ_o8VTJoyjDNoeOiduhKmwAk/exec'
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycby04UcX9FpszIYMuMd7I2rcpa7-RUVvmv7xxUQgJWGy261bpKsbl1hjPGHe684eza2G/exec'
 };
 
 /**
@@ -89,7 +89,7 @@ async function saveEnerjiToSheets(data) {
  * @returns {Promise<Object>} - Kontrol sonucu
  */
 async function checkExistingEnerjiRecord(motor, tarih, saat) {
-    console.log('🔍 checkExistingEnerjiRecord başlatıldı:', { motor, tarih, saat });
+    console.log('🔍 checkExistingEnerjiRecord başlatıldı:', motor, tarih, saat);
     
     try {
         // Tarih formatını düzelt
@@ -111,7 +111,7 @@ async function checkExistingEnerjiRecord(motor, tarih, saat) {
         console.log('📡 Response status:', response.status);
         
         const result = await response.json();
-        console.log('📊 Response result:', result);
+        console.log('📊 Response result:', result.success ? 'SUCCESS' : 'FAILED');
         
         return result;
         
