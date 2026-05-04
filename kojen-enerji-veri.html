@@ -252,5 +252,169 @@
 
     <script src="js/kojen-enerji-sheets.js"></script>
     <script src="js/kojen-enerji-veri.js"></script>
+<!-- 🔥 MOTOR ÇALIŞMIYOR KAYDET MODALI -->
+    <div id="motorCalismiyorModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ MOTOR ÇALIŞMIYOR KAYDET</h3>
+                <button class="modal-close" onclick="closeMotorCalismiyorModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Motor Seçimi:</label>
+                    <div class="motor-selection">
+                        <label class="motor-checkbox">
+                            <input type="checkbox" name="motor" value="GM-1" checked>
+                            <span>GM-1</span>
+                        </label>
+                        <label class="motor-checkbox">
+                            <input type="checkbox" name="motor" value="GM-2">
+                            <span>GM-2</span>
+                        </label>
+                        <label class="motor-checkbox">
+                            <input type="checkbox" name="motor" value="GM-3">
+                            <span>GM-3</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Tarih:</label>
+                    <input type="date" id="modalTarih" class="modal-input" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label>Vardiya:</label>
+                    <select id="modalVardiya" class="modal-input">
+                        <option value="08-16">08:00 - 16:00</option>
+                        <option value="16-24">16:00 - 24:00</option>
+                        <option value="24-08">24:00 - 08:00</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Veri Giriş Saatleri:</label>
+                    <div class="saat-selection">
+                        <div class="saat-group">
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="08:00" checked>
+                                <span>08:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="09:00" checked>
+                                <span>09:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="10:00" checked>
+                                <span>10:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="11:00" checked>
+                                <span>11:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="12:00" checked>
+                                <span>12:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="13:00" checked>
+                                <span>13:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="14:00" checked>
+                                <span>14:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="15:00" checked>
+                                <span>15:00</span>
+                            </label>
+                        </div>
+                        
+                        <div class="saat-group">
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="16:00" checked>
+                                <span>16:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="17:00" checked>
+                                <span>17:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="18:00" checked>
+                                <span>18:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="19:00" checked>
+                                <span>19:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="20:00" checked>
+                                <span>20:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="21:00" checked>
+                                <span>21:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="22:00" checked>
+                                <span>22:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="23:00" checked>
+                                <span>23:00</span>
+                            </label>
+                        </div>
+                        
+                        <div class="saat-group">
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="00:00" checked>
+                                <span>00:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="01:00" checked>
+                                <span>01:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="02:00" checked>
+                                <span>02:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="03:00" checked>
+                                <span>03:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="04:00" checked>
+                                <span>04:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="05:00" checked>
+                                <span>05:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="06:00" checked>
+                                <span>06:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="07:00" checked>
+                                <span>07:00</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Not:</label>
+                    <textarea id="modalNot" class="modal-input" rows="3" placeholder="Motor çalışmama nedeni..."></textarea>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeMotorCalismiyorModal()">İPTAL</button>
+                <button type="button" class="btn-danger" id="modalKaydetBtn">⚠️ KAYDET</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

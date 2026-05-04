@@ -89,6 +89,8 @@ async function saveEnerjiToSheets(data) {
  * @returns {Promise<Object>} - Kontrol sonucu
  */
 async function checkExistingEnerjiRecord(motor, tarih, saat) {
+    console.log('🔍 checkExistingEnerjiRecord başlatıldı:', { motor, tarih, saat });
+    
     try {
         // Tarih formatını düzelt
         let formattedTarih = tarih;
@@ -97,15 +99,56 @@ async function checkExistingEnerjiRecord(motor, tarih, saat) {
             formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
         
+        console.log('📅 Formatlanmış tarih:', formattedTarih);
+        
         const url = KojenEnerjiSheetsConfig.WEB_APP_URL + 
             `?action=checkExistingRecord&motor=${encodeURIComponent(motor)}&tarih=${encodeURIComponent(formattedTarih)}&saat=${encodeURIComponent(saat)}`;
         
+        console.log('🌐 İstek URL:', url);
+        console.log('📡 Fetch isteği gönderiliyor...');
+        
         const response = await fetch(url);
+        console.log('📡 Response status:', response.status);
+        
         const result = await response.json();
+        console.log('📊 Response result:', result);
+        
         return result;
         
     } catch (error) {
         console.error('Kayıt kontrolü hatası:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * 🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
+ * @param {Array} kombinasyonlar - [{motor, tarih, saat}, ...]
+ * @returns {Promise<Object>} - Kontrol sonuçları
+ */
+async function checkMultipleEnerjiRecords(kombinasyonlar) {
+    console.log('🚀 TOPLU KAYIT KONTROLÜ BAŞLATILIYOR:', kombinasyonlar.length, 'kombinasyon');
+    
+    try {
+        // Tüm kombinasyonları tek bir string'e dönüştür
+        const kontrolData = kombinasyonlar.map(k => `${k.motor}|${k.tarih}|${k.saat}`).join(',');
+        
+        const url = KojenEnerjiSheetsConfig.WEB_APP_URL + 
+            `?action=checkMultipleRecords&data=${encodeURIComponent(kontrolData)}`;
+        
+        console.log('🌐 Toplu kontrol URL:', url);
+        console.log('📡 Toplu fetch isteği gönderiliyor...');
+        
+        const response = await fetch(url);
+        console.log('📡 Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('📊 Toplu kontrol sonucu:', result);
+        
+        return result;
+        
+    } catch (error) {
+        console.error('Toplu kayıt kontrolü hatası:', error);
         return { success: false, error: error.message };
     }
 }

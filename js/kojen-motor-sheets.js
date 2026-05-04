@@ -4,7 +4,7 @@
  */
 
 const KojenMotorSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzUnvtc9XKqFbEx3jUC9MBbaERxwmQ2jVp8j3x4p7Y0N1DZwi3WW0xmllk_rxFMqzBn/exec'
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzOEAt1xRhuybeoK35WABMvi9WXjrNDi7WL_k_KAQogr6hVBB2Uzdgcn9cKYaXZkD5D/exec'
 };
 
 /**
@@ -95,6 +95,44 @@ async function checkExistingMotorRecord(motor, tarih, saat) {
         
     } catch (error) {
         console.error('Kayıt kontrolü hatası:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * 🚀 TOPLU MOTOR KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
+ * @param {Array} kombinasyonlar - [{motor, tarih, saat}, ...]
+ * @returns {Promise<Object>} - Kontrol sonuçları
+ */
+async function checkMultipleMotorRecords(kombinasyonlar) {
+    console.log('🚀 TOPLU MOTOR KAYIT KONTROLÜ BAŞLATILIYOR:', kombinasyonlar.length, 'kombinasyon');
+    console.log('📊 Gelen kombinasyonlar:', kombinasyonlar);
+    
+    try {
+        // Tüm kombinasyonları tek bir string'e dönüştür
+        const kontrolData = kombinasyonlar.map(k => {
+            console.log('🔍 Kombinasyon:', k);
+            return `${k.motor}|${k.tarih}|${k.saat}`;
+        }).join(',');
+        
+        console.log('📊 Oluşturulan kontrolData:', kontrolData);
+        
+        const url = KojenMotorSheetsConfig.WEB_APP_URL + 
+            `?action=checkMultipleRecords&data=${encodeURIComponent(kontrolData)}`;
+        
+        console.log('🌐 Toplu motor kontrol URL:', url);
+        console.log('📡 Toplu motor fetch isteği gönderiliyor...');
+        
+        const response = await fetch(url);
+        console.log('📡 Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('📊 Toplu motor kontrol sonucu:', result);
+        
+        return result;
+        
+    } catch (error) {
+        console.error('Toplu motor kayıt kontrolü hatası:', error);
         return { success: false, error: error.message };
     }
 }

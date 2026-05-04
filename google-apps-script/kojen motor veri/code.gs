@@ -46,6 +46,9 @@ function handleRequest(e) {
       case 'checkExistingRecord':
         result = checkExistingRecord(e.parameter.motor, e.parameter.tarih, e.parameter.saat);
         break;
+      case 'checkMultipleRecords':
+        result = checkMultipleRecords(e.parameter.data);
+        break;
       case 'getLastRecords':
         result = getLastRecords(parseInt(e.parameter.count) || 50);
         break;
@@ -378,6 +381,81 @@ function checkExistingRecord(motor, tarih, saat) {
     };
     
   } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+// 🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
+function checkMultipleRecords(data) {
+  try {
+    console.log('🚀 MOTOR checkMultipleRecords başlatıldı: ' + data);
+    
+    var allRecords = getRecords();
+    if (!allRecords.success) {
+      console.log('❌ getRecords başarısız: ' + JSON.stringify(allRecords));
+      return allRecords;
+    }
+    
+    console.log('📊 Toplam kayıt sayısı: ' + allRecords.data.length);
+    
+    // Veriyi parse et
+    var kombinasyonlar = data.split(',');
+    console.log('📋 Kontrol edilecek kombinasyon sayısı: ' + kombinasyonlar.length);
+    
+    var sonuclar = {};
+    var varOlanlar = [];
+    
+    // Her kombinasyonu kontrol et
+    for (var i = 0; i < kombinasyonlar.length; i++) {
+      var parts = kombinasyonlar[i].split('|');
+      if (parts.length !== 3) continue;
+      
+      var motor = parts[0].trim();
+      var tarih = parts[1].trim();
+      var saat = parts[2].trim();
+      
+      // Tarih formatını normalize et
+      var searchTarih = tarih;
+      if (searchTarih.includes('-')) {
+        var tarihParts = searchTarih.split('-');
+        searchTarih = tarihParts[2] + '.' + tarihParts[1] + '.' + tarihParts[0];
+      }
+      
+      var key = motor + '|' + tarih + '|' + saat;
+      
+      // Mevcut kayıtlarda ara
+      var existing = allRecords.data.find(function(record) {
+        var recMotor = String(record.motor || '').trim();
+        var recTarih = String(record.tarih || '').trim();
+        var recSaat = String(record.saat || '').trim();
+        
+        return recMotor === motor && 
+               recTarih === searchTarih && 
+               recSaat === saat;
+      });
+      
+      sonuclar[key] = {
+        exists: !!existing,
+        record: existing || null
+      };
+      
+      if (existing) {
+        varOlanlar.push(key);
+        console.log('✅ Mevcut motor kaydı bulundu: ' + key);
+      }
+    }
+    
+    console.log('📊 Toplu motor kontrol sonuçları: ' + varOlanlar.length + ' var, ' + (kombinasyonlar.length - varOlanlar.length) + ' yok');
+    
+    return { 
+      success: true, 
+      results: sonuclar,
+      existingCount: varOlanlar.length,
+      totalCount: kombinasyonlar.length
+    };
+    
+  } catch (error) {
+    console.error('Toplu motor kayıt kontrolü hatası: ' + error.toString());
     return { success: false, error: error.toString() };
   }
 }

@@ -1,3 +1,304 @@
+// 🔥 GLOBAL MESAJ GÖSTER FONKSİYONU
+function showMessage(message, type) {
+    // Mevcut mesajları temizle
+    const existingMessages = document.querySelectorAll('.message');
+    existingMessages.forEach(msg => msg.remove());
+
+    // Yeni mesaj oluştur
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    messageDiv.textContent = message;
+    
+    // Stiller
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 9999;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+    `;
+    
+    // Renkler
+    const colors = {
+        success: 'linear-gradient(135deg, #28a745, #20c997)',
+        error: 'linear-gradient(135deg, #dc3545, #c82333)',
+        warning: 'linear-gradient(135deg, #ff6b6b, #ee5a24)',
+        info: 'linear-gradient(135deg, #17a2b8, #138496)'
+    };
+    
+    messageDiv.style.background = colors[type] || colors.info;
+    document.body.appendChild(messageDiv);
+    
+    // 3 saniye sonra kaldır
+    setTimeout(() => {
+        messageDiv.style.opacity = '0';
+        setTimeout(() => messageDiv.remove(), 300);
+    }, 3000);
+}
+
+// 🔥 GLOBAL DEĞİŞKENLER
+let cachedRecords = [];
+let recordMap = new Map();
+let cacheTimestamp = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 dakika
+
+// � ARKA PLAN KAYIT SİSTEMİ
+let kayitKuyrugu = [];
+let islemSirasi = 0;
+let kayitIslemiDevamEdiyor = false;
+const MAX_PARALEL_KAYIT = 3; // Aynı anda max 3 kayıt
+
+// � Giriş yapan kullanıcının adını al
+function getCurrentUserName() {
+    try {
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (!loggedInUser) return 'Admin';
+        const user = JSON.parse(loggedInUser);
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        return fullName || user.email || 'Admin';
+    } catch (e) {
+        console.error('Kullanıcı adı okunamadı:', e);
+        return 'Admin';
+    }
+}
+
+// 🔍 MOTORUN SON KAYDINI GETİR (Motor Çalışmıyor için)
+async function getLastRecordForMotor(motor) {
+    try {
+        let motorRecords = [];
+        
+        // Önce cache'den dene
+        if (cachedRecords.length > 0) {
+            motorRecords = cachedRecords.filter(record => 
+                record.motor === motor && 
+                record.durum !== 'MOTOR ÇALIŞMIYOR' // Sadece normal kayıtları al
+            );
+        }
+        
+        // Cache'de yoksa API'den çek
+        if (motorRecords.length === 0) {
+            console.log(`⚡ Cache'de kayıt yok, API'den çekiliyor: ${motor}`);
+            const result = await getMotorRecordsByMotorAndDate(motor, document.getElementById('tarihSecimi')?.value || '');
+            if (result.success && result.data) {
+                motorRecords = result.data.filter(record => 
+                    record.durum !== 'MOTOR ÇALIŞMIYOR'
+                );
+            }
+        }
+        
+        if (motorRecords.length === 0) {
+            console.log(`⚠️ ${motor} için normal kayıt bulunamadı`);
+            return null;
+        }
+        
+        // Tarih ve saate göre sırala (en son kayıt)
+        motorRecords.sort((a, b) => {
+            const dateA = parseDateTime(a.tarih, a.saat);
+            const dateB = parseDateTime(b.tarih, b.saat);
+            return dateB - dateA; // En son kayıt önce
+        });
+        
+        const lastRecord = motorRecords[0];
+        console.log(`✅ ${motor} için son kayıt bulundu:`, lastRecord);
+        return lastRecord;
+        
+    } catch (error) {
+        console.error('Son kayıt getirme hatası:', error);
+        return null;
+    }
+}
+
+// 📅 Tarih ve saat string'ini Date objesine çevir
+function parseDateTime(tarih, saat) {
+    try {
+        // Tarih formatı: DD.MM.YYYY
+        const [day, month, year] = tarih.split('.');
+        // Saat formatı: HH:00
+        const [hour, minute] = saat.split(':');
+        
+        return new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day),
+            parseInt(hour),
+            parseInt(minute || 0)
+        );
+    } catch (error) {
+        console.error('Tarih parse hatası:', error);
+        return new Date();
+    }
+}
+
+// ⚡ KAYIT KONTROLÜ - GLOBAL
+async function checkExistingRecord(motor, tarih, saat) {
+    try {
+        // 🔥 ULTRA HIZLI KONTROL - Map'den ara (O(1) complexity)
+        const now = Date.now();
+        if (now - cacheTimestamp < CACHE_DURATION) {
+            const mapKey = `${motor}|${tarih}|${saat}`;
+            const cached = recordMap.get(mapKey);
+            if (cached) {
+                console.log('⚡ Ultra hızlı Map hit!');
+                return cached;
+            }
+        }
+        
+        // Cache'de yoksa Google Sheets'den kontrol et
+        const result = await checkExistingMotorRecord(motor, tarih, saat);
+        if (result.success && result.exists) {
+            // Cache'e ve Map'e ekle
+            cachedRecords.push(result.record);
+            const mapKey = `${result.record.motor}|${result.record.tarih}|${result.record.saat}`;
+            recordMap.set(mapKey, result.record);
+            return result.record;
+        }
+        return null;
+    } catch (error) {
+        console.error('Kayıt kontrolü hatası:', error);
+        return null;
+    }
+}
+
+// 🚀 ARKA PLAN KAYIT SİSTEMİ FONKSİYONLARI
+
+// Kayıt kuyruğuna yeni işlem ekle
+function kayitKuyrugunaEkle(kayitVerisi) {
+    const islem = {
+        id: ++islemSirasi,
+        ...kayitVerisi,
+        durum: 'beklemede',
+        baslangicZamani: null,
+        bitisZamani: null,
+        hata: null
+    };
+    
+    kayitKuyrugu.push(islem);
+    console.log(`📝 Kayıt kuyruğa eklendi: #${islem.id} - ${islem.motor} - ${islem.saat}`);
+    
+    // Arka plan işlemi başlat
+    if (!kayitIslemiDevamEdiyor) {
+        arkaPlanKayitIsleminiBaslat();
+    }
+    
+    return islem.id;
+}
+
+// Arka plan kayıt işlemini başlat
+async function arkaPlanKayitIsleminiBaslat() {
+    if (kayitIslemiDevamEdiyor || kayitKuyrugu.length === 0) {
+        return;
+    }
+    
+    kayitIslemiDevamEdiyor = true;
+    console.log('🚀 Arka plan kayıt işlemi başlatıldı...');
+    
+    while (kayitKuyrugu.length > 0) {
+        // Bekleyen işlemleri al (max paralel)
+        const yapilacakIslemler = kayitKuyrugu
+            .filter(islem => islem.durum === 'beklemede')
+            .slice(0, MAX_PARALEL_KAYIT);
+        
+        if (yapilacakIslemler.length === 0) {
+            break;
+        }
+        
+        console.log(`🔄 ${yapilacakIslemler.length} işlem paralel başlatılıyor...`);
+        
+        // İşlemleri paralel çalıştır
+        const islemSonuclari = await Promise.allSettled(
+            yapilacakIslemler.map(islem => tekilKayitYap(islem))
+        );
+        
+        // Sonuçları işle
+        islemSonuclari.forEach((sonuc, index) => {
+            const islem = yapilacakIslemler[index];
+            
+            if (sonuc.status === 'fulfilled') {
+                islem.durum = 'tamamlandi';
+                islem.bitisZamani = Date.now();
+                console.log(`✅ İşlem #${islem.id} tamamlandı: ${islem.motor} - ${islem.saat}`);
+            } else {
+                islem.durum = 'hata';
+                islem.hata = sonuc.reason.message;
+                islem.bitisZamani = Date.now();
+                console.log(`❌ İşlem #${islem.id} hata: ${islem.motor} - ${islem.saat} - ${islem.hata}`);
+            }
+        });
+        
+        // Tamamlanan işlemleri kuyruktan temizle
+        kayitKuyrugu = kayitKuyrugu.filter(islem => islem.durum === 'beklemede');
+        
+        // Kısa bekleme (API limitleri için)
+        if (kayitKuyrugu.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+    }
+    
+    kayitIslemiDevamEdiyor = false;
+    console.log('🏁 Arka plan kayıt işlemi tamamlandı');
+    
+    // Verileri yenile
+    loadVardiyaData();
+}
+
+// Tekil kayıt yap
+async function tekilKayitYap(islem) {
+    islem.durum = 'isleniyor';
+    islem.baslangicZamani = Date.now();
+    
+    try {
+        const sonuc = await saveMotorToSheets({
+            motor: islem.motor,
+            tarih: islem.tarih,
+            vardiya: islem.vardiya,
+            saat: islem.saat,
+            kaydeden: islem.kaydeden,
+            durum: 'MOTOR ÇALIŞMIYOR',
+            not: islem.not,
+            // Son kayıt değerleri
+            yuksekHacim: islem.sonKayit?.yuksekHacim || '0',
+            dusukHacim: islem.sonKayit?.dusukHacim || '0',
+            yuksekSicaklik: islem.sonKayit?.yuksekSicaklik || '0',
+            dusukSicaklik: islem.sonKayit?.dusukSicaklik || '0',
+            yuksekBasinc: islem.sonKayit?.yuksekBasinc || '0',
+            dusukBasinc: islem.sonKayit?.dusukBasinc || '0',
+            egzostSicaklik: islem.sonKayit?.egzostSicaklik || '0',
+            id: islem.sonKayit?.id || '0',
+            karterBasinc: islem.sonKayit?.karterBasinc || '0',
+            onKamaraFarkBasinc: islem.sonKayit?.onKamaraFarkBasinc || '0',
+            calismaSaati: islem.sonKayit?.calismaSaati || '0',
+            kalkisSayisi: islem.sonKayit?.kalkisSayisi || '0'
+        });
+        
+        if (!sonuc.success) {
+            throw new Error(sonuc.error || 'Kayıt başarısız');
+        }
+        
+        return { success: true, islem };
+        
+    } catch (error) {
+        console.error(`Tekil kayıt hatası #${islem.id}:`, error);
+        throw error;
+    }
+}
+
+// Kayıt durumunu göster
+function kayitDurumunuGoster() {
+    const bekleyen = kayitKuyrugu.filter(i => i.durum === 'beklemede').length;
+    const islenen = kayitKuyrugu.filter(i => i.durum === 'isleniyor').length;
+    const tamamlanan = kayitKuyrugu.filter(i => i.durum === 'tamamlandi').length;
+    const hatali = kayitKuyrugu.filter(i => i.durum === 'hata').length;
+    
+    if (bekleyen > 0 || islenen > 0) {
+        showMessage(`📊 Kayıt durumu: ${bekleyen} bekleyen, ${islenen} işleniyor, ${tamamlanan} tamamlandı, ${hatali} hatalı`, 'info');
+    }
+}
+
 // Kimlik dogrulama kontrolü
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
@@ -81,36 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ⚡ Background cache yenileme timer
     let cacheRefreshTimer = null;
 
-    // Kayıt kontrolü fonksiyonu - ⚡ ULTRA HIZLI Map arama
-    async function checkExistingRecord(motor, tarih, saat) {
-        try {
-            // 🔥 ULTRA HIZLI KONTROL - Map'den ara (O(1) complexity)
-            const now = Date.now();
-            if (now - cacheTimestamp < CACHE_DURATION) {
-                const mapKey = `${motor}|${tarih}|${saat}`;
-                const cached = recordMap.get(mapKey);
-                if (cached) {
-                    console.log('⚡ Ultra hızlı Map hit!');
-                    return cached;
-                }
-            }
-            
-            // Cache'de yoksa Google Sheets'den kontrol et
-            const result = await checkExistingMotorRecord(motor, tarih, saat);
-            if (result.success && result.exists) {
-                // Cache'e ve Map'e ekle
-                cachedRecords.push(result.record);
-                const mapKey = `${result.record.motor}|${result.record.tarih}|${result.record.saat}`;
-                recordMap.set(mapKey, result.record);
-                return result.record;
-            }
-            return null;
-        } catch (error) {
-            console.error('Kayıt kontrolü hatası:', error);
-            return null;
-        }
-    }
-
+    
     // Cache'i yenile - ⚡ Optimize edilmiş
     async function refreshCache() {
         try {
@@ -176,8 +448,8 @@ document.addEventListener('DOMContentLoaded', function() {
             input.style.cursor = 'not-allowed';
         });
         
-        // Butonları pasif yap
-        const buttons = [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn];
+        // Butonları pasif yap (AMA MOTOR ÇALIŞMIYOR BUTONUNU AKTİF TUT)
+        const buttons = [kaydetBtn, temizleBtn];
         buttons.forEach(btn => {
             if (btn) {
                 btn.disabled = true;
@@ -185,6 +457,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.style.cursor = 'not-allowed';
             }
         });
+        
+        // 🔥 MOTOR ÇALIŞMIYOR BUTONUNU HER ZAMAN AKTİF TUT
+        if (motorCalismiyorKaydetBtn) {
+            motorCalismiyorKaydetBtn.disabled = false;
+            motorCalismiyorKaydetBtn.style.opacity = '1';
+            motorCalismiyorKaydetBtn.style.cursor = 'pointer';
+        }
         
         // 🔥 MOTOR SEÇİM BUTONLARINI HER ZAMAN AKTIF TUT (BAŞLANGIÇTA DA)
         motorButtons.forEach(btn => {
@@ -473,63 +752,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 input.style.color = '';
             });
         }
-    }
-
-    // Mesaj gösterme fonksiyonu
-    function showMessage(message, type) {
-        // Mevcut mesajları temizle
-        const existingMessages = document.querySelectorAll('.message');
-        existingMessages.forEach(msg => msg.remove());
-
-        // Yeni mesaj oluştur
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.textContent = message;
-        
-        // Stiller
-        messageDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            z-index: 9999;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        `;
-        
-        // Tip'e göre renk belirle
-        switch(type) {
-            case 'success':
-                messageDiv.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
-                break;
-            case 'error':
-                messageDiv.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
-                break;
-            case 'warning':
-                messageDiv.style.background = 'linear-gradient(135deg, #ff6b6b, #ee5a24)';
-                break;
-            case 'info':
-                messageDiv.style.background = 'linear-gradient(135deg, #17a2b8, #138496)';
-                break;
-            default:
-                messageDiv.style.background = 'linear-gradient(135deg, #6c757d, #5a6268)';
-        }
-        
-        document.body.appendChild(messageDiv);
-        
-        // 3 saniye sonra mesajı kaldır
-        setTimeout(() => {
-            messageDiv.style.opacity = '0';
-            messageDiv.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
-            }, 300);
-        }, 3000);
     }
 
     // Tüm input'ları getir
@@ -1154,4 +1376,357 @@ document.addEventListener('DOMContentLoaded', function() {
             vardiyaSecimi.value = yeniVardiya;
         }
     }, 30000);
+});
+
+// 🔥 MOTOR ÇALIŞMIYOR MODAL FONKSİYONLARI (KOJEN MOTOR VERİLERİ İÇİN)
+function openMotorCalismiyorModal() {
+    const modal = document.getElementById('motorCalismiyorModal');
+    const modalTarih = document.getElementById('modalTarih');
+    const modalVardiya = document.getElementById('modalVardiya');
+    
+    // 🔥 OTOMATİK BUGÜN TARİHİNİ GETİR (HTML input için yyyy-MM-dd formatında)
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const htmlDateStr = `${year}-${month}-${day}`; // HTML input formatı
+    const displayDateStr = `${day}.${month}.${year}`; // Display formatı
+    
+    // Modal alanını doldur (HTML input formatı)
+    modalTarih.value = htmlDateStr;
+    console.log('📅 Modal tarihi ayarlandı (HTML):', htmlDateStr);
+    console.log('📅 Modal tarihi (Display):', displayDateStr);
+    
+    // Display formatını data attribute olarak sakla
+    modalTarih.setAttribute('data-display-date', displayDateStr);
+    modalVardiya.value = vardiyaSecimi.value;
+    
+    // Vardiya saatlerini filtrele
+    filterSaatByVardiya(vardiyaSecimi.value);
+    
+    // Modalı göster
+    modal.style.display = 'flex';
+    
+    // Event listener'ı ekle
+    document.getElementById('modalKaydetBtn').onclick = handleModalKaydet;
+}
+
+function closeMotorCalismiyorModal() {
+    console.log('🚪 closeMotorCalismiyorModal çağrıldı...');
+    
+    const modal = document.getElementById('motorCalismiyorModal');
+    if (!modal) {
+        console.log('❌ Modal bulunamadı!');
+        return;
+    }
+    
+    console.log('✅ Modal bulundu, kapatılıyor...');
+    modal.style.display = 'none';
+    
+    // Formu temizle
+    setTimeout(() => {
+        // Motor seçimlerini temizle
+        document.querySelectorAll('input[name="motor"]:checked').forEach(cb => {
+            cb.checked = false;
+        });
+        
+        // Saat seçimlerini temizle
+        document.querySelectorAll('input[name="saat"]:checked').forEach(cb => {
+            cb.checked = false;
+        });
+        
+        // Not alanını temizle
+        const modalNot = document.getElementById('modalNot');
+        if (modalNot) {
+            modalNot.value = '';
+        }
+        
+        console.log('🧹 Modal form temizlendi');
+    }, 100);
+}
+
+function filterSaatByVardiya(vardiya) {
+    const saatCheckboxes = document.querySelectorAll('input[name="saat"]');
+    const vardiyaSaatleri = {
+        '08-16': ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'],
+        '16-24': ['16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'],
+        '24-08': ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00']
+    };
+    
+    saatCheckboxes.forEach(checkbox => {
+        const saat = checkbox.value;
+        if (vardiyaSaatleri[vardiya].includes(saat)) {
+            checkbox.checked = true;
+            checkbox.disabled = false;
+            checkbox.parentElement.style.opacity = '1';
+        } else {
+            checkbox.checked = false;
+            checkbox.disabled = true;
+            checkbox.parentElement.style.opacity = '0.5';
+        }
+    });
+}
+
+async function handleModalKaydet() {
+    const kaydetBtn = document.getElementById('modalKaydetBtn');
+    const originalText = kaydetBtn.textContent;
+    
+    try {
+        // Seçili motorları al
+        const selectedMotors = Array.from(document.querySelectorAll('input[name="motor"]:checked'))
+            .map(cb => cb.value);
+        
+        if (selectedMotors.length === 0) {
+            showMessage('Lütfen en az bir motor seçin!', 'error');
+            return;
+        }
+        
+        // Seçili saatleri al
+        const selectedSaatler = Array.from(document.querySelectorAll('input[name="saat"]:checked:not(:disabled)'))
+            .map(cb => cb.value);
+        
+        if (selectedSaatler.length === 0) {
+            showMessage('Lütfen en az bir saat seçin!', 'error');
+            return;
+        }
+        
+        // Butonu devre dışı bırak
+        kaydetBtn.disabled = true;
+        kaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
+        
+        // 🔥 TARİH FORMAT DÖNÜŞTÜRME - HTML yyyy-MM-dd -> DD.MM.YYYY
+        const modalTarihInput = document.getElementById('modalTarih');
+        let modalTarih = modalTarihInput.value;
+        
+        // HTML formatından display formatına çevir
+        if (modalTarih && modalTarih.includes('-')) {
+            const parts = modalTarih.split('-');
+            modalTarih = `${parts[2]}.${parts[1]}.${parts[0]}`; // DD.MM.YYYY
+        }
+        
+        const modalVardiya = document.getElementById('modalVardiya').value;
+        const modalNot = document.getElementById('modalNot').value;
+        
+        console.log('📅 Modal değerleri:', { 
+            modalTarih: modalTarih, 
+            modalTarihRaw: modalTarihInput.value,
+            modalVardiya, 
+            modalNot 
+        });
+        
+        let successCount = 0;
+        let errorCount = 0;
+        let errors = [];
+        
+        console.log('🚀 HIZLI TOPLU MOTOR KAYIT SİSTEMİ BAŞLIYOR...');
+        
+        // 🚀 TOPLU KAYIT İÇİN HAZIRLIK
+        const kayitlar = [];
+        const kontrolListesi = [];
+        
+        // Tüm kombinasyonları hazırla
+        for (const motor of selectedMotors) {
+            for (const saat of selectedSaatler) {
+                kontrolListesi.push({ motor, tarih: modalTarih, saat });
+            }
+        }
+        
+        console.log('📊 Kontrol listesi:', kontrolListesi);
+        
+        console.log(`📋 ${kontrolListesi.length} motor kombinasyonu hazırlandı...`);
+        
+        // 🚀 SÜPER HIZLI TOPLU KAYIT KONTROLÜ (TEK API ÇAĞRISI)
+        console.log('🔍 Tüm motor kayıtları tek seferde kontrol ediliyor...');
+        const bulkKontrolResult = await checkMultipleMotorRecords(kontrolListesi);
+        
+        // 🚀 KAYIT EDİLECEKLERİ FİLTRELE
+        const kayitEdilecekler = [];
+        
+        if (bulkKontrolResult.success) {
+            console.log(`📊 Toplu motor kontrol sonucu: ${bulkKontrolResult.existingCount} var, ${bulkKontrolResult.totalCount - bulkKontrolResult.existingCount} yok`);
+            
+            kontrolListesi.forEach(({ motor, saat }) => {
+                const key = `${motor}|${modalTarih}|${saat}`;
+                const sonuc = bulkKontrolResult.results[key];
+                
+                if (sonuc && !sonuc.exists) {
+                    kayitEdilecekler.push({ motor, saat });
+                } else if (sonuc && sonuc.exists) {
+                    console.log(`⏭️ ${motor} - ${saat} için kayıt zaten var`);
+                } else {
+                    console.log(`❌ ${motor} - ${saat} kontrol hatası`);
+                    errors.push(`${motor} - ${saat}: Kontrol hatası`);
+                }
+            });
+        } else {
+            console.log('❌ Toplu motor kontrol başarısız, tek tek deneniyor...');
+            // Fallback: Tek tek kontrol et
+            for (const motor of selectedMotors) {
+                for (const saat of selectedSaatler) {
+                    try {
+                        const existingRecord = await checkExistingRecord(motor, modalTarih, saat);
+                        if (!existingRecord) {
+                            kayitEdilecekler.push({ motor, saat });
+                        } else {
+                            console.log(`${motor} - ${modalTarih} ${saat} için kayıt zaten var`);
+                        }
+                    } catch (error) {
+                        console.log(`❌ ${motor} - ${saat} kontrol hatası:`, error);
+                        errors.push(`${motor} - ${saat}: Kontrol hatası`);
+                    }
+                }
+            }
+        }
+        
+        console.log(`📊 ${kayitEdilecekler.length} motor kaydı yapılacak...`);
+        
+        if (kayitEdilecekler.length === 0) {
+            console.log('⏭️ Kayıt yapılacak şey yok, işlem tamamlandı');
+            showMessage('Tüm seçili saatler için zaten kayıt mevcut!', 'info');
+            kaydetBtn.disabled = false;
+            kaydetBtn.textContent = originalText;
+            return;
+        }
+        
+        // 🚀 SON KAYIT DEĞERLERİNİ TOPLU AL (PARALEL)
+        console.log('📊 Son motor kayıt değerleri toplanıyor...');
+        const motorlar = [...new Set(kayitEdilecekler.map(k => k.motor))];
+        const sonKayitSonuclari = await Promise.allSettled(
+            motorlar.map(motor => getLastRecordForMotor(motor))
+        );
+        
+        const sonKayitlar = {};
+        sonKayitSonuclari.forEach((sonuc, index) => {
+            const motor = motorlar[index];
+            if (sonuc.status === 'fulfilled') {
+                sonKayitlar[motor] = sonuc.value || {};
+            } else {
+                sonKayitlar[motor] = {};
+                console.log(`❌ ${motor} son motor kayıt hatası:`, sonuc.reason);
+            }
+        });
+        
+        // 🚀 TOPLU KAYIT İŞLEMİ (PARALEL)
+        console.log('💾 Toplu motor kayıt işlemi başlıyor...');
+        const kayitSonuclari = await Promise.allSettled(
+            kayitEdilecekler.map(({ motor, saat }) => {
+                const sonKayit = sonKayitlar[motor] || {};
+                
+                return saveMotorToSheets({
+                    motor: motor,
+                    tarih: modalTarih,
+                    vardiya: modalVardiya,
+                    saat: saat,
+                    kaydeden: getCurrentUserName(),
+                    durum: 'MOTOR ÇALIŞMIYOR',
+                    not: modalNot || 'Motor çalışmıyor',
+                    // Son kayıt değerleri (motor verileri için)
+                    yuksekHacim: sonKayit.yuksekHacim || '0',
+                    dusukHacim: sonKayit.dusukHacim || '0',
+                    yuksekSicaklik: sonKayit.yuksekSicaklik || '0',
+                    dusukSicaklik: sonKayit.dusukSicaklik || '0',
+                    yuksekBasinc: sonKayit.yuksekBasinc || '0',
+                    dusukBasinc: sonKayit.dusukBasinc || '0',
+                    egzostSicaklik: sonKayit.egzostSicaklik || '0',
+                    id: sonKayit.id || '0',
+                    karterBasinc: sonKayit.karterBasinc || '0',
+                    onKamaraFarkBasinc: sonKayit.onKamaraFarkBasinc || '0',
+                    calismaSaati: sonKayit.calismaSaati || '0',
+                    kalkisSayisi: sonKayit.kalkisSayisi || '0'
+                });
+            })
+        );
+        
+        // 🚀 SONUÇLARI DEĞERLENDİR
+        kayitSonuclari.forEach((sonuc, index) => {
+            const { motor, saat } = kayitEdilecekler[index];
+            
+            if (sonuc.status === 'fulfilled' && sonuc.value.success) {
+                successCount++;
+                console.log(`✅ Başarılı: ${motor} - ${saat}`);
+            } else {
+                errorCount++;
+                const errorMsg = sonuc.status === 'fulfilled' 
+                    ? `${motor} - ${saat}: ${sonuc.value.error}`
+                    : `${motor} - ${saat}: ${sonuc.reason.message}`;
+                errors.push(errorMsg);
+                console.log(`❌ Hata: ${errorMsg}`);
+            }
+        });
+        
+        // 🚀 ARKA PLAN KAYIT SİSTEMİ - İşlemleri kuyruğa ekle
+        const eklenenIslemler = [];
+        
+        kayitEdilecekler.forEach(({ motor, saat }) => {
+            const sonKayit = sonKayitlar[motor] || {};
+            
+            const islemId = kayitKuyrugunaEkle({
+                motor: motor,
+                tarih: modalTarih,
+                vardiya: modalVardiya,
+                saat: saat,
+                kaydeden: getCurrentUserName(),
+                not: modalNot || 'Motor çalışmıyor',
+                sonKayit: sonKayit
+            });
+            
+            eklenenIslemler.push(islemId);
+        });
+        
+        // Modalı hemen kapat - kullanıcı devam edebilir
+        closeMotorCalismiyorModal();
+        
+        // Başlangıç mesajı
+        showMessage(`${kayitEdilecekler.length} kayıt arka plana eklendi! İşlem #${eklenenIslemler[0]} - #${eklenenIslemler[eklenenIslemler.length-1]}`, 'success');
+        
+        // Durum güncellemelerini göster
+        const durumInterval = setInterval(() => {
+            kayitDurumunuGoster();
+            
+            // Tüm işlemler bittiğinde interval'i temizle
+            const bekleyen = kayitKuyrugu.filter(i => i.durum === 'beklemede').length;
+            const islenen = kayitKuyrugu.filter(i => i.durum === 'isleniyor').length;
+            
+            if (bekleyen === 0 && islenen === 0) {
+                clearInterval(durumInterval);
+                
+                // Son durum mesajı
+                const tamamlanan = kayitKuyrugu.filter(i => i.durum === 'tamamlandi').length;
+                const hatali = kayitKuyrugu.filter(i => i.durum === 'hata').length;
+                
+                if (tamamlanan > 0) {
+                    showMessage(`🎉 Tüm kayıtlar tamamlandı! ${tamamlanan} başarılı, ${hatali} hatalı`, 'success');
+                }
+                
+                // Kuyruğu temizle (sadece son 10 işlemi tut)
+                kayitKuyrugu = kayitKuyrugu.slice(-10);
+            }
+        }, 2000); // Her 2 saniyede bir durum göster
+        
+    } catch (error) {
+        showMessage('İşlem hatası: ' + error.message, 'error');
+    } finally {
+        kaydetBtn.disabled = false;
+        kaydetBtn.textContent = originalText;
+    }
+}
+
+// Event listener'ları ekle
+document.addEventListener('DOMContentLoaded', function() {
+    // Motor çalışmıyor butonuna modal açma event listener'ı ekle
+    const motorCalismiyorKaydetBtn = document.getElementById('motorCalismiyorKaydetBtn');
+    if (motorCalismiyorKaydetBtn) {
+        // Eski listener'ı kaldır
+        motorCalismiyorKaydetBtn.replaceWith(motorCalismiyorKaydetBtn.cloneNode(true));
+        
+        // Yeni listener'ı ekle
+        document.getElementById('motorCalismiyorKaydetBtn').addEventListener('click', function() {
+            openMotorCalismiyorModal();
+        });
+    }
+    
+    // Vardiya değiştiğinde saatleri filtrele
+    document.getElementById('modalVardiya')?.addEventListener('change', function() {
+        filterSaatByVardiya(this.value);
+    });
 });
