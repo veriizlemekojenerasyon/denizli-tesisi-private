@@ -68,13 +68,16 @@ function handleRequest(e) {
   }
 }
 
-// Sayfa oluşturma veya alma fonksiyonu
-function getOrCreateSheet() {
+// 🔥 MOTOR BAZLI SAYFA GETİRME FONKSİYONU
+function getOrCreateSheet(motor) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = spreadsheet.getSheetByName('KojenMotorVerileri');
+  
+  // Motor bazlı sayfa adı
+  var sheetName = 'Motor GM-' + motor;
+  var sheet = spreadsheet.getSheetByName(sheetName);
   
   if (!sheet) {
-    sheet = spreadsheet.insertSheet('KojenMotorVerileri');
+    sheet = spreadsheet.insertSheet(sheetName);
     
     // Başlık satırını ekle
     var headers = [
@@ -88,15 +91,11 @@ function getOrCreateSheet() {
       'SARGI SIC. -1-', 'SARGI SIC. -2-', 'SARGI SIC. -3-',
       'Durum', 'Kaydeden', 'Kayıt Tarihi'
     ];
-    sheet.appendRow(headers);
-    
-    // Başlık formatı
-    var headerRange = sheet.getRange(1, 1, 1, 22);
-    headerRange.setFontWeight('bold');
-    headerRange.setBackground('#3498db');
-    headerRange.setFontColor('#ffffff');
-    headerRange.setHorizontalAlignment('center');
+    var headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setValues([headers]).setFontWeight('bold');
     headerRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+    
+    console.log('📄 Yeni motor sayfası oluşturuldu: ' + sheetName);
     
     // Sütun genişliklerini ayarla
     sheet.setColumnWidth(1, 100);  // Tarih
@@ -138,10 +137,12 @@ function getOrCreateSheet() {
   return sheet;
 }
 
-// Yeni kayıt ekle
+// Yeni kayıt ekle (Motor Bazlı)
 function addRecord(data) {
   try {
-    var sheet = getOrCreateSheet();
+    // Motor bilgisinden sayfa adı belirle
+    var motor = data.motor || '1';
+    var sheet = getOrCreateSheet(motor);
     
     // Zorunlu alanları kontrol et
     if (!data.tarih || !data.vardiya || !data.saat || !data.motor) {
@@ -251,47 +252,62 @@ function addRecord(data) {
   }
 }
 
-// Tüm kayıtları getir
+// Tüm kayıtları getir (Tüm Motor Sayfalarından)
 function getRecords() {
   try {
-    var sheet = getOrCreateSheet();
-    
-    if (sheet.getLastRow() < 2) {
-      return { success: true, data: [] };
-    }
-    
-    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 22).getDisplayValues();
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheets = spreadsheet.getSheets();
     var records = [];
     
-    for (var i = data.length - 1; i >= 0; i--) {
-      var row = data[i];
+    // Sadece Motor GM-* sayfalarını işle
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      var sheetName = sheet.getName();
       
-      records.push({
-        tarih: row[0],
-        vardiya: row[1],
-        saat: row[2],
-        motor: row[3],
-        jenYatakSicaklikDE: row[4],
-        jenYatakSicaklikNDE: row[5],
-        sogutmaSuyuSicaklik: row[6],
-        sogutmaSuyuBasinc: row[7],
-        yagSicaklik: row[8],
-        yagBasinc: row[9],
-        sarjSicaklik: row[10],
-        sarjBasinc: row[11],
-        gazRegulatoru: row[12],
-        makineDairesiSicaklik: row[13],
-        karterBasinc: row[14],
-        onKamaraFarkBasinc: row[15],
-        sargiSicaklik1: row[16],
-        sargiSicaklik2: row[17],
-        sargiSicaklik3: row[18],
-        durum: row[19],
-        kaydeden: row[20],
-        kayitTarihi: row[21]
-      });
+      // Sadece motor sayfalarını işle
+      if (!sheetName.startsWith('Motor GM-')) {
+        continue;
+      }
+      
+      console.log('📊 Motor sayfası okunuyor: ' + sheetName);
+      
+      if (sheet.getLastRow() < 2) {
+        continue;
+      }
+      
+      var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 22).getDisplayValues();
+      
+      for (var j = data.length - 1; j >= 0; j--) {
+        var row = data[j];
+        
+        records.push({
+          tarih: row[0],
+          vardiya: row[1],
+          saat: row[2],
+          motor: row[3],
+          jenYatakSicaklikDE: row[4],
+          jenYatakSicaklikNDE: row[5],
+          sogutmaSuyuSicaklik: row[6],
+          sogutmaSuyuBasinc: row[7],
+          yagSicaklik: row[8],
+          yagBasinc: row[9],
+          sarjSicaklik: row[10],
+          sarjBasinc: row[11],
+          gazRegulatoru: row[12],
+          makineDairesiSicaklik: row[13],
+          karterBasinc: row[14],
+          onKamaraFarkBasinc: row[15],
+          sargiSicaklik1: row[16],
+          sargiSicaklik2: row[17],
+          sargiSicaklik3: row[18],
+          durum: row[19],
+          kaydeden: row[20],
+          kayitTarihi: row[21]
+        });
+      }
     }
     
+    console.log('📊 Toplam ' + records.length + ' motor kaydı okundu');
     return { success: true, data: records };
     
   } catch (error) {

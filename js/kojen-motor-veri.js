@@ -47,11 +47,14 @@ let recordMap = new Map();
 let cacheTimestamp = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 dakika
 
-// � ARKA PLAN KAYIT SİSTEMİ
+// 🚀 ARKA PLAN KAYIT SİSTEMİ
 let kayitKuyrugu = [];
 let islemSirasi = 0;
 let kayitIslemiDevamEdiyor = false;
 const MAX_PARALEL_KAYIT = 3; // Aynı anda max 3 kayıt
+
+// 🔥 GLOBAL MOTOR DEĞİŞKENİ
+let selectedMotor = 'GM-1'; // Varsayılan motor
 
 // � Giriş yapan kullanıcının adını al
 function getCurrentUserName() {
@@ -164,7 +167,97 @@ async function checkExistingRecord(motor, tarih, saat) {
     }
 }
 
-// 🚀 ARKA PLAN KAYIT SİSTEMİ FONKSİYONLARI
+// � GLOBAL loadVardiyaData FONKSİYONU
+async function loadVardiyaData() {
+    const vardiya = vardiyaSecimi.value;
+    const tarih = tarihSecimi.value;
+    const motor = selectedMotor; // Seçili motoru al
+    
+    if (!vardiya || !tarih || !motor) return;
+    
+    try {
+        console.log(`📊 ${motor} motoru için ${tarih} tarih ${vardiya} vardiya verileri yükleniyor...`);
+        
+        const result = await getRecordsByMotorAndDate(motor, tarih);
+        if (!result.success) {
+            console.error('Veriler yüklenemedi:', result.error);
+            return;
+        }
+        
+        const records = result.data;
+        const tbody = document.getElementById('motorVeriTableBody');
+        if (!tbody) return;
+        
+        // Mevcut satırları temizle
+        tbody.innerHTML = '';
+        
+        // Vardiya saatlerini filtrele
+        const vardiyaSaatleri = {
+            '08-16': ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'],
+            '16-24': ['16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'],
+            '24-08': ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00']
+        };
+        
+        const saatler = vardiyaSaatleri[vardiya] || [];
+        let kayitSayisi = 0;
+        
+        saatler.forEach(saat => {
+            const record = records.find(r => r.saat === saat);
+            const row = document.createElement('tr');
+            
+            if (record) {
+                kayitSayisi++;
+                row.innerHTML = `
+                    <td>${record.tarih}</td>
+                    <td>${record.vardiya}</td>
+                    <td>${record.saat}</td>
+                    <td>${record.motor}</td>
+                    <td>${record.jenYatakSicaklikDE || '-'}</td>
+                    <td>${record.jenYatakSicaklikNDE || '-'}</td>
+                    <td>${record.sogutmaSuyuSicaklik || '-'}</td>
+                    <td>${record.sogutmaSuyuBasinc || '-'}</td>
+                    <td>${record.yagSicaklik || '-'}</td>
+                    <td>${record.yagBasinc || '-'}</td>
+                    <td>${record.sarjSicaklik || '-'}</td>
+                    <td>${record.sarjBasinc || '-'}</td>
+                    <td>${record.gazRegulatoru || '-'}</td>
+                    <td>${record.makineDairesiSicaklik || '-'}</td>
+                    <td>${record.karterBasinc || '-'}</td>
+                    <td>${record.onKamaraFarkBasinc || '-'}</td>
+                    <td>${record.sargiSicaklik1 || '-'}</td>
+                    <td>${record.sargiSicaklik2 || '-'}</td>
+                    <td>${record.sargiSicaklik3 || '-'}</td>
+                    <td>${record.durum}</td>
+                    <td>${record.kaydeden}</td>
+                    <td>${record.kayitTarihi}</td>
+                `;
+                
+                // Motor çalışmıyorsa satırı kırmızı yap
+                if (record.durum === 'MOTOR ÇALIŞMIYOR') {
+                    row.style.backgroundColor = '#ffebee';
+                    row.style.color = '#c62828';
+                }
+            } else {
+                row.innerHTML = `
+                    <td>${tarih}</td>
+                    <td>${vardiya}</td>
+                    <td>${saat}</td>
+                    <td>${motor}</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                `;
+            }
+            
+            tbody.appendChild(row);
+        });
+        
+        console.log(`✅ ${kayitSayisi} kayıt yüklendi`);
+        
+    } catch (error) {
+        console.error('Vardiya verileri yüklenirken hata:', error);
+    }
+}
+
+// � ARKA PLAN KAYIT SİSTEMİ FONKSİYONLARI
 
 // Kayıt kuyruğuna yeni işlem ekle
 function kayitKuyrugunaEkle(kayitVerisi) {
@@ -349,8 +442,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarLogout = document.getElementById('sidebarLogout');
     const headerLogout = document.getElementById('headerLogout');
 
-    // Seçili motor
-    let selectedMotor = 'GM-1';
+    // Form kilit durumu
     let isLocked = false; // Form kilit durumu
 
     // 🔒 BAŞLANGIÇTA TÜM FORM PASİF YAP
@@ -1606,55 +1698,7 @@ async function handleModalKaydet() {
             }
         });
         
-        // 🚀 TOPLU KAYIT İŞLEMİ (PARALEL)
-        console.log('💾 Toplu motor kayıt işlemi başlıyor...');
-        const kayitSonuclari = await Promise.allSettled(
-            kayitEdilecekler.map(({ motor, saat }) => {
-                const sonKayit = sonKayitlar[motor] || {};
-                
-                return saveMotorToSheets({
-                    motor: motor,
-                    tarih: modalTarih,
-                    vardiya: modalVardiya,
-                    saat: saat,
-                    kaydeden: getCurrentUserName(),
-                    durum: 'MOTOR ÇALIŞMIYOR',
-                    not: modalNot || 'Motor çalışmıyor',
-                    // Son kayıt değerleri (motor verileri için)
-                    yuksekHacim: sonKayit.yuksekHacim || '0',
-                    dusukHacim: sonKayit.dusukHacim || '0',
-                    yuksekSicaklik: sonKayit.yuksekSicaklik || '0',
-                    dusukSicaklik: sonKayit.dusukSicaklik || '0',
-                    yuksekBasinc: sonKayit.yuksekBasinc || '0',
-                    dusukBasinc: sonKayit.dusukBasinc || '0',
-                    egzostSicaklik: sonKayit.egzostSicaklik || '0',
-                    id: sonKayit.id || '0',
-                    karterBasinc: sonKayit.karterBasinc || '0',
-                    onKamaraFarkBasinc: sonKayit.onKamaraFarkBasinc || '0',
-                    calismaSaati: sonKayit.calismaSaati || '0',
-                    kalkisSayisi: sonKayit.kalkisSayisi || '0'
-                });
-            })
-        );
-        
-        // 🚀 SONUÇLARI DEĞERLENDİR
-        kayitSonuclari.forEach((sonuc, index) => {
-            const { motor, saat } = kayitEdilecekler[index];
-            
-            if (sonuc.status === 'fulfilled' && sonuc.value.success) {
-                successCount++;
-                console.log(`✅ Başarılı: ${motor} - ${saat}`);
-            } else {
-                errorCount++;
-                const errorMsg = sonuc.status === 'fulfilled' 
-                    ? `${motor} - ${saat}: ${sonuc.value.error}`
-                    : `${motor} - ${saat}: ${sonuc.reason.message}`;
-                errors.push(errorMsg);
-                console.log(`❌ Hata: ${errorMsg}`);
-            }
-        });
-        
-        // 🚀 ARKA PLAN KAYIT SİSTEMİ - İşlemleri kuyruğa ekle
+        // 🚀 SADECE ARKA PLAN KAYIT SİSTEMİ - İşlemleri kuyruğa ekle
         const eklenenIslemler = [];
         
         kayitEdilecekler.forEach(({ motor, saat }) => {

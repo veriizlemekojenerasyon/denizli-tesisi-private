@@ -68,13 +68,16 @@ function handleRequest(e) {
   }
 }
 
-// Sayfa oluşturma veya alma fonksiyonu
-function getOrCreateSheet() {
+// 🔥 MOTOR BAZLI SAYFA GETİRME FONKSİYONU
+function getOrCreateSheet(motor) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = spreadsheet.getSheetByName('KojenEnerjiVerileri');
+  
+  // Motor bazlı sayfa adı
+  var sheetName = 'Enerji GM-' + motor;
+  var sheet = spreadsheet.getSheetByName(sheetName);
   
   if (!sheet) {
-    sheet = spreadsheet.insertSheet('KojenEnerjiVerileri');
+    sheet = spreadsheet.insertSheet(sheetName);
     
     // Başlık satırını ekle
     var headers = [
@@ -85,14 +88,9 @@ function getOrCreateSheet() {
       'TOPLAM AKTİF ENERJİ', 'ÇALIŞMA SAATİ', 'KALKIŞ SAYISI',
       'Durum', 'Kaydeden', 'Kayıt Tarihi'
     ];
-    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
     
-    // Başlık formatı
-    var headerRange = sheet.getRange(1, 1, 1, 18);
-    headerRange.setFontWeight('bold');
-    headerRange.setBackground('#e74c3c');
-    headerRange.setFontColor('#ffffff');
-    headerRange.setHorizontalAlignment('center');
+    console.log('📄 Yeni enerji sayfası oluşturuldu: ' + sheetName);
     headerRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
     
     // Sütun genişliklerini ayarla
@@ -126,10 +124,12 @@ function getOrCreateSheet() {
   return sheet;
 }
 
-// Yeni kayıt ekle
+// Yeni kayıt ekle (Motor Bazlı)
 function addRecord(data) {
   try {
-    var sheet = getOrCreateSheet();
+    // Motor bilgisinden sayfa adı belirle
+    var motor = data.motor || '1';
+    var sheet = getOrCreateSheet(motor);
     
     // Zorunlu alanları kontrol et
     if (!data.tarih || !data.vardiya || !data.saat || !data.motor) {
@@ -235,43 +235,58 @@ function addRecord(data) {
   }
 }
 
-// Tüm kayıtları getir
+// Tüm kayıtları getir (Tüm Motor Sayfalarından)
 function getRecords() {
   try {
-    var sheet = getOrCreateSheet();
-    
-    if (sheet.getLastRow() < 2) {
-      return { success: true, data: [] };
-    }
-    
-    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues();
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheets = spreadsheet.getSheets();
     var records = [];
     
-    for (var i = data.length - 1; i >= 0; i--) {
-      var row = data[i];
+    // Sadece Enerji GM-* sayfalarını işle
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      var sheetName = sheet.getName();
       
-      records.push({
-        tarih: row[0],
-        vardiya: row[1],
-        saat: row[2],
-        motor: row[3],
-        aydemVoltaji: row[4],
-        aktifGuc: row[5],
-        reaktifGuc: row[6],
-        cosPhi: row[7],
-        ortAkif: row[8],
-        ortGerilim: row[9],
-        notrAkim: row[10],
-        tahrikGerilimi: row[11],
-        toplamAktifEnerji: row[12],
-        calismaSaati: row[13],
-        kalkisSayisi: row[14],
-        durum: row[15],
-        kaydeden: row[16],
-        kayitTarihi: row[17]
-      });
+      // Sadece enerji sayfalarını işle
+      if (!sheetName.startsWith('Enerji GM-')) {
+        continue;
+      }
+      
+      console.log('📊 Enerji sayfası okunuyor: ' + sheetName);
+      
+      if (sheet.getLastRow() < 2) {
+        continue;
+      }
+      
+      var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues();
+      
+      for (var j = data.length - 1; j >= 0; j--) {
+        var row = data[j];
+        
+        records.push({
+          tarih: row[0],
+          vardiya: row[1],
+          saat: row[2],
+          motor: row[3],
+          aydemVoltaji: row[4],
+          aktifGuc: row[5],
+          reaktifGuc: row[6],
+          cosFi: row[7],
+          ortAkim: row[8],
+          ortGerilim: row[9],
+          notrAkimi: row[10],
+          tahrikGerilimi: row[11],
+          toplamAktifEnerji: row[12],
+          calismaSaati: row[13],
+          kalkisSayisi: row[14],
+          durum: row[15],
+          kaydeden: row[16],
+          kayitTarihi: row[17]
+        });
+      }
     }
     
+    console.log('📊 Toplam ' + records.length + ' enerji kaydı okundu');
     return { success: true, data: records };
     
   } catch (error) {
