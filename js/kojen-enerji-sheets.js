@@ -4,7 +4,7 @@
  */
 
 const KojenEnerjiSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbx_kS5oIag8vbtLsCJ55PzYKbmmy_DWEpQ1poHYshAPZ0RAV_PpiK8Q_TdR-WYlXLpu/exec'
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbz-OjM8ZptpnYboE8KKLM23Oe2wO-jK1EPbM8NqqTIFQ_o8VTJoyjDNoeOiduhKmwAk/exec'
 };
 
 /**
@@ -128,10 +128,13 @@ async function checkExistingEnerjiRecord(motor, tarih, saat) {
  */
 async function checkMultipleEnerjiRecords(kombinasyonlar) {
     console.log('🚀 TOPLU KAYIT KONTROLÜ BAŞLATILIYOR:', kombinasyonlar.length, 'kombinasyon');
+    console.log('📊 Gelen kombinasyonlar:', kombinasyonlar);
     
     try {
         // Tüm kombinasyonları tek bir string'e dönüştür
         const kontrolData = kombinasyonlar.map(k => `${k.motor}|${k.tarih}|${k.saat}`).join(',');
+        
+        console.log('📊 Oluşturulan kontrolData:', kontrolData);
         
         const url = KojenEnerjiSheetsConfig.WEB_APP_URL + 
             `?action=checkMultipleRecords&data=${encodeURIComponent(kontrolData)}`;

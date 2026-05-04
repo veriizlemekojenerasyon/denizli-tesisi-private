@@ -978,11 +978,25 @@ async function handleModalKaydet() {
         kaydetBtn.disabled = true;
         kaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
         
-        const modalTarih = document.getElementById('modalTarih').value;
+        // 🔥 TARİH FORMAT DÖNÜŞTÜRME - HTML yyyy-MM-dd -> DD.MM.YYYY
+        const modalTarihInput = document.getElementById('modalTarih');
+        let modalTarih = modalTarihInput.value;
+        
+        // HTML formatından display formatına çevir
+        if (modalTarih && modalTarih.includes('-')) {
+            const parts = modalTarih.split('-');
+            modalTarih = `${parts[2]}.${parts[1]}.${parts[0]}`; // DD.MM.YYYY
+        }
+        
         const modalVardiya = document.getElementById('modalVardiya').value;
         const modalNot = document.getElementById('modalNot').value;
         
-        console.log('📅 Modal verileri:', { modalTarih, modalVardiya, modalNot });
+        console.log('📅 Modal verileri:', { 
+            modalTarih: modalTarih, 
+            modalTarihRaw: modalTarihInput.value,
+            modalVardiya, 
+            modalNot 
+        });
         
         let successCount = 0;
         let errorCount = 0;
@@ -997,10 +1011,11 @@ async function handleModalKaydet() {
         // Tüm kombinasyonları hazırla
         for (const motor of selectedMotors) {
             for (const saat of selectedSaatler) {
-                kontrolListesi.push({ motor, saat });
+                kontrolListesi.push({ motor, tarih: modalTarih, saat });
             }
         }
         
+        console.log('📊 Kontrol listesi:', kontrolListesi);
         console.log(`📋 ${kontrolListesi.length} kombinasyon hazırlandı...`);
         
         // 🚀 SÜPER HIZLI TOPLU KAYIT KONTROLÜ (TEK API ÇAĞRISI)
@@ -1010,14 +1025,14 @@ async function handleModalKaydet() {
         const lokalKontrolEdilecekler = [];
         const cacheKontrolEdilecekler = [];
         
-        kontrolListesi.forEach(({ motor, saat }) => {
-            const key = `${motor}|${modalTarih}|${saat}`;
+        kontrolListesi.forEach(({ motor, tarih, saat }) => {
+            const key = `${motor}|${tarih}|${saat}`;
             const cached = recordMap.get(key);
             
             if (cached) {
                 console.log(`⚡ Cache hit: ${motor} - ${saat} (kayıt var)`);
             } else {
-                cacheKontrolEdilecekler.push({ motor, saat });
+                cacheKontrolEdilecekler.push({ motor, tarih, saat });
             }
         });
         
