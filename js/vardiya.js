@@ -85,12 +85,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const yardimciOperatorListesi = document.getElementById('yardimciOperatorListesi');
     const yardimciOperator = document.getElementById('yardimciOperator');
 
+    // Vardiya kayıtları tarih seçicileri
+    const baslangicTarihInput = document.getElementById('baslangicTarih');
+    const bitisTarihInput = document.getElementById('bitisTarih');
+    const tarihFiltreBtn = document.getElementById('tarihFiltreBtn');
+    const tarihSifirlaBtn = document.getElementById('tarihSifirlaBtn');
+
     // Bugünün tarihini al ve input'a ata (DD.MM.YYYY formatında)
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     tarihInput.value = `${day}.${month}.${year}`;
+
+    // Vardiya kayıtları için varsayılan tarih aralığı (son 30 gün)
+    const otuzGunOnce = new Date();
+    otuzGunOnce.setDate(otuzGunOnce.getDate() - 30);
+    const baslangicYear = otuzGunOnce.getFullYear();
+    const baslangicMonth = String(otuzGunOnce.getMonth() + 1).padStart(2, '0');
+    const baslangicDay = String(otuzGunOnce.getDate()).padStart(2, '0');
+    baslangicTarihInput.value = `${baslangicDay}.${baslangicMonth}.${baslangicYear}`;
+    bitisTarihInput.value = `${day}.${month}.${year}`;
 
     // Vardiya seçicisine otomatik değeri ata (saate göre)
     function setVardiyaByHour() {
@@ -416,12 +431,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Haftalık vardiya kayıtlarını göster
     haftalikVardiyaKayitlariniGoster();
 
-    // İşlem detaylarını göster
-    function islemDetaylariniGoster() {
-        const tumIslemler = JSON.parse(localStorage.getItem('vardiyaIslemleri') || '[]');
-        const mevcutVardiya = localStorage.getItem('mevcutVardiya');
+    // Tarih filtrele butonu
+    tarihFiltreBtn.addEventListener('click', function() {
+        haftalikVardiyaKayitlariniGoster();
+    });
+
+    // Tarih sıfırla butonu
+    tarihSifirlaBtn.addEventListener('click', function() {
+        // Tarihleri varsayılan değerlere sıfırla (son 30 gün)
+        const otuzGunOnce = new Date();
+        otuzGunOnce.setDate(otuzGunOnce.getDate() - 30);
+        const baslangicYear = otuzGunOnce.getFullYear();
+        const baslangicMonth = String(otuzGunOnce.getMonth() + 1).padStart(2, '0');
+        const baslangicDay = String(otuzGunOnce.getDate()).padStart(2, '0');
+        baslangicTarihInput.value = `${baslangicDay}.${baslangicMonth}.${baslangicYear}`;
+        bitisTarihInput.value = `${day}.${month}.${year}`;
         
-        // Modal oluştur
+        // Kayıtları yeniden yükle
+        haftalikVardiyaKayitlariniGoster();
+    });
+
+    // İşlem detaylarını göster
+    async function islemDetaylariniGoster() {
+        // Modal oluştur (loading ile)
         const modal = document.createElement('div');
         modal.className = 'islem-detaylari-modal';
         modal.innerHTML = `
@@ -432,7 +464,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="modal-close">✕</button>
                 </div>
                 <div class="modal-body">
-                    ${islemDetaylariHTML(tumIslemler, mevcutVardiya)}
+                    <div style="text-align: center; padding: 20px; color: #6c757d;">
+                        İşlemler yükleniyor...
+                    </div>
                 </div>
             </div>
         `;
@@ -450,13 +484,59 @@ document.addEventListener('DOMContentLoaded', function() {
         modalOverlay.addEventListener('click', function() {
             modal.remove();
         });
+        
+        try {
+            console.log('📊 Vardiya kayıtları ve işlemler tek seferde çekiliyor...');
+            // Google Sheets'ten vardiya kayıtlarını ve işlemleri tek seferde çek
+            const url = new URL(VARDIYA_APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getLastRecordsWithIslemler');
+            url.searchParams.append('count', '270'); // Son 90 gün
+            
+            const response = await fetch(url);
+            const result = await response.json();
+            
+            console.log('📊 Sonuç:', result);
+            
+            if (!result.success) {
+                throw new Error(result.error || 'İşlemler yüklenemedi');
+            }
+            
+            const tumVardiyaKayitlari = result.data || [];
+            const mevcutVardiya = localStorage.getItem('mevcutVardiya');
+            
+            console.log('📊 Toplam vardiya sayısı:', tumVardiyaKayitlari.length);
+            
+            // İşlemler her vardiya kaydının içinde (islemler) olarak geliyor
+            // Map oluşturmaya gerek yok, direkt kullanabiliriz
+            const vardiyaIslemleriMap = new Map();
+            tumVardiyaKayitlari.forEach(vardiya => {
+                if (vardiya.id) {
+                    vardiyaIslemleriMap.set(vardiya.id, vardiya.islemler || []);
+                }
+            });
+            
+            console.log('📊 İşlemler yüklendi');
+            
+            // Modal içeriğini güncelle
+            const modalBody = modal.querySelector('.modal-body');
+            modalBody.innerHTML = islemDetaylariHTML(tumVardiyaKayitlari, mevcutVardiya, vardiyaIslemleriMap);
+            
+        } catch (error) {
+            console.error('❌ İşlem detayları yükleme hatası:', error);
+            const modalBody = modal.querySelector('.modal-body');
+            modalBody.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #e74c3c;">
+                    İşlemler yüklenemedi: ${error.message}
+                </div>
+            `;
+        }
     }
 
     // İşlem detayları HTML'i oluştur
-    function islemDetaylariHTML(tumIslemler, mevcutVardiya) {
+    function islemDetaylariHTML(tumVardiyaKayitlari, mevcutVardiya, vardiyaIslemleriMap) {
         let html = '';
         
-        // Mevcut vardiya işlemleri
+        // Mevcut vardiya işlemleri (localStorage'dan)
         if (mevcutVardiya) {
             const vardiya = JSON.parse(mevcutVardiya);
             html += `
@@ -478,38 +558,64 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
         
-        // Arşivlenmiş vardiya işlemleri
-        if (tumIslemler.length > 0) {
-            html += `
-                <div class="islem-grubu">
-                    <h3>📁 Arşivlenmiş Vardiya İşlemleri</h3>
-                    <div class="islem-listesi">
-                        ${tumIslemler.map(vardiya => `
-                            <div class="vardiya-grubu">
-                                <div class="vardiya-baslik">
-                                    📅 ${vardiya.tarih} - ${vardiya.vardiyaAdi}
-                                    <span class="personel-info">${vardiya.personelAdSoyad}</span>
-                                </div>
-                                <div class="vardiya-islemleri">
-                                    ${vardiya.islemler && vardiya.islemler.length > 0 ? 
-                                        vardiya.islemler.map(islem => `
-                                            <div class="islem-item">
-                                                <div class="islem-baslik">${islem.islem}</div>
-                                                <div class="islem-zaman">${islem.zaman}</div>
-                                                <div class="islem-kaydeden">Kaydeden: ${islem.kaydeden}</div>
-                                            </div>
-                                        `).join('') : 
-                                        '<div class="bos-mesaj">Bu vardiya için işlem kaydedilmemiş.</div>'
-                                    }
-                                </div>
-                            </div>
-                        `).join('')}
+        // Arşivlenmiş vardiya işlemleri (Google Sheets'ten)
+        if (tumVardiyaKayitlari.length > 0) {
+            // İşlemi olan vardiyaları filtrele
+            const islemliVardiyalar = tumVardiyaKayitlari.filter(vardiya => {
+                const islemler = vardiyaIslemleriMap.get(vardiya.id);
+                return islemler && islemler.length > 0;
+            });
+            
+            if (islemliVardiyalar.length > 0) {
+                html += `
+                    <div class="islem-grubu">
+                        <h3>📁 Arşivlenmiş Vardiya İşlemleri</h3>
+                        <div class="islem-listesi">
+                            ${islemliVardiyalar.map(vardiya => {
+                                const islemler = vardiyaIslemleriMap.get(vardiya.id) || [];
+                                const vardiyaAdiMap = {
+                                    '08-16': '08:00 - 16:00',
+                                    '16-24': '16:00 - 24:00',
+                                    '24-08': '24:00 - 08:00'
+                                };
+                                
+                                return `
+                                    <div class="vardiya-grubu">
+                                        <div class="vardiya-baslik">
+                                            📅 ${vardiya.tarih} - ${vardiyaAdiMap[vardiya.vardiya] || vardiya.vardiya}
+                                            <span class="personel-info">${vardiya.personel || '-'}</span>
+                                        </div>
+                                        <div class="vardiya-islemleri">
+                                            ${islemler.length > 0 ? 
+                                                islemler.map(islem => `
+                                                    <div class="islem-item">
+                                                        <div class="islem-baslik">${islem.islem}</div>
+                                                        <div class="islem-zaman">${islem.zaman}</div>
+                                                        <div class="islem-kaydeden">Kaydeden: ${islem.kaydeden}</div>
+                                                    </div>
+                                                `).join('') : 
+                                                '<div class="bos-mesaj">Bu vardiya için işlem kaydedilmemiş.</div>'
+                                            }
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                html += `
+                    <div class="islem-grubu">
+                        <h3>📁 Arşivlenmiş Vardiya İşlemleri</h3>
+                        <div class="islem-listesi">
+                            <div class="bos-mesaj">Arşivde işlem kaydı bulunamadı.</div>
+                        </div>
+                    </div>
+                `;
+            }
         }
         
-        if (!mevcutVardiya && tumIslemler.length === 0) {
+        if (!mevcutVardiya && tumVardiyaKayitlari.length === 0) {
             html = '<div class="bos-mesaj">Henüz hiç vardiya kaydı bulunamadı.</div>';
         }
         
@@ -524,45 +630,6 @@ document.addEventListener('DOMContentLoaded', function() {
             islemDetaylariniGoster();
         });
     }
-
-    // localStorage'daki vardiya işlemlerini kontrol et
-    function localStorageVardiyaIslemleriniKontrolEt() {
-        const mevcutVardiya = localStorage.getItem('mevcutVardiya');
-        const tumIslemler = localStorage.getItem('vardiyaIslemleri');
-        
-        console.log('=== Vardiya İşlemleri Kontrol ===');
-        console.log('Mevcut Vardiya:', mevcutVardiya ? JSON.parse(mevcutVardiya) : 'Yok');
-        console.log('Tüm İşlemler:', tumIslemler ? JSON.parse(tumIslemler) : 'Yok');
-        
-        if (mevcutVardiya) {
-            const vardiya = JSON.parse(mevcutVardiya);
-            console.log('Mevcut Vardiya İşlemleri:', vardiya.islemler || 'İşlem Yok');
-            console.log('İşlem Sayısı:', vardiya.islemler ? vardiya.islemler.length : 0);
-        }
-        
-        if (tumIslemler) {
-            const islemler = JSON.parse(tumIslemler);
-            console.log('Arşivdeki Toplam Vardiya Sayısı:', islemler.length);
-            
-            islemler.forEach((vardiya, index) => {
-                console.log(`Vardiya ${index + 1}:`, {
-                    tarih: vardiya.tarih,
-                    personel: vardiya.personelAdSoyad,
-                    vardiya: vardiya.vardiyaAdi,
-                    islemSayisi: vardiya.islemler ? vardiya.islemler.length : 0,
-                    bitisZamani: vardiya.bitisZamani || 'Devam Ediyor'
-                });
-            });
-        }
-        
-        return {
-            mevcutVardiya: mevcutVardiya ? JSON.parse(mevcutVardiya) : null,
-            tumIslemler: tumIslemler ? JSON.parse(tumIslemler) : []
-        };
-    }
-
-    // Sayfa yüklendiğinde kontrol et
-    localStorageVardiyaIslemleriniKontrolEt();
 
     // Mevcut vardiya bilgisi (localStorage'dan)
     function mevcutVardiyaBilgisi() {
@@ -688,10 +755,10 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         try {
-            // Google Sheets'ten son kayıtları çek
+            // Google Sheets'ten son kayıtları ve işlemleri tek seferde çek (son 90 gün için yeterli)
             const url = new URL(VARDIYA_APPS_SCRIPT_URL);
-            url.searchParams.append('action', 'getLastRecords');
-            url.searchParams.append('count', '32');
+            url.searchParams.append('action', 'getLastRecordsWithIslemler');
+            url.searchParams.append('count', '270'); // 90 gün * 3 vardiya
             
             const response = await fetch(url);
             const result = await response.json();
@@ -723,38 +790,86 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Son 7 günün kayıtlarını göster
-            const yediGunOnce = new Date();
-            yediGunOnce.setDate(yediGunOnce.getDate() - 7);
-            
-            const sonHaftaKayitlari = tumIslemler.filter(vardiya => {
-                // DD.MM.YYYY formatını parse et
-                const tarihParts = vardiya.tarih.split('.');
-                if (tarihParts.length === 3) {
-                    const vardiyaTarihi = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
-                    return vardiyaTarihi >= yediGunOnce;
+            // İşlemler her vardiya kaydının içinde (islemler) olarak geliyor
+            const vardiyaIslemleriMap = new Map();
+            tumIslemler.forEach(vardiya => {
+                if (vardiya.id) {
+                    vardiyaIslemleriMap.set(vardiya.id, vardiya.islemler || []);
                 }
-                return false;
             });
             
-            if (sonHaftaKayitlari.length === 0) {
+            // Tarih aralığına göre filtrele
+            const baslangicTarihInput = document.getElementById('baslangicTarih').value;
+            const bitisTarihInput = document.getElementById('bitisTarih').value;
+            
+            let filtrelenmisKayitlar = tumIslemler;
+            
+            if (baslangicTarihInput && bitisTarihInput) {
+                // Kullanıcı tarih seçtiyse o aralıktaki kayıtları göster
+                const baslangicParts = baslangicTarihInput.split('.');
+                const bitisParts = bitisTarihInput.split('.');
+                
+                if (baslangicParts.length === 3 && bitisParts.length === 3) {
+                    const baslangicDate = new Date(baslangicParts[2], baslangicParts[1] - 1, baslangicParts[0]);
+                    const bitisDate = new Date(bitisParts[2], bitisParts[1] - 1, bitisParts[0]);
+                    
+                    filtrelenmisKayitlar = tumIslemler.filter(vardiya => {
+                        const tarihParts = vardiya.tarih.split('.');
+                        if (tarihParts.length === 3) {
+                            const vardiyaTarihi = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
+                            return vardiyaTarihi >= baslangicDate && vardiyaTarihi <= bitisDate;
+                        }
+                        return false;
+                    });
+                }
+            } else {
+                // Varsayılan: Son 30 gün
+                const otuzGunOnce = new Date();
+                otuzGunOnce.setDate(otuzGunOnce.getDate() - 30);
+                
+                filtrelenmisKayitlar = tumIslemler.filter(vardiya => {
+                    const tarihParts = vardiya.tarih.split('.');
+                    if (tarihParts.length === 3) {
+                        const vardiyaTarihi = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
+                        return vardiyaTarihi >= otuzGunOnce;
+                    }
+                    return false;
+                });
+            }
+            
+            if (filtrelenmisKayitlar.length === 0) {
+                const mesaj = baslangicTarihInput && bitisTarihInput 
+                    ? 'Seçilen tarih aralığında vardiya kaydı bulunamadı.' 
+                    : 'Son 30 günde vardiya kaydı bulunamadı.';
+                    
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
                         <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
-                            Son 7 günde vardiya kaydı bulunamadı.
+                            ${mesaj}
                         </td>
                     </tr>
                 `;
                 return;
             }
             
-            sonHaftaKayitlari.forEach(vardiya => {
+            filtrelenmisKayitlar.forEach(vardiya => {
                 const tr = document.createElement('tr');
                 const vardiyaAdiMap = {
                     '08-16': '08:00 - 16:00',
                     '16-24': '16:00 - 24:00',
                     '24-08': '24:00 - 08:00'
                 };
+                
+                // Yapılan işlemleri formatla (VardiyaIslemleri sheet'inden)
+                let yapilanIslemlerText = '-';
+                const islemler = vardiyaIslemleriMap.get(vardiya.id) || [];
+                
+                if (islemler.length > 0) {
+                    yapilanIslemlerText = islemler.map(i => i.islem).join(', ');
+                    if (yapilanIslemlerText.length > 50) {
+                        yapilanIslemlerText = yapilanIslemlerText.substring(0, 50) + '...';
+                    }
+                }
                 
                 tr.innerHTML = `
                     <td>${vardiya.tarih}</td>
@@ -763,7 +878,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>${vardiya.yardimciOperator || 'Yok'}</td>
                     <td>${vardiya.baslangicSaati}</td>
                     <td>${vardiya.bitisSaati || 'Devam Ediyor'}</td>
-                    <td><span class="badge ${vardiya.durum === 'Aktif' ? 'badge-success' : 'badge-secondary'}">${vardiya.durum}</span></td>
+                    <td>${yapilanIslemlerText}</td>
                 `;
                 
                 haftalikVardiyaTableBody.appendChild(tr);

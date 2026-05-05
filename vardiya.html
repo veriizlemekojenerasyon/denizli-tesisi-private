@@ -238,7 +238,26 @@
 
                     <!-- Haftalık Vardiya Kayıtları -->
                     <div class="haftalik-vardiya-kayitlari">
-                        <h3 class="subsection-title">Haftalık Vardiya Kayıtları</h3>
+                        <h3 class="subsection-title">Vardiya Kayıtları</h3>
+                        
+                        <!-- Tarih Aralığı Seçici -->
+                        <div class="form-row" style="margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label for="baslangicTarih">Başlangıç Tarihi</label>
+                                <input type="text" id="baslangicTarih" name="baslangicTarih" placeholder="GG.AA.YYYY">
+                            </div>
+                            <div class="form-group">
+                                <label for="bitisTarih">Bitiş Tarihi</label>
+                                <input type="text" id="bitisTarih" name="bitisTarih" placeholder="GG.AA.YYYY">
+                            </div>
+                            <div class="form-group" style="display: flex; align-items: flex-end;">
+                                <button type="button" class="submit-btn" id="tarihFiltreBtn" style="width: 100%;">FİLTRELE</button>
+                            </div>
+                            <div class="form-group" style="display: flex; align-items: flex-end;">
+                                <button type="button" class="reset-btn" id="tarihSifirlaBtn" style="width: 100%;">SIFIRLA</button>
+                            </div>
+                        </div>
+                        
                         <div class="table-container">
                             <table class="vardiya-kayitlari-table">
                                 <thead>

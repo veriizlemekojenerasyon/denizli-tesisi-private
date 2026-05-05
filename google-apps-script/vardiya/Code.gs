@@ -40,6 +40,9 @@ function handleRequest(e) {
       case 'getLastRecords':
         result = getLastRecords(parseInt(e.parameter.count) || 32);
         break;
+      case 'getLastRecordsWithIslemler':
+        result = getLastRecordsWithIslemler(parseInt(e.parameter.count) || 32);
+        break;
       case 'getRecordByDateVardiya':
         result = getRecordByDateVardiya(e.parameter.tarih, e.parameter.vardiya);
         break;
@@ -519,6 +522,64 @@ function getIslemlerByVardiyaId(vardiyaId) {
     });
     
     return { success: true, data: islemler };
+    
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+// Son kayıtları işlemleri ile birlikte getir
+function getLastRecordsWithIslemler(count) {
+  try {
+    // Vardiya kayıtlarını çek
+    var vardiyaResult = getLastRecords(count);
+    
+    if (!vardiyaResult.success) {
+      return vardiyaResult;
+    }
+    
+    var vardiyaKayitlari = vardiyaResult.data;
+    
+    // Tüm işlemleri çek
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var islemSheet = spreadsheet.getSheetByName('VardiyaIslemleri');
+    var islemlerMap = {};
+    
+    if (islemSheet && islemSheet.getLastRow() > 1) {
+      var islemData = islemSheet.getRange(2, 1, islemSheet.getLastRow() - 1, 6).getDisplayValues();
+      
+      for (var i = 0; i < islemData.length; i++) {
+        var row = islemData[i];
+        var vardiyaId = row[1];
+        
+        if (!islemlerMap[vardiyaId]) {
+          islemlerMap[vardiyaId] = [];
+        }
+        
+        islemlerMap[vardiyaId].push({
+          id: row[0],
+          vardiyaId: row[1],
+          islem: row[2],
+          zaman: row[3],
+          kaydeden: row[4],
+          kayitTarihi: row[5]
+        });
+      }
+    }
+    
+    // Her vardiya kaydına işlemleri ekle
+    for (var j = 0; j < vardiyaKayitlari.length; j++) {
+      var vardiya = vardiyaKayitlari[j];
+      var vardiyaId = vardiya.id;
+      
+      if (islemlerMap[vardiyaId]) {
+        vardiya.islemler = islemlerMap[vardiyaId];
+      } else {
+        vardiya.islemler = [];
+      }
+    }
+    
+    return { success: true, data: vardiyaKayitlari };
     
   } catch (error) {
     return { success: false, error: error.toString() };
