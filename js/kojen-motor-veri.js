@@ -179,7 +179,8 @@ async function loadVardiyaData() {
         console.log(`📊 ${motor} motoru için ${tarih} tarih ${vardiya} vardiya verileri yükleniyor...`);
         console.log(`🔍 Parametreler: motor=${motor}, tarih=${tarih}, vardiya=${vardiya}`);
         
-        const result = await getMotorRecordsByMotorAndDate(motor, tarih, vardiya);
+        // 🔥 ENERJİ VERİLERİNDEKİ GİBİ TÜM KAYITLARI ÇEK
+        const result = await getAllMotorRecords();
         console.log(`📊 API sonucu:`, result);
         
         if (!result.success) {
@@ -188,12 +189,31 @@ async function loadVardiyaData() {
             return;
         }
         
-        const records = result.data;
-        console.log(`📊 Gelen kayıt sayısı: ${records ? records.length : 0}`);
-        console.log(`📊 Gelen kayıtlar:`, records);
+        const allRecords = result.data;
+        console.log(`📊 Toplam kayıt sayısı: ${allRecords ? allRecords.length : 0}`);
+        
+        // 🔥 TARİH VE VARDİYA FİLTRELEME (ENERJİ VERİLERİNDEKİ GİBİ)
+        let searchTarih = tarih;
+        if (searchTarih.includes('-')) { 
+            const parts = searchTarih.split('-'); 
+            searchTarih = `${parts[2]}.${parts[1]}.${parts[0]}`; 
+        }
+        
+        console.log('🔍 Arama tarihi:', searchTarih);
+        
+        const filtered = allRecords.filter(r => {
+            const matchTarih = (r.tarih || '') === searchTarih;
+            const matchVardiya = kayitVardiyaAraligindaMi(r.saat || '', vardiya);
+            const matchMotor = (r.motor || '') === motor;
+            return matchTarih && matchVardiya && matchMotor;
+        });
+        
+        console.log(`� Filtrelenmiş kayıtlar:`, filtered);
+        console.log(`🔍 Filtrelenmiş kayıt sayısı: ${filtered.length}`);
         
         const tbody = document.getElementById('vardiyaTableBody');
-        console.log(`🔍 Tablo tbody bulundu mu:`, tbody);
+        const noDataMessage = document.getElementById('noDataMessage');
+        
         if (!tbody) {
             console.error('❌ vardiyaTableBody bulunamadı!');
             return;
@@ -202,120 +222,142 @@ async function loadVardiyaData() {
         // Mevcut satırları temizle
         tbody.innerHTML = '';
         
-        // Vardiya saatlerini filtrele
-        const vardiyaSaatleri = {
-            '08-16': ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'],
-            '16-24': ['16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'],
-            '24-08': ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00']
+        if (noDataMessage) noDataMessage.style.display = 'none';
+        
+        // 🔥 VARDİYA SAAT ARALIĞINI GÜNCELLE
+        const vardiyaAraliklari = {
+            '08-16': { basla: '08:00', bit: '16:00' },
+            '16-24': { basla: '16:00', bit: '24:00' },
+            '24-08': { basla: '00:00', bit: '08:00' }
         };
         
-        const saatler = vardiyaSaatleri[vardiya] || [];
-        console.log(`🔍 Vardiya saatleri:`, saatler);
-        console.log(`🔍 Gelen kayıtların saatleri:`, records.map(r => r.saat));
-        console.log(`🔍 Gelen tüm kayıtlar:`, records);
+        const aralik = vardiyaAraliklari[vardiya];
+        const saatAraligiElement = document.getElementById('saatAraligi');
+        const vardiyaBadgeElement = document.getElementById('vardiyaBadge');
         
-        let kayitSayisi = 0;
+        if (saatAraligiElement && aralik) {
+            saatAraligiElement.textContent = `${aralik.basla} - ${aralik.bit}`;
+        }
         
-        saatler.forEach(saat => {
-            const record = records.find(r => r.saat === saat);
-            console.log(`🔍 Saat: ${saat}, Kayıt bulundu mu:`, !!record);
-            if (record) {
-                console.log(`🔍 Kayıt detayı:`, JSON.stringify(record, null, 2));
-                console.log(`🔍 Alanlar:`, Object.keys(record));
-                console.log(`🔍 Değerler:`, {
-                    saat: record.saat,
-                    motor: record.motor,
-                    durum: record.durum,
-                    jenYatakSicaklikDE: record.jenYatakSicaklikDE,
-                    jenYatakSicaklikNDE: record.jenYatakSicaklikNDE,
-                    sogutmaSuyuSicaklik: record.sogutmaSuyuSicaklik,
-                    sogutmaSuyuBasinc: record.sogutmaSuyuBasinc,
-                    yagSicaklik: record.yagSicaklik,
-                    yagBasinc: record.yagBasinc,
-                    sarjSicaklik: record.sarjSicaklik,
-                    sarjBasinc: record.sarjBasinc,
-                    gazRegulatoru: record.gazRegulatoru,
-                    makineDairesiSicaklik: record.makineDairesiSicaklik,
-                    karterBasinc: record.karterBasinc,
-                    onKamaraFarkBasinc: record.onKamaraFarkBasinc,
-                    sargiSicaklik1: record.sargiSicaklik1,
-                    sargiSicaklik2: record.sargiSicaklik2,
-                    sargiSicaklik3: record.sargiSicaklik3
-                });
+        if (vardiyaBadgeElement) {
+            vardiyaBadgeElement.textContent = vardiya;
+        }
+        
+        if (!filtered.length) { 
+            if (noDataMessage) { 
+                noDataMessage.textContent = `${motor} motoru için bu vardiya saat aralığında henüz kayıt bulunmamaktadır.`; 
+                noDataMessage.style.display = 'block'; 
             }
-            const row = document.createElement('tr');
-            
-            if (record) {
-                kayitSayisi++;
-                
-                // Gelen verideki tüm alanları kontrol et
-                console.log(`🔍 Gelen tüm alanlar:`, Object.keys(record));
-                console.log(`🔍 Alan değerleri:`, record);
-                
-                // Eğer motor alanları yoksa, gelen veriyi olduğu gibi göster
-                const hasMotorFields = record.jenYatakSicaklikDE !== undefined || 
-                                   record.sogutmaSuyuSicaklik !== undefined ||
-                                   record.yagSicaklik !== undefined;
-                
-                if (!hasMotorFields) {
-                    // Motor alanları yoksa, gelen veriyi göster
-                    row.innerHTML = `
-                        <td>${record.saat}</td>
-                        <td>${record.motor}</td>
-                        <td colspan="16" style="text-align: center; background-color: #fff3cd;">
-                            <strong>Veri Yapısı Uyuşmuyor:</strong><br>
-                            Gelen alanlar: ${Object.keys(record).join(', ')}<br>
-                            Beklenen: jenYatakSicaklikDE, sogutmaSuyuSicaklik, etc.
-                        </td>
-                        <td>${record.durum}</td>
-                    `;
-                } else {
-                    // Normal motor verisi göster
-                    row.innerHTML = `
-                        <td>${record.saat}</td>
-                        <td>${record.motor}</td>
-                        <td>${record.jenYatakSicaklikDE || '-'}</td>
-                        <td>${record.jenYatakSicaklikNDE || '-'}</td>
-                        <td>${record.sogutmaSuyuSicaklik || '-'}</td>
-                        <td>${record.sogutmaSuyuBasinc || '-'}</td>
-                        <td>${record.yagSicaklik || '-'}</td>
-                        <td>${record.yagBasinc || '-'}</td>
-                        <td>${record.sarjSicaklik || '-'}</td>
-                        <td>${record.sarjBasinc || '-'}</td>
-                        <td>${record.gazRegulatoru || '-'}</td>
-                        <td>${record.makineDairesiSicaklik || '-'}</td>
-                        <td>${record.karterBasinc || '-'}</td>
-                        <td>${record.onKamaraFarkBasinc || '-'}</td>
-                        <td>${record.sargiSicaklik1 || '-'}</td>
-                        <td>${record.sargiSicaklik2 || '-'}</td>
-                        <td>${record.sargiSicaklik3 || '-'}</td>
-                        <td>${record.durum}</td>
-                    `;
+            return;
+        }
+        
+        // 🔥 SAATE GÖRE SIRALA
+        filtered.sort((a, b) => (getSaatDegeri(a.saat) || 0) - (getSaatDegeri(b.saat) || 0));
+        
+        // 🔥 MOTOR ÇALIŞMIYOR KAYITLARI İÇİN SON NORMAL KAYITLARI BUL
+        const sonNormalKayitlar = {};
+        filtered.forEach(record => {
+            if (record.durum !== 'MOTOR ÇALIŞMIYOR') {
+                const motor = record.motor;
+                const recDateTime = parseDateTime(record.tarih, record.saat);
+                if (!sonNormalKayitlar[motor] || parseDateTime(sonNormalKayitlar[motor].tarih, sonNormalKayitlar[motor].saat) < recDateTime) {
+                    sonNormalKayitlar[motor] = record;
                 }
-                
-                // Motor çalışmıyorsa satırı kırmızı yap
-                if (record.durum === 'MOTOR ÇALIŞMIYOR') {
-                    row.style.backgroundColor = '#ffebee';
-                    row.style.color = '#c62828';
-                }
-            } else {
-                row.innerHTML = `
-                    <td>${saat}</td>
-                    <td>${motor}</td>
-                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-                `;
             }
-            
-            tbody.appendChild(row);
-            console.log(`🔍 Satır tabloya eklendi:`, row);
         });
         
-        console.log(`✅ ${kayitSayisi} kayıt yüklendi`);
-        console.log(`🔍 Tablodaki toplam satır sayısı:`, tbody.children.length);
+        // 🔥 TABLOYU DOLDUR
+        filtered.forEach(record => {
+            const row = document.createElement('tr');
+            if (record.durum === 'MOTOR ÇALIŞMIYOR') row.classList.add('motor-calismiyor');
+            
+            // 🔥 MOTOR ÇALIŞMIYOR ise son değerleri kullan
+            let jenYatakSicaklikDE = record.jenYatakSicaklikDE || '-';
+            let jenYatakSicaklikNDE = record.jenYatakSicaklikNDE || '-';
+            let sogutmaSuyuSicaklik = record.sogutmaSuyuSicaklik || '-';
+            let sogutmaSuyuBasinc = record.sogutmaSuyuBasinc || '-';
+            let yagSicaklik = record.yagSicaklik || '-';
+            let yagBasinc = record.yagBasinc || '-';
+            let sarjSicaklik = record.sarjSicaklik || '-';
+            let sarjBasinc = record.sarjBasinc || '-';
+            let gazRegulatoru = record.gazRegulatoru || '-';
+            let makineDairesiSicaklik = record.makineDairesiSicaklik || '-';
+            let karterBasinc = record.karterBasinc || '-';
+            let onKamaraFarkBasinc = record.onKamaraFarkBasinc || '-';
+            let sargiSicaklik1 = record.sargiSicaklik1 || '-';
+            let sargiSicaklik2 = record.sargiSicaklik2 || '-';
+            let sargiSicaklik3 = record.sargiSicaklik3 || '-';
+            
+            if (record.durum === 'MOTOR ÇALIŞMIYOR' && sonNormalKayitlar[record.motor]) {
+                const sonKayit = sonNormalKayitlar[record.motor];
+                jenYatakSicaklikDE = sonKayit.jenYatakSicaklikDE || '-';
+                jenYatakSicaklikNDE = sonKayit.jenYatakSicaklikNDE || '-';
+                sogutmaSuyuSicaklik = sonKayit.sogutmaSuyuSicaklik || '-';
+                sogutmaSuyuBasinc = sonKayit.sogutmaSuyuBasinc || '-';
+                yagSicaklik = sonKayit.yagSicaklik || '-';
+                yagBasinc = sonKayit.yagBasinc || '-';
+                sarjSicaklik = sonKayit.sarjSicaklik || '-';
+                sarjBasinc = sonKayit.sarjBasinc || '-';
+                gazRegulatoru = sonKayit.gazRegulatoru || '-';
+                makineDairesiSicaklik = sonKayit.makineDairesiSicaklik || '-';
+                karterBasinc = sonKayit.karterBasinc || '-';
+                onKamaraFarkBasinc = sonKayit.onKamaraFarkBasinc || '-';
+                sargiSicaklik1 = sonKayit.sargiSicaklik1 || '-';
+                sargiSicaklik2 = sonKayit.sargiSicaklik2 || '-';
+                sargiSicaklik3 = sonKayit.sargiSicaklik3 || '-';
+            }
+            
+            row.innerHTML = `
+                <td>${record.saat || '-'}</td>
+                <td>${record.motor || '-'}</td>
+                <td>${jenYatakSicaklikDE}</td>
+                <td>${jenYatakSicaklikNDE}</td>
+                <td>${sogutmaSuyuSicaklik}</td>
+                <td>${sogutmaSuyuBasinc}</td>
+                <td>${yagSicaklik}</td>
+                <td>${yagBasinc}</td>
+                <td>${sarjSicaklik}</td>
+                <td>${sarjBasinc}</td>
+                <td>${gazRegulatoru}</td>
+                <td>${makineDairesiSicaklik}</td>
+                <td>${karterBasinc}</td>
+                <td>${onKamaraFarkBasinc}</td>
+                <td>${sargiSicaklik1}</td>
+                <td>${sargiSicaklik2}</td>
+                <td>${sargiSicaklik3}</td>
+                <td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        console.log(`✅ ${filtered.length} kayıt yüklendi`);
         
     } catch (error) {
         console.error('Vardiya verileri yüklenirken hata:', error);
     }
+}
+
+// 🔄 YARDIMCI FONKSİYONLAR (GLOBAL)
+function kayitVardiyaAraligindaMi(saat, vardiya) {
+    const aralik = {
+        '08-16': { basla: '08:00', bit: '16:00' },
+        '16-24': { basla: '16:00', bit: '24:00' },
+        '24-08': { basla: '00:00', bit: '08:00' }
+    };
+    
+    if (!aralik[vardiya]) return false;
+    
+    const saatDegeri = getSaatDegeri(saat);
+    const baslaDegeri = getSaatDegeri(aralik[vardiya].basla);
+    const bitDegeri = getSaatDegeri(aralik[vardiya].bit);
+    
+    return saatDegeri >= baslaDegeri && saatDegeri < bitDegeri;
+}
+
+function getSaatDegeri(saat) {
+    if (!saat) return 0;
+    const [saatStr] = saat.split(':');
+    return parseInt(saatStr) || 0;
 }
 
 // � ARKA PLAN KAYIT SİSTEMİ FONKSİYONLARI
