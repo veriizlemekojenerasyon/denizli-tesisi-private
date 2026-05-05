@@ -205,11 +205,22 @@ async function loadVardiyaData() {
             const matchTarih = (r.tarih || '') === searchTarih;
             const matchVardiya = kayitVardiyaAraligindaMi(r.saat || '', vardiya);
             const matchMotor = (r.motor || '') === motor;
+            
+            // Debug log
+            if (!matchTarih || !matchVardiya || !matchMotor) {
+                console.log(`🔍 Filtre - Kayıt:`, r.tarih, r.saat, r.motor, `| matchTarih:${matchTarih} matchVardiya:${matchVardiya} matchMotor:${matchMotor}`);
+            }
+            
             return matchTarih && matchVardiya && matchMotor;
         });
         
-        console.log(`� Filtrelenmiş kayıtlar:`, filtered);
+        console.log(`🔍 Filtrelenmiş kayıtlar:`, filtered);
         console.log(`🔍 Filtrelenmiş kayıt sayısı: ${filtered.length}`);
+        
+        // İlk 3 kayıt örneği
+        if (allRecords.length > 0) {
+            console.log(`🔍 İlk 3 kayıt örneği:`, allRecords.slice(0, 3).map(r => ({tarih: r.tarih, saat: r.saat, motor: r.motor})));
+        }
         
         const tbody = document.getElementById('vardiyaTableBody');
         const noDataMessage = document.getElementById('noDataMessage');

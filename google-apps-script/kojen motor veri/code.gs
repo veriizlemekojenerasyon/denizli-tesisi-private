@@ -206,7 +206,7 @@ function addRecord(data) {
     if (durum === 'MOTOR ÇALIŞMIYOR') {
       values = [
         tarihObj, data.vardiya, data.saat, data.motor,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         durum, kaydeden, kayitTarihi
       ];
     } else {
@@ -351,6 +351,8 @@ function getRecordsByDate(tarih) {
 // Motor ve tarihe göre kayıtları getir
 function getRecordsByMotorAndDate(motor, tarih, vardiya) {
   try {
+    Logger.log('getRecordsByMotorAndDate çağrıldı: motor=' + motor + ', tarih=' + tarih + ', vardiya=' + vardiya);
+    
     var allRecords = getRecords();
     if (!allRecords.success) return allRecords;
     
@@ -360,6 +362,9 @@ function getRecordsByMotorAndDate(motor, tarih, vardiya) {
       var parts = searchTarih.split('-');
       searchTarih = parts[2] + '.' + parts[1] + '.' + parts[0];
     }
+    
+    Logger.log('Arama tarihi: ' + searchTarih);
+    Logger.log('Toplam kayıt sayısı: ' + allRecords.data.length);
     
     var filtered = allRecords.data.filter(function(record) {
       var matchMotor = record.motor === motor;
@@ -383,9 +388,12 @@ function getRecordsByMotorAndDate(motor, tarih, vardiya) {
       return matchMotor && matchTarih && matchVardiya;
     });
     
+    Logger.log('Filtrelenmiş kayıt sayısı: ' + filtered.length);
+    
     return { success: true, data: filtered };
     
   } catch (error) {
+    Logger.log('Hata: ' + error.toString());
     return { success: false, error: error.toString() };
   }
 }
