@@ -178,7 +178,7 @@ async function loadVardiyaData() {
     try {
         console.log(`📊 ${motor} motoru için ${tarih} tarih ${vardiya} vardiya verileri yükleniyor...`);
         
-        const result = await getRecordsByMotorAndDate(motor, tarih);
+        const result = await getMotorRecordsByMotorAndDate(motor, tarih);
         if (!result.success) {
             console.error('Veriler yüklenemedi:', result.error);
             return;
@@ -290,6 +290,9 @@ async function arkaPlanKayitIsleminiBaslat() {
     kayitIslemiDevamEdiyor = true;
     console.log('🚀 Arka plan kayıt işlemi başlatıldı...');
     
+    let successCount = 0;
+    let errorCount = 0;
+    
     while (kayitKuyrugu.length > 0) {
         // Bekleyen işlemleri al (max paralel)
         const yapilacakIslemler = kayitKuyrugu
@@ -300,28 +303,35 @@ async function arkaPlanKayitIsleminiBaslat() {
             break;
         }
         
-        console.log(`🔄 ${yapilacakIslemler.length} işlem paralel başlatılıyor...`);
+        console.log(`🔄 ${yapilacakIslemler.length} işlem sıralı başlatılıyor...`);
+        console.log(`📊 İşlem saatleri:`, yapilacakIslemler.map(i => i.saat));
         
-        // İşlemleri paralel çalıştır
-        const islemSonuclari = await Promise.allSettled(
-            yapilacakIslemler.map(islem => tekilKayitYap(islem))
-        );
-        
-        // Sonuçları işle
-        islemSonuclari.forEach((sonuc, index) => {
-            const islem = yapilacakIslemler[index];
-            
-            if (sonuc.status === 'fulfilled') {
-                islem.durum = 'tamamlandi';
-                islem.bitisZamani = Date.now();
-                console.log(`✅ İşlem #${islem.id} tamamlandı: ${islem.motor} - ${islem.saat}`);
-            } else {
-                islem.durum = 'hata';
-                islem.hata = sonuc.reason.message;
-                islem.bitisZamani = Date.now();
-                console.log(`❌ İşlem #${islem.id} hata: ${islem.motor} - ${islem.saat} - ${islem.hata}`);
+        // İşlemleri sıralı çalıştır (saat sırası korunur)
+        for (const islem of yapilacakIslemler) {
+            try {
+                console.log(`🔄 İşlem başlatılıyor: #${islem.id} - ${islem.motor} - ${islem.saat}`);
+                const sonuc = await tekilKayitYap(islem);
+                
+                if (sonuc.status === 'success') {
+                    islem.durum = 'basarili';
+                    islem.bitisZamani = new Date();
+                    successCount++;
+                    console.log(`✅ İşlem tamamlandı: #${islem.id} - ${islem.motor} - ${islem.saat}`);
+                } else {
+                    islem.durum = 'hatali';
+                    islem.bitisZamani = new Date();
+                    islem.hata = sonuc.error || 'Bilinmeyen hata';
+                    errorCount++;
+                    console.log(`❌ İşlem hatalı: #${islem.id} - ${islem.motor} - ${islem.saat} - ${islem.hata}`);
+                }
+            } catch (error) {
+                islem.durum = 'hatali';
+                islem.bitisZamani = new Date();
+                islem.hata = error.message;
+                errorCount++;
+                console.log(`💀 İşlem hatası: #${islem.id} - ${islem.motor} - ${islem.saat} - ${error.message}`);
             }
-        });
+        }
         
         // Tamamlanan işlemleri kuyruktan temizle
         kayitKuyrugu = kayitKuyrugu.filter(islem => islem.durum === 'beklemede');
@@ -334,6 +344,7 @@ async function arkaPlanKayitIsleminiBaslat() {
     
     kayitIslemiDevamEdiyor = false;
     console.log('🏁 Arka plan kayıt işlemi tamamlandı');
+    console.log(`📊 Sonuç: ${successCount} başarılı, ${errorCount} hatalı`);
     
     // Verileri yenile
     loadVardiyaData();
@@ -368,8 +379,8 @@ async function tekilKayitYap(islem) {
             kalkisSayisi: islem.sonKayit?.kalkisSayisi || '0'
         });
         
-        if (!sonuc.success) {
-            throw new Error(sonuc.error || 'Kayıt başarısız');
+        if (!sonuc || !sonuc.success) {
+            throw new Error(sonuc?.error || 'Kayıt başarısız');
         }
         
         return { success: true, islem };
@@ -1272,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Vardiya saat aralıklarını tanımla
     const vardiyaSaatAraliklari = {
         '08-16': { baslangic: 7, bitis: 15, baslangicSaat: '07:00', bitisSaat: '15:00' },
-        '16-24': { baslangic: 15, bitis: 23, baslangicSaat: '15:00', bitisSaat: '23:00' },
+        '16-24': { baslangic: 15, bitis: 24, baslangicSaat: '15:00', bitisSaat: '24:00' },
         '24-08': { baslangic: 23, bitis: 7, baslangicSaat: '23:00', bitisSaat: '07:00' }
     };
     
@@ -1573,9 +1584,17 @@ async function handleModalKaydet() {
             return;
         }
         
-        // Seçili saatleri al
+        // Seçili saatleri al ve sıralı olarak düzenle
         const selectedSaatler = Array.from(document.querySelectorAll('input[name="saat"]:checked:not(:disabled)'))
-            .map(cb => cb.value);
+            .map(cb => cb.value)
+            .sort((a, b) => {
+                // Saatleri sayısal olarak karşılaştır (00:00, 01:00, 02:00...)
+                const hourA = parseInt(a.split(':')[0]);
+                const hourB = parseInt(b.split(':')[0]);
+                return hourA - hourB;
+            });
+        
+        console.log('📋 Seçili saatler (sıralı):', selectedSaatler);
         
         if (selectedSaatler.length === 0) {
             showMessage('Lütfen en az bir saat seçin!', 'error');

@@ -25,7 +25,7 @@ function doPost(e) {
 function handleRequest(e) {
   var lock = LockService.getScriptLock();
   try {
-    lock.waitLock(30000);
+    lock.waitLock(10000); // 10 saniye - daha hızlı kilitleme
     
     var action = e.parameter.action;
     var result = {};
@@ -178,11 +178,20 @@ function addRecord(data) {
       }
     }
     
-    // Tarih formatını düzelt
+    // Tarih formatını düzelt ve Sheets formatına çevir
     var formattedTarih = data.tarih;
     if (formattedTarih.includes('-')) {
       var tarihParts = formattedTarih.split('-');
       formattedTarih = tarihParts[2] + '.' + tarihParts[1] + '.' + tarihParts[0];
+    }
+    
+    // dd.MM.yyyy formatını tarih nesnesine çevir
+    var tarihObj;
+    if (formattedTarih.includes('.')) {
+      var tarihParts = formattedTarih.split('.');
+      tarihObj = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
+    } else {
+      tarihObj = new Date(formattedTarih);
     }
     
     // Kayıt zamanı
@@ -196,13 +205,13 @@ function addRecord(data) {
     var values;
     if (durum === 'MOTOR ÇALIŞMIYOR') {
       values = [
-        formattedTarih, data.vardiya, data.saat, data.motor,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        tarihObj, data.vardiya, data.saat, data.motor,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         durum, kaydeden, kayitTarihi
       ];
     } else {
       values = [
-        formattedTarih,
+        tarihObj,
         data.vardiya,
         data.saat,
         data.motor,

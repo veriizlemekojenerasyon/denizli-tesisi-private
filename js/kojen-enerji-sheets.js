@@ -4,7 +4,7 @@
  */
 
 const KojenEnerjiSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycby04UcX9FpszIYMuMd7I2rcpa7-RUVvmv7xxUQgJWGy261bpKsbl1hjPGHe684eza2G/exec'
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbw8uCtVPK3IO83GLI1upNavopELwNpC2D-TeFgaaietkHWxDTwnGb4L9rxHVTSPI3mG/exec'
 };
 
 /**
@@ -18,9 +18,11 @@ async function saveEnerjiToSheets(data) {
         
         // Tarih formatını düzelt (dd.MM.yyyy -> yyyy-MM-dd)
         let formattedTarih = data.tarih;
-        if (formattedTarih.includes('.')) {
+        if (formattedTarih && formattedTarih.includes('.')) {
             const parts = formattedTarih.split('.');
             formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else if (!formattedTarih) {
+            formattedTarih = new Date().toISOString().split('T')[0]; // Bugün tarihi
         }
         
         // Parametreleri hazırla

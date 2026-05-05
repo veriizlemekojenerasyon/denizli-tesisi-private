@@ -4,7 +4,7 @@
  */
 
 const KojenMotorSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbz5QLLse0RcNCsdUmYf5RE3DsD8f_ojbUcyyUU4uF3-YMyw3AeRPh3sq2KVvb2Xj7Px/exec'
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbw8uCtVPK3IO83GLI1upNavopELwNpC2D-TeFgaaietkHWxDTwnGb4L9rxHVTSPI3mG/exec'
 };
 
 /**
@@ -24,41 +24,57 @@ async function saveMotorToSheets(data) {
         }
         
         // Parametreleri hazırla
-        const params = new URLSearchParams({
+        const urlParams = new URLSearchParams({
             action: 'addRecord',
+            motor: data.motor,
             tarih: formattedTarih,
-            vardiya: data.vardiya || '',
-            saat: data.saat || '',
-            motor: data.motor || '',
+            vardiya: data.vardiya,
+            saat: data.saat,
             kaydeden: data.kaydeden || 'Admin',
-            durum: data.durum || 'NORMAL'
+            durum: data.durum || 'NORMAL',
+            not: data.not || ''
         });
         
-        // Motor çalışmıyor durumunda verileri ekleme
-        if (data.durum !== 'MOTOR ÇALIŞMIYOR') {
-            params.append('jenYatakSicaklikDE', data.jenYatakSicaklikDE || '0');
-            params.append('jenYatakSicaklikNDE', data.jenYatakSicaklikNDE || '0');
-            params.append('sogutmaSuyuSicaklik', data.sogutmaSuyuSicaklik || '0');
-            params.append('sogutmaSuyuBasinc', data.sogutmaSuyuBasinc || '0');
-            params.append('yagSicaklik', data.yagSicaklik || '0');
-            params.append('yagBasinc', data.yagBasinc || '0');
-            params.append('sarjSicaklik', data.sarjSicaklik || '0');
-            params.append('sarjBasinc', data.sarjBasinc || '0');
-            params.append('gazRegulatoru', data.gazRegulatoru || '0');
-            params.append('makineDairesiSicaklik', data.makineDairesiSicaklik || '0');
-            params.append('karterBasinc', data.karterBasinc || '0');
-            params.append('onKamaraFarkBasinc', data.onKamaraFarkBasinc || '0');
-            params.append('sargiSicaklik1', data.sargiSicaklik1 || '0');
-            params.append('sargiSicaklik2', data.sargiSicaklik2 || '0');
-            params.append('sargiSicaklik3', data.sargiSicaklik3 || '0');
+        // Motor çalışmıyorsa tüm değerleri 0 olarak gönder
+        if (data.durum === 'MOTOR ÇALIŞMIYOR') {
+            // Sadece gerekli alanları gönder
+            urlParams.append('yuksekHacim', '0');
+            urlParams.append('dusukHacim', '0');
+            urlParams.append('yuksekSicaklik', '0');
+            urlParams.append('dusukSicaklik', '0');
+            urlParams.append('yuksekBasinc', '0');
+            urlParams.append('dusukBasinc', '0');
+            urlParams.append('egzostSicaklik', '0');
+            urlParams.append('id', '0');
+            urlParams.append('karterBasinc', '0');
+            urlParams.append('onKamaraFarkBasinc', '0');
+            urlParams.append('sargiSicaklik1', '0');
+            urlParams.append('sargiSicaklik2', '0');
+            urlParams.append('sargiSicaklik3', '0');
+        } else {
+            // Normal değerleri gönder
+            urlParams.append('jenYatakSicaklikDE', data.jenYatakSicaklikDE || '0');
+            urlParams.append('jenYatakSicaklikNDE', data.jenYatakSicaklikNDE || '0');
+            urlParams.append('sogutmaSuyuSicaklik', data.sogutmaSuyuSicaklik || '0');
+            urlParams.append('sogutmaSuyuBasinc', data.sogutmaSuyuBasinc || '0');
+            urlParams.append('yagSicaklik', data.yagSicaklik || '0');
+            urlParams.append('yagBasinc', data.yagBasinc || '0');
+            urlParams.append('sarjSicaklik', data.sarjSicaklik || '0');
+            urlParams.append('sarjBasinc', data.sarjBasinc || '0');
+            urlParams.append('gazRegulatoru', data.gazRegulatoru || '0');
+            urlParams.append('makineDairesiSicaklik', data.makineDairesiSicaklik || '0');
+            urlParams.append('karterBasinc', data.karterBasinc || '0');
+            urlParams.append('onKamaraFarkBasinc', data.onKamaraFarkBasinc || '0');
+            urlParams.append('sargiSicaklik1', data.sargiSicaklik1 || '0');
+            urlParams.append('sargiSicaklik2', data.sargiSicaklik2 || '0');
+            urlParams.append('sargiSicaklik3', data.sargiSicaklik3 || '0');
         }
         
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: params
+        const fullUrl = url + '?' + urlParams.toString();
+        
+        const response = await fetch(fullUrl, {
+            method: 'GET',
+            cache: 'no-cache'
         });
         
         const result = await response.json();

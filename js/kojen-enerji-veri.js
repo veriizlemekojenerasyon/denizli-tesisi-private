@@ -1,5 +1,34 @@
 // Kojen Enerji Veri JavaScript - Google Sheets Entegrasyonu
 
+// 🔥 OTOMATİK ENERJİ RAPORLAMA SİSTEMİ
+// Motor bazında saatlik enerji üretimini otomatik hesaplar ve kaydeder
+
+/**
+ * 🚀 OTOMATİK ENERJİ RAPORU BAŞLAT
+ * Yeni enerji verisi kaydedildikten sonra otomatik çalışır
+ */
+async function otomatikEnerjiRaporuBaslat(kayitVerisi) {
+    try {
+        console.log('🔥 Otomatik enerji raporu başlatılıyor:', kayitVerisi);
+        
+        // Motor Enerji Raporu script'inin yüklü olup olmadığını kontrol et
+        if (typeof otomatikEnerjiRaporuHesapla === 'function') {
+            const raporSonucu = await otomatikEnerjiRaporuHesapla(kayitVerisi);
+            
+            if (raporSonucu.success) {
+                console.log('✅ Otomatik enerji raporu tamamlandı');
+            } else {
+                console.log('ℹ️ Otomatik rapor atlandı:', raporSonucu.reason || raporSonucu.error);
+            }
+        } else {
+            console.log('⚠️ Motor enerji raporu sistemi yüklenmemiş');
+        }
+        
+    } catch (error) {
+        console.error('❌ Otomatik enerji raporu hatası:', error);
+    }
+}
+
 // ⏰ Otomatik yönlendirme kontrolü (15:59, 23:59, 07:59)
 function checkAutoRedirect() {
     const now = new Date();
@@ -212,6 +241,26 @@ async function getLastRecordForMotor(motor) {
             }
         }
         
+        // Eğer hala kayıt bulunamadıysa, önceki günü de kontrol et (sadece son değerleri almak için)
+        if (motorRecords.length === 0) {
+            console.log(`⚡ O gün kayıt yok, önceki gün aranıyor: ${motor}`);
+            const currentTarih = document.getElementById('tarihSecimi')?.value || '';
+            if (currentTarih) {
+                const dateObj = new Date(currentTarih.split('.').reverse().join('-'));
+                dateObj.setDate(dateObj.getDate() - 1);
+                const oncekiGun = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()}`;
+                
+                const prevResult = await getEnerjiRecordsByMotorAndDate(motor, oncekiGun);
+                if (prevResult.success && prevResult.data) {
+                    motorRecords = prevResult.data.filter(record => 
+                        record.durum !== 'MOTOR ÇALIŞMIYOR'
+                    );
+                    console.log(`✅ Önceki gün (${oncekiGun}) kayıtları bulundu`);
+                }
+            }
+        }
+        
+                
         if (motorRecords.length === 0) {
             console.log(`⚠️ ${motor} için normal kayıt bulunamadı`);
             return null;
@@ -668,6 +717,21 @@ document.addEventListener('DOMContentLoaded', async function() {
                 showMessage(`${selectedMotor} motoru için enerji verileri kaydedildi!`, 'success');
                 lockForm(false);
                 await loadVardiyaData();
+                
+                // 🚀 OTOMATİK ENERJİ RAPORU BAŞLAT
+                const kayitVerisi = {
+                    motor: selectedMotor,
+                    tarih: tarihSecimi.value,
+                    vardiya: vardiyaSecimi.value,
+                    saat: saat,
+                    toplamAktifEnerji: data.toplamAktifEnerji,
+                    calismaSaati: data.calismaSaati,
+                    kaydeden: getCurrentUserName()
+                };
+                
+                // Otomatik raporu arka planda çalıştır (kullanıcıyı bekleme)
+                setTimeout(() => otomatikEnerjiRaporuBaslat(kayitVerisi), 500);
+                
             } else {
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
             }
@@ -710,13 +774,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Input'lara değerleri yaz (görsel geri bildirim)
         const inputs = document.querySelectorAll('.kojen-input');
-        inputs.forEach((input, index) => {
+        inputs.forEach(input => {
             input.style.background = '#ffebee';
             input.style.color = '#c62828';
-            if (index === 8) input.value = toplamAktifEnerji; // TOPLAM AKTİF ENERJİ
-            else if (index === 9) input.value = calismaSaati;  // ÇALIŞMA SAATİ
-            else if (index === 10) input.value = kalkisSayisi; // KALKIŞ SAYISI
-            else input.value = '0'; // Diğerleri 0
+            
+            // Input name'ine göre değer ata
+            if (input.name === 'toplamAktifEnerji') {
+                input.value = toplamAktifEnerji;
+                console.log('✅ TOPLAM AKTİF ENERJİ yazıldı:', toplamAktifEnerji);
+            } else if (input.name === 'calismaSaati') {
+                input.value = calismaSaati;
+                console.log('✅ ÇALIŞMA SAATİ yazıldı:', calismaSaati);
+            } else if (input.name === 'kalkisSayisi') {
+                input.value = kalkisSayisi;
+                console.log('✅ KALKIŞ SAYISI yazıldı:', kalkisSayisi);
+            } else {
+                input.value = '0'; // Diğerleri 0
+            }
         });
         
         motorCalismiyorKaydetBtn.disabled = true; motorCalismiyorKaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
@@ -768,7 +842,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (saat === null) return false;
         const aralik = vardiyaSaatAraliklari[vardiya];
         if (!aralik) return false;
-        return vardiya === '24-08' ? (saat >= 23 || saat < 7) : (saat >= aralik.baslangic && saat < aralik.bitis);
+        return vardiya === '24-08' ? (saat >= 23 || saat < 7) : (saat >= aralik.baslangic && saat <= aralik.bitis);
     }
     function guncelleVardiyaBilgisi() {
         const vardiya = vardiyaSecimi.value, aralik = vardiyaSaatAraliklari[vardiya];
@@ -968,11 +1042,17 @@ async function handleModalKaydet() {
         }
         
         console.log('🔍 Seçili saatler alınıyor...');
-        // Seçili saatleri al
+        // Seçili saatleri al ve sıralı olarak düzenle
         const selectedSaatler = Array.from(document.querySelectorAll('input[name="saat"]:checked:not(:disabled)'))
-            .map(cb => cb.value);
+            .map(cb => cb.value)
+            .sort((a, b) => {
+                // Saatleri sayısal olarak karşılaştır (00:00, 01:00, 02:00...)
+                const hourA = parseInt(a.split(':')[0]);
+                const hourB = parseInt(b.split(':')[0]);
+                return hourA - hourB;
+            });
         
-        console.log('📋 Seçili saatler:', selectedSaatler);
+        console.log('📋 Seçili saatler (sıralı):', selectedSaatler);
         
         if (selectedSaatler.length === 0) {
             console.log('❌ Hiç saat seçilmedi');
@@ -980,14 +1060,10 @@ async function handleModalKaydet() {
             return;
         }
         
-        // Butonu devre dışı bırak
-        console.log('🔒 Buton devre dışı bırakılıyor...');
-        kaydetBtn.disabled = true;
-        kaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
-        
-        // 🔥 TARİH FORMAT DÖNÜŞTÜRME - HTML yyyy-MM-dd -> DD.MM.YYYY
+        // Modal verilerini al
         const modalTarihInput = document.getElementById('modalTarih');
         let modalTarih = modalTarihInput.value;
+        const modalTarihRaw = modalTarih;
         
         // HTML formatından display formatına çevir
         if (modalTarih && modalTarih.includes('-')) {
@@ -1000,12 +1076,15 @@ async function handleModalKaydet() {
         
         console.log('📅 Modal verileri:', { 
             modalTarih: modalTarih, 
-            modalTarihRaw: modalTarihInput.value,
+            modalTarihRaw: modalTarihRaw,
             modalVardiya, 
             modalNot 
         });
         
-        let successCount = 0;
+        // Butonu devre dışı bırak
+        console.log('🔒 Buton devre dışı bırakılıyor...');
+        kaydetBtn.disabled = true;
+        kaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
         let errorCount = 0;
         let errors = [];
         
@@ -1136,144 +1215,132 @@ async function handleModalKaydet() {
             }
         });
         
-        // 🚀 OPTİMİZE TOPLU KAYIT İŞLEMİ (BATCH PARALEL)
-        console.log('💾 Optimize toplu kayıt işlemi başlıyor...');
+        // 🚀 ARKAPLAN KAYIT SİSTEMİ - FORMU HEMEN SERBEST BIRAK
+        console.log('💾 Arka plan kayıt sistemi başlıyor...');
         
-        // ⚡ BATCH SIZE OPTİMİZASYONU - Aynı anda max 6 istek
-        const BATCH_SIZE = 6;
-        const batches = [];
+        // Kullanıcıya bilgi ver ve formu serbest bırak
+        showMessage(`${kayitEdilecekler.length} kayıt arka planda yapılıyor, sistem kullanılabilir!`, 'info');
+        kaydetBtn.disabled = false;
+        kaydetBtn.textContent = originalText;
+        closeMotorCalismiyorModal();
         
-        for (let i = 0; i < kayitEdilecekler.length; i += BATCH_SIZE) {
-            batches.push(kayitEdilecekler.slice(i, i + BATCH_SIZE));
-        }
+        // Modal verilerini arka plan fonksiyonu için sakla
+        const finalModalTarih = modalTarihRaw || modalTarih;
+        const finalModalVardiya = modalVardiya;
         
-        console.log(`📊 ${batches.length} batch'e bölündü (her batch max ${BATCH_SIZE} kayıt)`);
-        
-        const allKayitSonuclari = [];
-        
-        // Batch'leri sırayla ama her batch içinde paralel çalıştır
-        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-            const batch = batches[batchIndex];
-            console.log(`🔄 Batch ${batchIndex + 1}/${batches.length} işleniyor (${batch.length} kayıt)`);
+        // Arka planda kayıt işlemi başlat
+        setTimeout(async () => {
+            console.log('🔄 Arka plan kayıt işlemi başlatıldı...');
             
-            const batchSonuclari = await Promise.allSettled(
-                batch.map(({ motor, saat }) => {
-                    const sonKayit = sonKayitlar[motor] || {};
-                    
-                    // ⚡ KAYIT ÖNCESİ CACHE KONTROLÜ - Son kontrol
-                    const key = `${motor}|${modalTarih}|${saat}`;
-                    if (recordMap.has(key)) {
-                        console.log(`⚡ Kayıt öncesi cache hit: ${motor} - ${saat}`);
-                        return { success: true, skipped: true, reason: 'Cache\'de zaten var' };
+            // Batch'lere böl (her batch max 6 kayıt)
+            const batchSize = 6;
+            const batches = [];
+            for (let i = 0; i < kayitEdilecekler.length; i += batchSize) {
+                batches.push(kayitEdilecekler.slice(i, i + batchSize));
+            }
+            
+            console.log(`📊 ${batches.length} batch'e bölündü (her batch max ${batchSize} kayıt)`);
+            
+            let successCount = 0;
+            let errorCount = 0;
+            const errors = [];
+            
+            // Batch'leri sıralı işle
+            for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+                const batch = batches[batchIndex];
+                
+                // Batch içindeki kayıtları saat sırasına göre sırala
+                batch.sort((a, b) => {
+                    const hourA = parseInt(a.saat.split(':')[0]);
+                    const hourB = parseInt(b.saat.split(':')[0]);
+                    return hourA - hourB;
+                });
+                
+                console.log(`🔄 Batch ${batchIndex + 1}/${batches.length} işleniyor (${batch.length} kayıt)`);
+                console.log(`📊 Batch sıralı saatler:`, batch.map(k => k.saat));
+                
+                try {
+                    // Batch içindeki kayıtları sıralı (sequential) olarak işle
+                    for (const kayit of batch) {
+                        try {
+                            // Son kayıt değerlerini al
+                            const sonKayit = sonKayitlar[kayit.motor] || {};
+                            console.log(`🔍 ${kayit.motor} için son kayıt değerleri:`, {
+                                toplamAktifEnerji: sonKayit.toplamAktifEnerji,
+                                calismaSaati: sonKayit.calismaSaati,
+                                kalkisSayisi: sonKayit.kalkisSayisi
+                            });
+                            
+                            const kayitVerisi = {
+                                motor: kayit.motor,
+                                tarih: finalModalTarih, // Final modal tarihini kullan
+                                vardiya: finalModalVardiya, // Final modal vardiya bilgisini kullan
+                                saat: kayit.saat,
+                                kaydeden: getCurrentUserName(),
+                                durum: 'MOTOR ÇALIŞMIYOR', // Motor çalışmıyor modal'ı üzerinden kayıt yapılıyor
+                                // Son değerleri kullan (M, N, O sütunları için en son değerler)
+                                toplamAktifEnerji: sonKayit.toplamAktifEnerji || '0',
+                                calismaSaati: sonKayit.calismaSaati || '0',
+                                kalkisSayisi: sonKayit.kalkisSayisi || '0'
+                            };
+                            
+                            // Motor çalışmıyor durumunda diğer değerleri 0 olarak ayarla
+                            kayitVerisi.aydemVoltaji = '0';
+                            kayitVerisi.aktifGuc = '0';
+                            kayitVerisi.reaktifGuc = '0';
+                            kayitVerisi.cosPhi = '0';
+                            kayitVerisi.ortGerilim = '0';
+                            kayitVerisi.notrAkim = '0';
+                            kayitVerisi.tahrikGerilimi = '0';
+                            
+                            const result = await saveEnerjiToSheets(kayitVerisi);
+                            if (result.success) {
+                                console.log(`✅ Başarılı: ${kayit.motor} - ${kayit.saat}`);
+                                successCount++;
+                            } else {
+                                console.log(`❌ Hata: ${kayit.motor} - ${kayit.saat} - ${result.error}`);
+                                errorCount++;
+                                errors.push(`${kayit.motor} - ${kayit.saat}: ${result.error}`);
+                            }
+                        } catch (error) {
+                            console.error(`💀 Batch kayıt hatası: ${kayit.motor} - ${kayit.saat}:`, error);
+                            errorCount++;
+                            errors.push(`${kayit.motor} - ${kayit.saat}: ${error.message}`);
+                        }
                     }
                     
-                    // 🔥 Virgülü noktaya çevirme fonksiyonu
-                    const virguldenNoktaya = (deger) => {
-                        if (!deger) return '0';
-                        return deger.replace(',', '.');
-                    };
-                    
-                    return saveEnerjiToSheets({
-                        motor: motor,
-                        tarih: modalTarih,
-                        vardiya: modalVardiya,
-                        saat: saat,
-                        kaydeden: getCurrentUserName(),
-                        durum: 'MOTOR ÇALIŞMIYOR',
-                        not: modalNot || 'Motor çalışmıyor',
-                        // Son kayıt değerleri - virgül düzeltmesi
-                        toplamAktifEnerji: virguldenNoktaya(sonKayit.toplamAktifEnerji || '0'),
-                        toplamReaktifEnerji: virguldenNoktaya(sonKayit.toplamReaktifEnerji || '0'),
-                        ortakPuan: virguldenNoktaya(sonKayit.ortakPuan || '0'),
-                        yakitTuketimi: virguldenNoktaya(sonKayit.yakitTuketimi || '0'),
-                        suSicakligi: virguldenNoktaya(sonKayit.suSicakligi || '0'),
-                        egzostGazSicakligi: virguldenNoktaya(sonKayit.egzostGazSicakligi || '0'),
-                        karterBasinc: virguldenNoktaya(sonKayit.karterBasinc || '0'),
-                        onKamaraFarkBasinc: virguldenNoktaya(sonKayit.onKamaraFarkBasinc || '0'),
-                        calismaSaati: virguldenNoktaya(sonKayit.calismaSaati || '0'),
-                        kalkisSayisi: virguldenNoktaya(sonKayit.kalkisSayisi || '0')
-                    });
-                })
-            );
-            
-            allKayitSonuclari.push(...batchSonuclari);
-            
-            // ⚡ BATCH ARASI KISA BEKLEME - API limitlerini aşmamak için
-            if (batchIndex < batches.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-        }
-        
-        const kayitSonuclari = allKayitSonuclari;
-        
-        // 🚀 OPTİMİZE SONUÇ DEĞERLENDİRME
-        let kayitEdilecekIndex = 0;
-        
-        kayitSonuclari.forEach((sonuc, batchIndex) => {
-            // Batch içindeki index'i hesapla
-            const batchNumber = Math.floor(batchIndex / BATCH_SIZE);
-            const indexInBatch = batchIndex % BATCH_SIZE;
-            const globalIndex = batchNumber * BATCH_SIZE + indexInBatch;
-            
-            if (globalIndex >= kayitEdilecekler.length) return;
-            
-            const { motor, saat } = kayitEdilecekler[globalIndex];
-            
-            if (sonuc.status === 'fulfilled' && sonuc.value.success) {
-                if (sonuc.value.skipped) {
-                    console.log(`⚡ Atlandı: ${motor} - ${saat} (${sonuc.value.reason})`);
-                } else {
-                    successCount++;
-                    console.log(`✅ Başarılı: ${motor} - ${saat}`);
-                    
-                    // ⚡ BAŞARILI KAYDI CACHE'E EKLE
-                    const key = `${motor}|${modalTarih}|${saat}`;
-                    const newRecord = {
-                        motor,
-                        tarih: modalTarih,
-                        saat,
-                        durum: 'MOTOR ÇALIŞMIYOR',
-                        kaydeden: getCurrentUserName(),
-                        not: modalNot || 'Motor çalışmıyor'
-                    };
-                    recordMap.set(key, newRecord);
+                } catch (error) {
+                    console.error(`💀 Batch ${batchIndex + 1} hatası:`, error);
+                    errorCount += batch.length;
+                    errors.push(`Batch ${batchIndex + 1}: ${error.message}`);
                 }
-            } else {
-                errorCount++;
-                const errorMsg = sonuc.status === 'fulfilled' 
-                    ? `${motor} - ${saat}: ${sonuc.value.error}`
-                    : `${motor} - ${saat}: ${sonuc.reason.message}`;
-                errors.push(errorMsg);
-                console.log(`❌ Hata: ${errorMsg}`);
             }
             
-            kayitEdilecekIndex++;
-        });
-        
-        console.log(`📊 Sonuçlar: ${successCount} başarılı, ${errorCount} hatalı`);
-        
-        // Sonuç mesajı
-        if (successCount > 0) {
-            console.log('🎉 Başarılı kayıtlar var, mesaj gösteriliyor...');
-            showMessage(`${successCount} kayıt başarıyla eklendi!${errorCount > 0 ? ` ${errorCount} hata var.` : ''}`, 'success');
-            loadVardiyaData(); // Verileri yenile
-            closeMotorCalismiyorModal();
-        } else {
-            console.log('❌ Başarılı kayıt yok, hata mesajı gösteriliyor...');
-            showMessage('Kayıt eklenemedi!', 'error');
-            if (errors.length > 0) {
-                console.error('🚨 Tüm hatalar:', errors);
+            // Arka plan kayıt sonuçlarını kullanıcıya bildir
+            console.log(`📊 Arka plan kayıt sonuçları: ${successCount} başarılı, ${errorCount} hatalı`);
+            
+            if (successCount > 0) {
+                console.log('🎉 Arka plan kayıt tamamlandı, veriler yenileniyor...');
+                loadVardiyaData(); // Verileri yenile
+                
+                // Sonuç bildirimi
+                setTimeout(() => {
+                    showMessage(`✅ ${successCount} kayıt arka planda tamamlandı!${errorCount > 0 ? ` ${errorCount} hata var.` : ''}`, 'success');
+                }, 1000);
             }
-        }
-        
+            
+            if (errorCount > 0) {
+                setTimeout(() => {
+                    console.error('🚨 Arka plan kayıt hataları:', errors);
+                    showMessage(`⚠️ ${errorCount} kayıt hatası oluştu (Console'dan detayları kontrol edin)`, 'warning');
+                }, 2000);
+            }
+        }, 100); // 100ms sonra arka plana başla
     } catch (error) {
         console.error('💀 Ana hata:', error);
         showMessage('İşlem hatası: ' + error.message, 'error');
-    } finally {
-        console.log('🔓 Buton tekrar aktif ediliyor...');
         kaydetBtn.disabled = false;
         kaydetBtn.textContent = originalText;
-        console.log('✅ handleModalKaydet tamamlandı');
     }
 }
 

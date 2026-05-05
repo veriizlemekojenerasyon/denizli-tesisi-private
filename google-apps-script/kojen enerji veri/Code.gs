@@ -25,7 +25,7 @@ function doPost(e) {
 function handleRequest(e) {
   var lock = LockService.getScriptLock();
   try {
-    lock.waitLock(30000);
+    lock.waitLock(10000); // 10 saniye - daha hızlı kilitleme
     
     var action = e.parameter.action;
     var result = {};
@@ -165,11 +165,20 @@ function addRecord(data) {
       }
     }
     
-    // Tarih formatını düzelt
+    // Tarih formatını düzelt ve Sheets formatına çevir
     var formattedTarih = data.tarih;
     if (formattedTarih.includes('-')) {
       var tarihParts = formattedTarih.split('-');
       formattedTarih = tarihParts[2] + '.' + tarihParts[1] + '.' + tarihParts[0];
+    }
+    
+    // dd.MM.yyyy formatını tarih nesnesine çevir
+    var tarihObj;
+    if (formattedTarih.includes('.')) {
+      var tarihParts = formattedTarih.split('.');
+      tarihObj = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[1]);
+    } else {
+      tarihObj = new Date(formattedTarih);
     }
     
     // Kayıt zamanı
@@ -179,17 +188,20 @@ function addRecord(data) {
     var durum = data.durum || 'NORMAL';
     var kaydeden = data.kaydeden || 'Admin';
     
-    // Eğer motor çalışmıyorsa, tüm değerleri 0 olarak kaydet
+    // Eğer motor çalışmıyorsa, M, N, O sütunları için son değerleri kullan, diğerlerini 0 olarak kaydet
     var values;
     if (durum === 'MOTOR ÇALIŞMIYOR') {
       values = [
-        formattedTarih, data.vardiya, data.saat, data.motor,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        tarihObj, data.vardiya, data.saat, data.motor,
+        0, 0, 0, 0, 0, 0, 0, 0, // Diğer değerler 0 (8 tane)
+        parseFloat(data.toplamAktifEnerji.toString().replace(',', '.')) || 0, // M sütunu - son değer
+        parseFloat(data.calismaSaati.toString().replace(',', '.')) || 0,     // N sütunu - son değer
+        parseFloat(data.kalkisSayisi.toString().replace(',', '.')) || 0,      // O sütunu - son değer
         durum, kaydeden, kayitTarihi
       ];
     } else {
       values = [
-        formattedTarih,
+        tarihObj,
         data.vardiya,
         data.saat,
         data.motor,
@@ -210,11 +222,15 @@ function addRecord(data) {
       ];
     }
     
-    // Kayıt ekle
-    sheet.appendRow(values);
+    // 🔥 SAAT SIRALAMASI İÇİN DOĞRU KONUMU BUL
+    var insertRow = findInsertPosition(sheet, formattedTarih, data.saat);
+    
+    // Kaydı doğru konuma ekle
+    sheet.insertRowBefore(insertRow);
+    sheet.getRange(insertRow, 1, 1, 18).setValues([values]);
     
     // Yeni eklenen satırın formatını ayarla
-    var newRow = sheet.getLastRow();
+    var newRow = insertRow;
     var dataRange = sheet.getRange(newRow, 1, 1, 18);
     dataRange.setHorizontalAlignment('center');
     dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
@@ -496,4 +512,40 @@ function getLastRecords(count) {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+// 🔥 SAAT SIRALAMASI İÇİN DOĞRU KONUMU BULAN FONKSİYON
+function findInsertPosition(sheet, tarih, saat) {
+  var lastRow = sheet.getLastRow();
+  
+  // Tablo boşsa 2. satıra ekle
+  if (lastRow <= 1) {
+    return 2;
+  }
+  
+  // Mevcut verileri al (tarih, saat)
+  var data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+  
+  // Saati sayısal olarak karşılaştır (08:00 -> 8, 09:00 -> 9)
+  var saatNum = parseInt(saat.split(':')[0]);
+  
+  // Tarih ve saate göre doğru konumu bul
+  for (var i = 0; i < data.length; i++) {
+    var rowTarih = data[i][0];
+    var rowSaat = data[i][2];
+    var rowSaatNum = parseInt(rowSaat.toString().split(':')[0]);
+    
+    // Aynı tarih ve saatten önceki konumu bul
+    if (rowTarih === tarih && rowSaatNum > saatNum) {
+      return i + 2; // +2 çünkü başlıklar var
+    }
+    
+    // Farklı tarihse, tarihe göre sırala
+    if (rowTarih > tarih) {
+      return i + 2;
+    }
+  }
+  
+  // En sona ekle
+  return lastRow + 1;
 }
