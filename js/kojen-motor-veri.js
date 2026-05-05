@@ -179,7 +179,7 @@ async function loadVardiyaData() {
         console.log(`📊 ${motor} motoru için ${tarih} tarih ${vardiya} vardiya verileri yükleniyor...`);
         console.log(`🔍 Parametreler: motor=${motor}, tarih=${tarih}, vardiya=${vardiya}`);
         
-        const result = await getMotorRecordsByMotorAndDate(motor, tarih);
+        const result = await getMotorRecordsByMotorAndDate(motor, tarih, vardiya);
         console.log(`📊 API sonucu:`, result);
         
         if (!result.success) {
@@ -212,6 +212,7 @@ async function loadVardiyaData() {
         const saatler = vardiyaSaatleri[vardiya] || [];
         console.log(`🔍 Vardiya saatleri:`, saatler);
         console.log(`🔍 Gelen kayıtların saatleri:`, records.map(r => r.saat));
+        console.log(`🔍 Gelen tüm kayıtlar:`, records);
         
         let kayitSayisi = 0;
         

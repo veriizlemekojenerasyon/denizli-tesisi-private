@@ -349,7 +349,7 @@ function getRecordsByDate(tarih) {
 }
 
 // Motor ve tarihe göre kayıtları getir
-function getRecordsByMotorAndDate(motor, tarih) {
+function getRecordsByMotorAndDate(motor, tarih, vardiya) {
   try {
     var allRecords = getRecords();
     if (!allRecords.success) return allRecords;
@@ -362,7 +362,25 @@ function getRecordsByMotorAndDate(motor, tarih) {
     }
     
     var filtered = allRecords.data.filter(function(record) {
-      return record.motor === motor && record.tarih === searchTarih;
+      var matchMotor = record.motor === motor;
+      var matchTarih = record.tarih === searchTarih;
+      var matchVardiya = true;
+      
+      // Vardiya parametresi varsa, saate göre filtrele
+      if (vardiya) {
+        var saat = record.saat || '';
+        var hour = parseInt(saat.split(':')[0]) || 0;
+        
+        if (vardiya === '08-16') {
+          matchVardiya = (hour >= 8 && hour < 16);
+        } else if (vardiya === '16-24') {
+          matchVardiya = (hour >= 16 && hour < 24);
+        } else if (vardiya === '24-08') {
+          matchVardiya = (hour >= 0 && hour < 8);
+        }
+      }
+      
+      return matchMotor && matchTarih && matchVardiya;
     });
     
     return { success: true, data: filtered };

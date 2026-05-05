@@ -157,9 +157,10 @@ async function checkMultipleMotorRecords(kombinasyonlar) {
  * Motor ve tarihe göre kayıtları getir
  * @param {string} motor - Motor adı
  * @param {string} tarih - Tarih (dd.MM.yyyy)
+ * @param {string} vardiya - Vardiya (08-16, 16-24, 24-08)
  * @returns {Promise<Object>} - Kayıtlar
  */
-async function getMotorRecordsByMotorAndDate(motor, tarih) {
+async function getMotorRecordsByMotorAndDate(motor, tarih, vardiya) {
     try {
         // Tarih formatını düzelt
         let formattedTarih = tarih;
@@ -168,8 +169,13 @@ async function getMotorRecordsByMotorAndDate(motor, tarih) {
             formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
         
-        const url = KojenMotorSheetsConfig.WEB_APP_URL + 
+        let url = KojenMotorSheetsConfig.WEB_APP_URL + 
             `?action=getRecordsByMotorAndDate&motor=${encodeURIComponent(motor)}&tarih=${encodeURIComponent(formattedTarih)}`;
+        
+        // Vardiya parametresi varsa ekle
+        if (vardiya) {
+            url += `&vardiya=${encodeURIComponent(vardiya)}`;
+        }
         
         const response = await fetch(url);
         const result = await response.json();
