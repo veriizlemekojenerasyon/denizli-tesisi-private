@@ -497,6 +497,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Önce kimlik dogrulama kontrolü
     checkAuth();
     
+    // 🔥 Vardiya verileri bölümünü göster
+    showVardiyaVerileriSection();
+    
     // Elementleri seç
     const tarihSecimi = document.getElementById('tarihSecimi');
     const vardiyaSecimi = document.getElementById('vardiyaSecimi');
@@ -600,7 +603,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 240000); // 4 dakika
     }
 
-    // 🔒 BAŞLANGIÇTA TÜM FORM PASİF YAP
+    // � VARDİYA VERİLERİ BÖLÜMÜNÜ GÖSTER
+    function showVardiyaVerileriSection() {
+        const vardiyaVerileriSection = document.getElementById('vardiyaVerileriSection');
+        if (vardiyaVerileriSection) {
+            vardiyaVerileriSection.style.display = 'block';
+        }
+    }
+
+    // �� BAŞLANGIÇTA TÜM FORM PASİF YAP
     function disableAllFormElements() {
         console.log('🔒 Form başlangıçta pasif yapılıyor...');
         
