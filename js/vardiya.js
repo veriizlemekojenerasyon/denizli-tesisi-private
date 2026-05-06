@@ -79,18 +79,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const islemKaydetBtn = document.getElementById('islemKaydetBtn');
     const vardiyaBitirBtn = document.getElementById('vardiyaBitirBtn');
     
+    // Haftalık vardiya kayıtları elementleri
+    const baslangicTarihInput = document.getElementById('baslangicTarih');
+    const bitisTarihInput = document.getElementById('bitisTarih');
+    const tarihFiltreBtn = document.getElementById('tarihFiltreBtn');
+    const tarihSifirlaBtn = document.getElementById('tarihSifirlaBtn');
+    
     // Yardımcı operatör elementleri
     const yardimciOperatorSection = document.getElementById('yardimciOperatorSection');
     const yardimciOperatorVar = document.getElementById('yardimciOperatorVar');
     const yardimciOperatorListesi = document.getElementById('yardimciOperatorListesi');
     const yardimciOperator = document.getElementById('yardimciOperator');
 
-    // Vardiya kayıtları tarih seçicileri
-    const baslangicTarihInput = document.getElementById('baslangicTarih');
-    const bitisTarihInput = document.getElementById('bitisTarih');
-    const tarihFiltreBtn = document.getElementById('tarihFiltreBtn');
-    const tarihSifirlaBtn = document.getElementById('tarihSifirlaBtn');
-
+    
     // Bugünün tarihini al ve input'a ata (DD.MM.YYYY formatında)
     const today = new Date();
     const year = today.getFullYear();
@@ -800,25 +801,27 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (baslangicTarihInput && bitisTarihInput) {
                 // Kullanıcı tarih seçtiyse o aralıktaki kayıtları göster
-                const baslangicParts = baslangicTarihInput.split('.');
-                const bitisParts = bitisTarihInput.split('.');
-                
-                if (baslangicParts.length === 3 && bitisParts.length === 3) {
-                    const baslangicDate = new Date(baslangicParts[2], baslangicParts[1] - 1, baslangicParts[0]);
-                    const bitisDate = new Date(bitisParts[2], bitisParts[1] - 1, bitisParts[0]);
+                const baslangicDate = new Date(baslangicTarihInput);
+                const bitisDate = new Date(bitisTarihInput);
                     
-                    filtrelenmisKayitlar = tumIslemler.filter(vardiya => {
-                        const tarihParts = vardiya.tarih.split('.');
-                        if (tarihParts.length === 3) {
-                            const vardiyaTarihi = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
-                            return vardiyaTarihi >= baslangicDate && vardiyaTarihi <= bitisDate;
-                        }
-                        return false;
-                    });
-                }
+                filtrelenmisKayitlar = tumIslemler.filter(vardiya => {
+                    const tarihParts = vardiya.tarih.split('.');
+                    if (tarihParts.length === 3) {
+                        const vardiyaTarihi = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
+                        return vardiyaTarihi >= baslangicDate && vardiyaTarihi <= bitisDate;
+                    }
+                    return false;
+                });
             } else {
-                // Tarih seçilmediyse tüm kayıtları göster
-                filtrelenmisKayitlar = tumIslemler;
+                // Tarih girilmediyse kayıtları gösterme
+                haftalikVardiyaTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
+                            Tarih aralığı seçin.
+                        </td>
+                    </tr>
+                `;
+                return;
             }
             
             if (filtrelenmisKayitlar.length === 0) {
