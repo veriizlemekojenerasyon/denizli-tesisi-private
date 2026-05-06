@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
     
     // Vardiya Google Apps Script URL
-    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2NzLeBDcrZ9T-VoyqrK1J07zN4UlXm-WMrKkMv0AP_puG-0AMzQhNqnQ92D1zHWSp/exec';
+    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL8sWrgj5OsoYEI5P-WGJsBwtZH6HTopu0-m18QPUkO5CqmcO2oeoFsvrAdcXOYhs1/exec';
     
     // Tarih seçicisine otomatik bugünün tarihini atama
     const tarihInput = document.getElementById('tarih');
@@ -748,7 +748,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Loading mesajı göster
         haftalikVardiyaTableBody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
+                <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
                     Kayıtlar yükleniyor...
                 </td>
             </tr>
@@ -766,7 +766,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!result.success) {
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #e74c3c; padding: 20px;">
+                        <td colspan="8" style="text-align: center; color: #e74c3c; padding: 20px;">
                             Kayıtlar yüklenemedi: ${result.error || 'Bilinmeyen hata'}
                         </td>
                     </tr>
@@ -782,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tumIslemler.length === 0) {
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
+                        <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
                             Vardiya kaydı bulunamadı.
                         </td>
                     </tr>
@@ -844,7 +844,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
+                        <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
                             ${mesaj}
                         </td>
                     </tr>
@@ -862,23 +862,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Yapılan işlemleri formatla (VardiyaIslemleri sheet'inden)
                 let yapilanIslemlerText = '-';
+                let islemDetaylariText = '-';
                 const islemler = vardiyaIslemleriMap.get(vardiya.id) || [];
                 
                 if (islemler.length > 0) {
                     yapilanIslemlerText = islemler.map(i => i.islem).join(', ');
-                    if (yapilanIslemlerText.length > 50) {
-                        yapilanIslemlerText = yapilanIslemlerText.substring(0, 50) + '...';
-                    }
+                    islemDetaylariText = islemler.map(i => `${i.islem} (${i.saat})`).join(' | ');
                 }
                 
                 tr.innerHTML = `
                     <td>${vardiya.tarih}</td>
                     <td>${vardiyaAdiMap[vardiya.vardiya] || vardiya.vardiya}</td>
                     <td>${vardiya.personel}</td>
-                    <td>${vardiya.yardimciOperator || 'Yok'}</td>
-                    <td>${vardiya.baslangicSaati}</td>
-                    <td>${vardiya.bitisSaati || 'Devam Ediyor'}</td>
+                    <td>${vardiya.yardimciOperator || '-'}</td>
+                    <td>${vardiya.baslangic}</td>
+                    <td>${vardiya.bitis || '-'}</td>
                     <td>${yapilanIslemlerText}</td>
+                    <td>${islemDetaylariText}</td>
                 `;
                 
                 haftalikVardiyaTableBody.appendChild(tr);
@@ -887,7 +887,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Vardiya kayıtları yükleme hatası:', error);
             haftalikVardiyaTableBody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; color: #e74c3c; padding: 20px;">
+                    <td colspan="8" style="text-align: center; color: #e74c3c; padding: 20px;">
                         Bağlantı hatası! Kayıtlar yüklenemedi.
                     </td>
                 </tr>
