@@ -3,7 +3,7 @@
  * sayfayı dakikada bir yeniler.
  */
 (function () {
-    const REFRESH_INTERVAL_MS = 60 * 1000;
+    const REFRESH_INTERVAL_MS = 5*60 * 1000;
 
     window.setTimeout(function () {
         window.location.reload();
