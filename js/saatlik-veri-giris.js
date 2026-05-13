@@ -8,7 +8,7 @@
 // ============================================
 const SAATLIK_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxxcUF1LWgCJ3ulNRQ70aeEGUCaYh81ii9zFIZphljTeHn1gZPZB8wu_AFfK3gaisWXVQ/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwnSxFYbTJZoaWpNO4r05CKAzFUp6tLByLxzBdZ1opcN9S4Eno_D4uLyREAmF9j45MHuQ/exec',
     
     // Sayfa başlığı
     PAGE_NAME: 'Saatlik Veri Girişi',

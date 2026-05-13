@@ -83,7 +83,6 @@ function addRecord(data) {
       
       // Başlık formatı (11 sütun)
       var headerRange = sheet.getRange(1, 1, 1, 11);
-      var headerRange = sheet.getRange(1, 1, 1, 10);
       headerRange.setFontWeight('bold');
       headerRange.setBackground('#3498db');
       headerRange.setFontColor('#ffffff');
@@ -99,7 +98,8 @@ function addRecord(data) {
       sheet.setColumnWidth(7, 140);   // Aydem Aktif
       sheet.setColumnWidth(8, 160);   // Aydem Reaktif
       sheet.setColumnWidth(9, 120);   // Kaydeden
-      sheet.setColumnWidth(10, 140);  // Kayıt Tarihi
+      sheet.setColumnWidth(10, 180);  // Notlar
+      sheet.setColumnWidth(11, 140);  // Kayit Tarihi
       
       // Kenarlıklar
       headerRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
@@ -107,7 +107,7 @@ function addRecord(data) {
       // Sütun formatları
       sheet.getRange(2, 1, 1000, 4).setNumberFormat('@');     // ID, Tarih, Saat, Vardiya metin
       sheet.getRange(2, 5, 1000, 4).setNumberFormat('0.000');  // Sayısal değerler (4 sütun)
-      sheet.getRange(2, 9, 1000, 2).setNumberFormat('@');      // Notlar ve Kayıt Tarihi
+      sheet.getRange(2, 9, 1000, 3).setNumberFormat('@');      // Kaydeden, Notlar ve Kayit Tarihi
       
       Logger.log('SaatlikVeriler sayfası otomatik olarak oluşturuldu.');
     }
@@ -160,7 +160,7 @@ function addRecord(data) {
     // Yeni satır formatı
     var newRow = sheet.getLastRow();
     sheet.getRange(newRow, 1, 1, 11).setHorizontalAlignment('center');
-    sheet.getRange(newRow, 1, 1, 11).setBorder(true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+    sheet.getRange(newRow, 1, 1, 11).setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
     
     return { success: true, message: 'Kayıt başarıyla eklendi! (ID: ' + nextID + ')' };
     
@@ -212,8 +212,9 @@ function updateRecord(data) {
     sheet.getRange(foundRow, 6).setValue(parseFloat(data.reaktifMwh) || 0);
     sheet.getRange(foundRow, 7).setValue(parseFloat(data.aydemAktif) || 0);
     sheet.getRange(foundRow, 8).setValue(parseFloat(data.aydemReaktif) || 0);
-    sheet.getRange(foundRow, 9).setValue(data.notlar || '');
-    sheet.getRange(foundRow, 10).setValue(formatDateTimeTR(new Date()));
+    sheet.getRange(foundRow, 9).setValue(data.kaydeden || '');
+    sheet.getRange(foundRow, 10).setValue(data.notlar || '');
+    sheet.getRange(foundRow, 11).setValue(formatDateTimeTR(new Date()));
     
     Logger.log('Satır ' + foundRow + ' (ID: ' + recordID + ') güncellendi.');
     
@@ -238,7 +239,7 @@ function getRecords() {
       return { success: true, data: [] };
     }
     
-    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getDisplayValues();
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 11).getDisplayValues();
     var records = [];
     
     for (var i = data.length - 1; i >= 0; i--) {
@@ -252,8 +253,9 @@ function getRecords() {
         reaktifMwh: row[5],
         aydemAktif: row[6],
         aydemReaktif: row[7],
-        notlar: row[8],
-        kayitTarihi: row[9]
+        kaydeden: row[8],
+        notlar: row[9],
+        kayitTarihi: row[10]
       });
     }
     
