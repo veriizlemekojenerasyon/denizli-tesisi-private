@@ -58,6 +58,10 @@ const SaatlikApp = {
     },
     
     setInitialValues: function() {
+        this.syncCurrentDateTime();
+    },
+
+    syncCurrentDateTime: function() {
         const tarihInput = document.getElementById('tarih');
         const saatInput = document.getElementById('saat');
         const vardiyaSelect = document.getElementById('vardiya');
@@ -96,6 +100,7 @@ const SaatlikApp = {
     
     handleFormSubmit: async function(e) {
         e.preventDefault();
+        this.syncCurrentDateTime();
         
         const submitBtn = document.getElementById('submitBtn');
         const originalBtnText = submitBtn ? submitBtn.textContent : 'Kaydet';
