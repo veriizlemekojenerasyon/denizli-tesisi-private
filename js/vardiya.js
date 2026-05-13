@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
     
     // Vardiya Google Apps Script URL
-    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyL8sWrgj5OsoYEI5P-WGJsBwtZH6HTopu0-m18QPUkO5CqmcO2oeoFsvrAdcXOYhs1/exec';
+    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1IARr4aEfpukBwKYz8PDD_hY_dahyj3mHYUo5QhajNwzjwq6O2Tzbl06xazU4UPl0RA/exec';
     
     // Tarih seçicisine otomatik bugünün tarihini atama
     const tarihInput = document.getElementById('tarih');

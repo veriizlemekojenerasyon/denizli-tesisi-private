@@ -40,6 +40,9 @@ function handleRequest(e) {
       case 'getLastRecords':
         result = getLastRecords(parseInt(e.parameter.count) || 32);
         break;
+      case 'sendEmail':
+        result = sendEmailAlert(e.parameter);
+        break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
@@ -204,6 +207,37 @@ function getLastRecords(count) {
     };
     
   } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+// 📧 Mail gönderme fonksiyonu
+function sendEmailAlert(data) {
+  try {
+    // Parametreleri kontrol et
+    if (!data) {
+      return { success: false, error: 'Veri parametresi eksik' };
+    }
+    
+    var to = data.to || 'mrtcsk0320@gmail.com'; // Varsayılan mail adresi
+    var subject = data.subject || 'Buhar Verisi Uyarısı';
+    var body = data.body || '';
+    
+    Logger.log('Mail gönderiliyor: ' + to + ', Konu: ' + subject);
+    
+    // Mail gönder
+    MailApp.sendEmail({
+      to: to,
+      subject: subject,
+      body: body,
+      htmlBody: body.replace(/\n/g, '<br>')
+    });
+    
+    Logger.log('Mail başarıyla gönderildi: ' + to);
+    return { success: true, message: 'Mail başarıyla gönderildi!' };
+    
+  } catch (error) {
+    Logger.log('Mail gönderme hatası: ' + error.toString());
     return { success: false, error: error.toString() };
   }
 }

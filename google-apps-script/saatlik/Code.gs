@@ -42,6 +42,9 @@ function handleRequest(e) {
       case 'getRecordByDateTime':
         result = getRecordByDateTime(e.parameter.tarih, e.parameter.saat);
         break;
+      case 'sendEmail':
+        result = sendEmailAlert(e.parameter);
+        break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
@@ -70,24 +73,23 @@ function addRecord(data) {
     if (!sheet) {
       sheet = spreadsheet.insertSheet('SaatlikVeriler');
       
-      // Başlıklar (10 sütun - Aydem alanları eklendi)
+      // Başlıklar (11 sütun - Aydem alanları eklendi)
       var headers = [
-        'ID', 'Tarih', 'Saat', 'Vardiya',
-        'Aktif Enerji (MWh)', 'Reaktif Enerji (kVArh)',
-        'Aydem Aktif (MWh)', 'Aydem Reaktif (kVArh)',
-        'Notlar', 'Kayıt Tarihi'
+        'ID', 'Tarih', 'Saat', 'Vardiya', 
+        'Aktif Enerji (MWh)', 'Reaktif Enerji (kVArh)', 'Aydem Aktif (MWh)', 'Aydem Reaktif (kVArh)', 'Kaydeden', 'Notlar', 'Kayıt Tarihi'
       ];
       
       sheet.appendRow(headers);
       
-      // Başlık formatı (10 sütun)
+      // Başlık formatı (11 sütun)
+      var headerRange = sheet.getRange(1, 1, 1, 11);
       var headerRange = sheet.getRange(1, 1, 1, 10);
       headerRange.setFontWeight('bold');
       headerRange.setBackground('#3498db');
       headerRange.setFontColor('#ffffff');
       headerRange.setHorizontalAlignment('center');
       
-      // Sütun genişlikleri (10 sütun)
+      // Sütun genişlikleri (11 sütun)
       sheet.setColumnWidth(1, 60);    // ID
       sheet.setColumnWidth(2, 100);   // Tarih
       sheet.setColumnWidth(3, 80);    // Saat
@@ -96,7 +98,7 @@ function addRecord(data) {
       sheet.setColumnWidth(6, 160);   // Reaktif Enerji
       sheet.setColumnWidth(7, 140);   // Aydem Aktif
       sheet.setColumnWidth(8, 160);   // Aydem Reaktif
-      sheet.setColumnWidth(9, 250);   // Notlar
+      sheet.setColumnWidth(9, 120);   // Kaydeden
       sheet.setColumnWidth(10, 140);  // Kayıt Tarihi
       
       // Kenarlıklar
@@ -145,18 +147,20 @@ function addRecord(data) {
       formattedTarih,
       data.saat,
       data.vardiya,
+      
       parseFloat(data.aktifMwh) || 0,
       parseFloat(data.reaktifMwh) || 0,
       parseFloat(data.aydemAktif) || 0,
       parseFloat(data.aydemReaktif) || 0,
+      data.kaydeden || '',
       data.notlar || '',
       kayitTarihi
     ]);
     
     // Yeni satır formatı
     var newRow = sheet.getLastRow();
-    sheet.getRange(newRow, 1, 1, 10).setHorizontalAlignment('center');
-    sheet.getRange(newRow, 1, 1, 10).setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+    sheet.getRange(newRow, 1, 1, 11).setHorizontalAlignment('center');
+    sheet.getRange(newRow, 1, 1, 11).setBorder(true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
     
     return { success: true, message: 'Kayıt başarıyla eklendi! (ID: ' + nextID + ')' };
     
@@ -319,4 +323,35 @@ function formatDateTimeTR(date) {
   var minutes = String(d.getMinutes()).padStart(2, '0');
   var seconds = String(d.getSeconds()).padStart(2, '0');
   return day + '.' + month + '.' + year + ' ' + hours + ':' + minutes + ':' + seconds;
+}
+
+// 📧 Mail gönderme fonksiyonu
+function sendEmailAlert(data) {
+  try {
+    // Parametreleri kontrol et
+    if (!data) {
+      return { success: false, error: 'Veri parametresi eksik' };
+    }
+    
+    var to = data.to || 'mrtcsk0320@gmail.com'; // Varsayılan mail adresi
+    var subject = data.subject || 'Saatlik Veri Girişi Uyarısı';
+    var body = data.body || '';
+    
+    Logger.log('Mail gönderiliyor: ' + to + ', Konu: ' + subject);
+    
+    // Mail gönder
+    MailApp.sendEmail({
+      to: to,
+      subject: subject,
+      body: body,
+      htmlBody: body.replace(/\n/g, '<br>')
+    });
+    
+    Logger.log('Mail başarıyla gönderildi: ' + to);
+    return { success: true, message: 'Mail başarıyla gönderildi!' };
+    
+  } catch (error) {
+    Logger.log('Mail gönderme hatası: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
 }

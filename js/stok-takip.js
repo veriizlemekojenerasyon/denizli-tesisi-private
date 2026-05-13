@@ -1,7 +1,7 @@
 // Stok Takip JavaScript
 
 // Google Apps Script URL
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4oQE1MFZYojKLTveo7oBpCnzXDpA0EtqRzFsJp9eQCRQhDS3aQU1jnVHcvypv00h-/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwFVb4eVY8x083wuJGDl2Z-cap7jjxBfF3qWgQ_KhV16CtxU4d-2UhWSbOSccniNqPCwQ/exec";
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Başlangıç değerlerini ayarla

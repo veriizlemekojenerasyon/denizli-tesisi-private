@@ -1566,3 +1566,71 @@ body {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* 📧 Admin Mail Butonu Stilleri */
+.header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+}
+
+.admin-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mail-toggle-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+.mail-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+.mail-toggle-btn:active {
+    transform: translateY(0);
+}
+
+/* Mail açık olduğunda yeşil renk */
+.mail-toggle-btn.mail-enabled {
+    background: #27ae60;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+}
+
+.mail-toggle-btn.mail-enabled:hover {
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+}
+
+/* Responsive tasarım */
+@media (max-width: 768px) {
+    .header-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .admin-controls {
+        order: 2;
+    }
+    
+    .motor-selector {
+        order: 1;
+    }
+    
+    .mail-toggle-btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}

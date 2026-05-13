@@ -3,12 +3,12 @@
  * Drive'a fotoğraf yükleme ve Sheets'e kayıt yapma
  * 
  * Drive Klasör: https://drive.google.com/drive/folders/1ae4WbGS2qXnKcJc9gX7Dc0Od2kSoTYiM
- * Sheets: https://docs.google.com/spreadsheets/d/1NxlvD6drTjyB7l_kSeAtyXSdbigeu6HvyrwXJF9T7bk/edit
+ * Sheets: https://docs.google.com/spreadsheets/d/1226RpbRSRp4ryBgUVxw69wPwcmJq0wHQ0OafEHqnuoo/edit
  */
 
 // === AYARLAR ===
 const DRIVE_FOLDER_ID = '1ae4WbGS2qXnKcJc9gX7Dc0Od2kSoTYiM';
-const SHEET_ID = '1NxlvD6drTjyB7l_kSeAtyXSdbigeu6HvyrwXJF9T7bk';
+const SHEET_ID = '1226RpbRSRp4ryBgUVxw69wPwcmJq0wHQ0OafEHqnuoo';
 const SHEET_NAME = 'Motor Takip'; // Sayfa adı
 
 /**
@@ -26,9 +26,23 @@ function doPost(e) {
         params = JSON.parse(e.postData.contents);
       } else {
         // FormData parametreleri
-        params = e.parameter || {};
+        const contents = e.postData.contents;
+        const pairs = contents.split('&');
+        for (let i = 0; i < pairs.length; i++) {
+          const pair = pairs[i].split('=');
+          params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+        }
       }
-    } else {
+    }
+    
+    // 📧 Mail gönderme action'ı
+    if (params.action === 'sendEmail') {
+      const mailResult = sendMotorEmail(params);
+      return createResponse(mailResult.success, mailResult.message || mailResult.error);
+    }
+    
+    // Eksik parametre kontrolü
+    if (!e.postData) {
       params = e.parameter || {};
     }
     
@@ -433,6 +447,39 @@ function createResponse(success, message, data) {
   
   return ContentService.createTextOutput(JSON.stringify(response))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * 📧 Motor Takip Mail Gönderme Fonksiyonu
+ */
+function sendMotorEmail(data) {
+  try {
+    // Parametreleri kontrol et
+    if (!data) {
+      return { success: false, error: 'Veri parametresi eksik' };
+    }
+    
+    var to = data.to || 'mrtcsk0320@gmail.com'; // Varsayılan mail adresi
+    var subject = data.subject || 'Motor Takip Uyarısı';
+    var body = data.body || '';
+    
+    Logger.log('Motor takip mail gönderiliyor: ' + to + ', Konu: ' + subject);
+    
+    // Mail gönder
+    MailApp.sendEmail({
+      to: to,
+      subject: subject,
+      body: body,
+      htmlBody: body.replace(/\n/g, '<br>')
+    });
+    
+    Logger.log('Motor takip mail başarıyla gönderildi: ' + to);
+    return { success: true, message: 'Mail başarıyla gönderildi!' };
+    
+  } catch (error) {
+    Logger.log('Motor takip mail gönderme hatası: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
 }
 
 /**

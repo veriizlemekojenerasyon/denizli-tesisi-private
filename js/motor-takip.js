@@ -1,5 +1,12 @@
 // Motor Takip JavaScript Fonksiyonları
 
+// 📧 Mail gönderme konfigürasyonu
+const MOTOR_MAIL_CONFIG = {
+    ENABLED: false, // Şimdilik kapalı
+    EMAIL_TO: 'mrtcsk0320@gmail.com',
+    EMAIL_SUBJECT: 'Motor Takip Uyarısı'
+};
+
 // Kimlik dogrulama kontrolü
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
@@ -117,7 +124,7 @@ function isRecordExists(tarih, saat) {
 }
 
 // Google Apps Script URL
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbysyDXF5kP9aFYC-IycyaCEYwVbZFWm6qbVUStSqNyam6ec3-w0WN3dogNygU4lsh6D/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyrYeuUQcK8c2V7iWnmkEz8al6sdVqRdXMlKGrwmYAaD2BKUkyvxm9LUL1KgzxvA0Ae/exec';
 
 // Kayıtları Yükle - Sadece Google Apps Script'ten çek (LocalStorage devre dışı)
 async function loadRecords() {
@@ -1086,4 +1093,68 @@ function temizleTumKontroller() {
     const motorButtons = document.querySelectorAll('.motor-btn');
     motorButtons.forEach(btn => btn.classList.remove('selected'));
     selectedMotor = null;
+}
+
+// 📧 Motor Takip Mail Gönderme Fonksiyonu
+async function sendMotorMail(subject, body) {
+    if (!MOTOR_MAIL_CONFIG.ENABLED) {
+        console.log('📧 Motor takip mail gönderme kapalı');
+        return { success: true, message: 'Mail gönderme kapalı' };
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('action', 'sendEmail');
+        formData.append('to', MOTOR_MAIL_CONFIG.EMAIL_TO);
+        formData.append('subject', subject || MOTOR_MAIL_CONFIG.EMAIL_SUBJECT);
+        formData.append('body', body);
+        
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        console.log('📧 Motor takip mail sonucu:', result);
+        return result;
+    } catch (error) {
+        console.error('Motor takip mail gönderme hatası:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// 🔧 Mail ayarlarını aç/kapat (sadece admin)
+function toggleMotorMailSettings() {
+    const user = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    
+    // Sadece admin kullanıcılara izin ver
+    if (user.role !== 'admin') {
+        alert('Bu ayarı değiştirmek için admin yetkisi gereklidir!');
+        return;
+    }
+    
+    const newStatus = !MOTOR_MAIL_CONFIG.ENABLED;
+    MOTOR_MAIL_CONFIG.ENABLED = newStatus;
+    
+    const statusText = newStatus ? 'açıldı' : 'kapatıldı';
+    const statusColor = newStatus ? '#27ae60' : '#e74c3c';
+    
+    // Buton rengini güncelle
+    const mailToggleBtn = document.getElementById('mailToggleBtn');
+    if (mailToggleBtn) {
+        if (newStatus) {
+            mailToggleBtn.classList.add('mail-enabled');
+        } else {
+            mailToggleBtn.classList.remove('mail-enabled');
+        }
+        mailToggleBtn.textContent = newStatus ? '📧 Mail Açık' : '📧 Mail Kapalı';
+    }
+    
+    // Bildirim göster
+    alert(`📧 Motor takip mail gönderme ${statusText}!\n\nDurum: ${newStatus ? 'Açık' : 'Kapalı'}\nMail adresi: ${MOTOR_MAIL_CONFIG.EMAIL_TO}`);
+    
+    // Test mail gönder (açık ise)
+    if (newStatus) {
+        sendMotorMail('Motor Takip Mail Test', 'Motor takip mail sistemi başarıyla açıldı. Bu bir test mailidir.');
+    }
 }

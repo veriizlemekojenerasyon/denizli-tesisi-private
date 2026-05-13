@@ -4,7 +4,10 @@
  */
 
 const KojenEnerjiSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbx5BRaxLastZUMARa8r1m0i1YIxXV_t1JJ39CuAerIWPy9WK5BLsGCfpTaDX_b0IitsTg/exec'
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbyyqa3CRd7wx61HzlCFXyofGpsRJYAYiEZx3wKEoORYCQgkuLHEbIKARqV2eH7TblLSGA/exec',
+    EMAIL_ENABLED: true,
+    EMAIL_TO: 'mrtcsk0320@gmail.com',
+    EMAIL_SUBJECT: 'Kojen Enerji Veri Uyarısı - Kayıt Girilmedi'
 };
 
 /**
@@ -225,6 +228,34 @@ async function getAllEnerjiRecords() {
 }
 
 /**
+ * Mail uyarısı gönder
+ * @param {string} subject - Mail konusu
+ * @param {string} body - Mail içeriği
+ * @returns {Promise<Object>} - Mail sonucu
+ */
+async function sendKojenEnerjiEmailAlert(subject, body) {
+    if (!KojenEnerjiSheetsConfig.EMAIL_ENABLED) {
+        console.log('Kojen enerji mail gönderme kapalı');
+        return { success: true, message: 'Mail gönderme kapalı' };
+    }
+
+    try {
+        const url = new URL(KojenEnerjiSheetsConfig.WEB_APP_URL);
+        url.searchParams.append('action', 'sendEmail');
+        url.searchParams.append('to', KojenEnerjiSheetsConfig.EMAIL_TO);
+        url.searchParams.append('subject', subject || KojenEnerjiSheetsConfig.EMAIL_SUBJECT);
+        url.searchParams.append('body', body || '');
+
+        const response = await fetch(url, { method: 'GET', mode: 'cors' });
+        return await response.json();
+
+    } catch (error) {
+        console.error('Kojen enerji mail gönderme hatası:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
  * 🚀 ÇOKLU KAYIT SİSTEMİ - Tek seferde çoklu enerji kaydı
  * @param {Array} records - Kaydedilecek enerji kayıtları
  * @returns {Promise<Object>} - Kayıt sonuçları
@@ -267,3 +298,4 @@ window.getEnerjiRecordsByMotorAndDate = getEnerjiRecordsByMotorAndDate;
 window.getLastEnerjiRecords = getLastEnerjiRecords;
 window.getAllEnerjiRecords = getAllEnerjiRecords;
 window.addMultipleEnerjiRecords = addMultipleEnerjiRecords;
+window.sendKojenEnerjiEmailAlert = sendKojenEnerjiEmailAlert;

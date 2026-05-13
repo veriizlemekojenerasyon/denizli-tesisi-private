@@ -217,6 +217,80 @@ function getSaatDegeri(saat) {
     return parseInt(saatStr || 0) * 60 + parseInt(dakikaStr || 0);
 }
 
+// Enerji verisi girilmediyse mail uyarısı gönder
+async function checkAndSendMissingEnerjiMail() {
+    const now = new Date();
+
+    if (now.getMinutes() !== 59) {
+        return;
+    }
+
+    const hour = String(now.getHours()).padStart(2, '0');
+    const saat = `${hour}:00`;
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const tarih = `${day}.${month}.${year}`;
+    const sentKey = `kojenEnerjiMissingMailSent:${tarih}:${saat}`;
+
+    if (localStorage.getItem(sentKey)) {
+        return;
+    }
+
+    const motors = ['GM-1', 'GM-2', 'GM-3'];
+    const kontrolListesi = motors.map(motor => ({ motor, tarih, saat }));
+    const eksikMotorlar = [];
+
+    try {
+        const bulkResult = await checkMultipleEnerjiRecords(kontrolListesi);
+
+        if (bulkResult.success && bulkResult.results) {
+            kontrolListesi.forEach(({ motor }) => {
+                const key = `${motor}|${tarih}|${saat}`;
+                if (!bulkResult.results[key] || !bulkResult.results[key].exists) {
+                    eksikMotorlar.push(motor);
+                }
+            });
+        } else {
+            for (const motor of motors) {
+                const result = await checkExistingEnerjiRecord(motor, tarih, saat);
+                if (!result.success || !result.exists) {
+                    eksikMotorlar.push(motor);
+                }
+            }
+        }
+
+        if (eksikMotorlar.length === 0) {
+            return;
+        }
+
+        const subject = `${KojenEnerjiSheetsConfig.EMAIL_SUBJECT} - ${tarih} ${saat}`;
+        const body = `Kojen Enerji Veri Uyarısı\n\nTarih: ${tarih}\nSaat: ${saat}\nEksik motor enerji kayıtları: ${eksikMotorlar.join(', ')}\n\nBu saat için kojen enerji veri kaydı girilmedi.\n\nLütfen ilgili personeli bilgilendirin.`;
+        const mailResult = await sendKojenEnerjiEmailAlert(subject, body);
+
+        if (mailResult.success) {
+            localStorage.setItem(sentKey, new Date().toISOString());
+            showMessage(`${saat} için eksik enerji veri maili gönderildi.`, 'warning');
+        } else {
+            console.error('Kojen enerji uyarı maili gönderilemedi:', mailResult.error);
+        }
+    } catch (error) {
+        console.error('Kojen enerji eksik kayıt mail kontrolü hatası:', error);
+    }
+}
+
+function startMissingEnerjiMailCheck() {
+    console.log('Kojen enerji mail kontrolü başlatılıyor...');
+
+    setInterval(() => {
+        checkAndSendMissingEnerjiMail();
+    }, 60000);
+
+    setTimeout(() => {
+        checkAndSendMissingEnerjiMail();
+    }, 5000);
+}
+
 // � MOTORUN SON KAYDINI GETİR (Motor Çalışmıyor için)
 async function getLastRecordForMotor(motor) {
     try {
@@ -340,6 +414,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ⏰ Otomatik yönlendirme kontrolünü başlat (her dakika kontrol et)
     checkAutoRedirect();
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
+    startMissingEnerjiMailCheck();
     
     // ⚡ SUPER HIZLI Cache sistemi
     let cachedRecords = [];

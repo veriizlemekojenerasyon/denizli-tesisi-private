@@ -8,13 +8,20 @@
 // ============================================
 const GUNLUK_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxwNO87oBqwFqzLJZdUNEcJrVHnJyznjK0Cgtb8rKHEHDZAMVeQJLqE6IrlXhkwe5PS/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwV6xKa2cuNdRrVgQUZdnJrW7RFnaNPgCX2WSB08VTeg1wH7uUq7DuZ2f-s_ObQXsb4nA/exec',
     
     // Sayfa başlığı
     PAGE_NAME: 'Günlük Veri Girişi',
     
     // Varsayılan kullanıcı adı
-    DEFAULT_USER: 'Admin'
+    DEFAULT_USER: 'Admin',
+
+    // Mail uyarı ayarları
+    EMAIL_ENABLED: true,
+    EMAIL_TO: 'mrtcsk0320@gmail.com',
+    EMAIL_SUBJECT: 'Günlük Veri Girişi Uyarısı - Kayıt Girilmedi',
+    AUTO_CHECK_HOUR: 23,
+    AUTO_CHECK_MINUTE: 59
 };
 
 // ============================================
@@ -34,6 +41,7 @@ const GunlukApp = {
         this.setDefaultDate();
         this.checkExistingRecord();
         this.loadLastRecords();
+        this.startAutoRecordCheck();
         
         console.log('GunlukApp başlatıldı');
     },
@@ -187,6 +195,29 @@ const GunlukApp = {
             return { success: false, error: 'Bağlantı hatası: ' + error.message };
         }
     },
+
+    // Mail gönderme
+    sendEmailAlert: async function(subject, body) {
+        if (!GUNLUK_CONFIG.EMAIL_ENABLED) {
+            console.log('Mail gönderme kapalı');
+            return { success: true, message: 'Mail gönderme kapalı' };
+        }
+
+        try {
+            const url = new URL(GUNLUK_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'sendEmail');
+            url.searchParams.append('to', GUNLUK_CONFIG.EMAIL_TO);
+            url.searchParams.append('subject', subject || GUNLUK_CONFIG.EMAIL_SUBJECT);
+            url.searchParams.append('body', body || '');
+
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            return await response.json();
+
+        } catch (error) {
+            console.error('Mail gönderme hatası:', error);
+            return { success: false, error: 'Mail bağlantı hatası: ' + error.message };
+        }
+    },
     
     // Kayıt var mı kontrolü
     isExistingRecord: async function(tarih) {
@@ -285,6 +316,51 @@ const GunlukApp = {
         } catch (error) {
             console.error('Kayıt getirme hatası:', error);
             return null;
+        }
+    },
+
+    // Günlük kayıt girilmediyse mail uyarısı gönder
+    startAutoRecordCheck: function() {
+        console.log('Günlük otomatik kayıt kontrolü başlatılıyor...');
+
+        setInterval(() => {
+            this.checkAndSendMissingRecordMail();
+        }, 60000);
+
+        setTimeout(() => {
+            this.checkAndSendMissingRecordMail();
+        }, 5000);
+    },
+
+    checkAndSendMissingRecordMail: async function() {
+        const now = new Date();
+
+        if (now.getHours() !== GUNLUK_CONFIG.AUTO_CHECK_HOUR || now.getMinutes() !== GUNLUK_CONFIG.AUTO_CHECK_MINUTE) {
+            return;
+        }
+
+        const todayStr = this.formatDateInput(now);
+        const sentKey = `gunlukMissingMailSent:${todayStr}`;
+
+        if (localStorage.getItem(sentKey)) {
+            return;
+        }
+
+        const hasRecord = await this.isExistingRecord(todayStr);
+        if (hasRecord) {
+            return;
+        }
+
+        const formattedToday = this.formatDateTR(todayStr);
+        const subject = `${GUNLUK_CONFIG.EMAIL_SUBJECT} - ${formattedToday}`;
+        const body = `Günlük Veri Girişi Uyarısı\n\nTarih: ${formattedToday}\n\nBugün için günlük veri kaydı girilmedi.\n\nLütfen ilgili personeli bilgilendirin.`;
+
+        const result = await this.sendEmailAlert(subject, body);
+        if (result.success) {
+            localStorage.setItem(sentKey, new Date().toISOString());
+            this.showNotification('Uyarı Maili', 'Günlük veri girilmediği için mail gönderildi.', 'warning');
+        } else {
+            console.error('Günlük veri uyarı maili gönderilemedi:', result.error);
         }
     },
     
@@ -482,6 +558,14 @@ const GunlukApp = {
             return parts[2] + '.' + parts[1] + '.' + parts[0];
         }
         return dateString;
+    },
+
+    // Date nesnesini input tarih formatına çevir (YYYY-MM-DD)
+    formatDateInput: function(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     },
     
     // Kullanıcı adı göster

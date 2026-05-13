@@ -109,10 +109,17 @@
                 </div>
                 <div class="header-bottom">
                     <h3>Denizli Tesisi Kontrol Paneli</h3>
-                    <div class="motor-selector">
-                        <button type="button" class="motor-btn" data-motor="gm1">GM-1</button>
-                        <button type="button" class="motor-btn" data-motor="gm2">GM-2</button>
-                        <button type="button" class="motor-btn" data-motor="gm3">GM-3</button>
+                    <div class="header-controls">
+                        <div class="motor-selector">
+                            <button type="button" class="motor-btn" data-motor="gm1">GM-1</button>
+                            <button type="button" class="motor-btn" data-motor="gm2">GM-2</button>
+                            <button type="button" class="motor-btn" data-motor="gm3">GM-3</button>
+                        </div>
+                        <div class="admin-controls">
+                            <button type="button" id="mailToggleBtn" class="mail-toggle-btn" onclick="toggleMotorMailSettings()">
+                                📧 Mail Kapalı
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -252,7 +259,7 @@
 
     <script>
         // Fotoğraf için Google Apps Script URL
-        const FOTO_GAS_URL = 'https://script.google.com/macros/s/AKfycbysyDXF5kP9aFYC-IycyaCEYwVbZFWm6qbVUStSqNyam6ec3-w0WN3dogNygU4lsh6D/exec';
+        const FOTO_GAS_URL = 'https://script.google.com/macros/s/AKfycbyrYeuUQcK8c2V7iWnmkEz8al6sdVqRdXMlKGrwmYAaD2BKUkyvxm9LUL1KgzxvA0Ae/exec';
         
         // Sayfa yüklendiğinde otomatik tarih ata
         document.addEventListener('DOMContentLoaded', function() {

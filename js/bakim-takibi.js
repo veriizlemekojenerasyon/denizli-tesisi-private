@@ -1,5 +1,5 @@
 // Bakım Takibi JavaScript - ÇALIŞAN VERSİYON
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyw5EYX-9pG62GqHhDMJ2vzcVSIE2owGonrw2k8oA4tKqtxIMBW22W3g71V431utYr_/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyimCmn6QQy0hl__KEqcLl_xd0rLjW9S-tS7vWU-nqwepH2Ur4tCDbzMvBafuSLrhQkEw/exec";
 
 // Sistem başlatma fonksiyonu
 async function initializeSystem() {

@@ -13,13 +13,18 @@
 // ============================================
 const BUHAR_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbx-_7cvrmHCHCxoV9admm1_Drua5vNepfI9xK_hECfJJSIFSl6wZO5GAD0qVPSGgK2z/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxnhHSmc5GTuOq8hdqgFM2-FA2XNjRdLHoED5gmjXbmWcYycPNXykdd0ZYTzOI3HNJxKg/exec',
     
     // Sayfa basligi
     PAGE_NAME: 'Buhar Verisi',
     
     // Varsayilan kullanici adi
-    DEFAULT_USER: 'Admin'
+    DEFAULT_USER: 'Admin',
+    
+    // 📧 Mail uyarı ayarları
+    EMAIL_ENABLED: true, // Mail gönderme aç/kapa
+    EMAIL_TO: 'mrtcsk0320@gmail.com', // Uyarı maili gönderilecek adres
+    EMAIL_SUBJECT: 'Buhar Verisi Uyarısı - Değer Girilmedi'
 };
 
 // ============================================
@@ -34,6 +39,9 @@ const BuharApp = {
         this.setDefaultDate();
         this.checkExistingRecord();
         this.loadLastRecords();
+        
+        // 🔥 OTOMATİK KAYIT KONTROLÜ BAŞLAT
+        this.startAutoRecordCheck();
         
         console.log('BuharApp baslatildi');
     },
@@ -291,6 +299,123 @@ const BuharApp = {
         if (confirm('Çikis yapmak istediginizden emin misiniz?')) {
             localStorage.removeItem('loggedInUser');
             window.location.href = 'anasayfa.html';
+        }
+    },
+    
+    // 📧 Mail gönderme fonksiyonu
+    sendEmailAlert: async function(subject, body) {
+        if (!BUHAR_CONFIG.EMAIL_ENABLED) {
+            console.log('📧 Mail gönderme kapalı');
+            return { success: true, message: 'Mail gönderme kapalı' };
+        }
+        
+        try {
+            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'sendEmail');
+            url.searchParams.append('to', BUHAR_CONFIG.EMAIL_TO);
+            url.searchParams.append('subject', subject || BUHAR_CONFIG.EMAIL_SUBJECT);
+            url.searchParams.append('body', body);
+            
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+            
+            console.log('📧 Mail sonucu:', result);
+            return result;
+        } catch (error) {
+            console.error('Mail gönderme hatası:', error);
+            return { success: false, error: error.message };
+        }
+    },
+    
+    // 🔥 OTOMATİK KAYIT KONTROLÜ
+    startAutoRecordCheck: function() {
+        console.log('🔥 Otomatik buhar kayıt kontrolü başlatılıyor...');
+        
+        // Her 5 dakikada bir kontrol et (günlük kontrol için)
+        setInterval(() => {
+            this.checkAndAutoRecord();
+        }, 300000); // 5 dakika
+        
+        // Sayfa yüklendiğinde de kontrol et
+        setTimeout(() => {
+            this.checkAndAutoRecord();
+        }, 10000); // 10 saniye
+    },
+    
+    // 🔥 OTOMATİK KAYIT KONTROLÜ VE GÖNDERİM
+    checkAndAutoRecord: async function() {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        
+        console.log(`🔥 Buhar kontrolü: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+        
+        // Her gün 23:59'da kontrol et (günün sonu kontrolü)
+        if (currentHour !== 23 || currentMinute !== 59) {
+            return;
+        }
+        
+        console.log('🔥 23:59 kontrolü yapılıyor...');
+        
+        // Dünün tarihini al
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const year = yesterday.getFullYear();
+        const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+        const day = String(yesterday.getDate()).padStart(2, '0');
+        const yesterdayStr = `${year}-${month}-${day}`;
+        
+        // Dünün kaydı var mı kontrol et
+        const hasRecord = await this.isExistingRecord(yesterdayStr);
+        
+        if (!hasRecord) {
+            console.log('🚨 Dün için buhar kaydı bulunamadı! Otomatik kayıt gönderiliyor...');
+            
+            // Otomatik kayıt verileri
+            const autoData = {
+                tarih: yesterdayStr,
+                buharMiktari: '0',
+                kaydeden: 'OTOMATİK SİSTEM'
+            };
+            
+            // Kaydı gönder
+            const result = await this.addRecord(autoData);
+            
+            if (result.success) {
+                console.log('✅ Otomatik dün kaydı başarıyla gönderildi!');
+                this.showNotification('warning', 'Otomatik Kayıt', 'Dün için buhar verisi otomatik olarak kaydedildi (Değer girilmedi)');
+                this.loadLastRecords();
+                
+                // 📧 Mail gönder
+                const mailBody = `Buhar Verisi Uyarısı\n\nTarih: ${yesterdayStr}\n\n${yesterdayStr} için buhar verisi girilmedi. Otomatik olarak boş kayıt yapıldı.\n\nLütfen ilgili personeli bilgilendirin.`;
+                await this.sendEmailAlert(`Buhar Verisi Uyarısı - ${yesterdayStr} Değer Girilmedi`, mailBody);
+                
+            } else {
+                console.error('❌ Otomatik kayıt başarısız:', result.error);
+            }
+        } else {
+            console.log('✅ Dün kaydı mevcut, otomatik kayıt gerekmiyor');
+        }
+    },
+    
+    // Kayıt var mı kontrol et
+    isExistingRecord: async function(tarih) {
+        try {
+            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getRecords');
+            
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                const existingRecord = result.data.find(record => record.tarih === tarih);
+                return !!existingRecord;
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('Kayıt kontrolü hatası:', error);
+            return false;
         }
     },
     

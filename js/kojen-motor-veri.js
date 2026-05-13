@@ -1475,6 +1475,80 @@ document.addEventListener('DOMContentLoaded', function() {
             saatAraligi.textContent = `${aralik.baslangicSaat} - ${aralik.bitisSaat}`;
         }
     }
+
+    // Motor verisi girilmediyse mail uyarısı gönder
+    async function checkAndSendMissingMotorMail() {
+        const now = new Date();
+
+        if (now.getMinutes() !== 59) {
+            return;
+        }
+
+        const hour = String(now.getHours()).padStart(2, '0');
+        const saat = `${hour}:00`;
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const tarih = `${day}.${month}.${year}`;
+        const sentKey = `kojenMotorMissingMailSent:${tarih}:${saat}`;
+
+        if (localStorage.getItem(sentKey)) {
+            return;
+        }
+
+        const motors = ['GM-1', 'GM-2', 'GM-3'];
+        const kontrolListesi = motors.map(motor => ({ motor, tarih, saat }));
+        const eksikMotorlar = [];
+
+        try {
+            const bulkResult = await checkMultipleMotorRecords(kontrolListesi);
+
+            if (bulkResult.success && bulkResult.results) {
+                kontrolListesi.forEach(({ motor }) => {
+                    const key = `${motor}|${tarih}|${saat}`;
+                    if (!bulkResult.results[key] || !bulkResult.results[key].exists) {
+                        eksikMotorlar.push(motor);
+                    }
+                });
+            } else {
+                for (const motor of motors) {
+                    const result = await checkExistingMotorRecord(motor, tarih, saat);
+                    if (!result.success || !result.exists) {
+                        eksikMotorlar.push(motor);
+                    }
+                }
+            }
+
+            if (eksikMotorlar.length === 0) {
+                return;
+            }
+
+            const subject = `${KojenMotorSheetsConfig.EMAIL_SUBJECT} - ${tarih} ${saat}`;
+            const body = `Kojen Motor Veri Uyarısı\n\nTarih: ${tarih}\nSaat: ${saat}\nEksik motor kayıtları: ${eksikMotorlar.join(', ')}\n\nBu saat için kojen motor veri kaydı girilmedi.\n\nLütfen ilgili personeli bilgilendirin.`;
+            const mailResult = await sendKojenMotorEmailAlert(subject, body);
+
+            if (mailResult.success) {
+                localStorage.setItem(sentKey, new Date().toISOString());
+                showMessage(`${saat} için eksik motor veri maili gönderildi.`, 'warning');
+            } else {
+                console.error('Kojen motor uyarı maili gönderilemedi:', mailResult.error);
+            }
+        } catch (error) {
+            console.error('Kojen motor eksik kayıt mail kontrolü hatası:', error);
+        }
+    }
+
+    function startMissingMotorMailCheck() {
+        console.log('Kojen motor mail kontrolü başlatılıyor...');
+
+        setInterval(() => {
+            checkAndSendMissingMotorMail();
+        }, 60000);
+
+        setTimeout(() => {
+            checkAndSendMissingMotorMail();
+        }, 5000);
+    }
     
         
     // Vardiya veya tarih değiştiğinde tabloyu güncelle
@@ -1495,6 +1569,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Sayfa yüklendiğinde otomatik ayarları yap
     otomatikAyarlar();
+    startMissingMotorMailCheck();
 
     // Her saniyede bir saati güncelle
     setInterval(async () => {

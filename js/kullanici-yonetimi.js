@@ -1,5 +1,5 @@
 // Kullanici Yonetimi JavaScript - Ayrik Dosya
-const USER_URL = 'https://script.google.com/macros/s/AKfycby-XThkMXZTUa1Du2du9FZH57YZHrxnKrSAXCRClhD75f6j-8Ld3DpPL3wMUy2YfzH5/exec';
+const USER_URL = 'https://script.google.com/macros/s/AKfycbx4PqsgAuIvRCfafyqPv30sJf_Pv5hBVXbL8nTorr7LhcbHudFPwMB-CQRM4SoXqH2bYQ/exec';
 
 let users = [];
 let filteredUsers = [];

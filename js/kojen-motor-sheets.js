@@ -4,7 +4,10 @@
  */
 
 const KojenMotorSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycby-FljlItUJ4EQNMuHSoLcbb1_ayeyWjZa28zTG2Tjf-ir8m5b8sJPOiQmVSkintKUAbA/exec'
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzl-x58FUMlvMAgO_qPoze4l-htikWV3Bt5kcLVkjhp9c-rRLo2SxKwpIINauaif3HA7g/exec',
+    EMAIL_ENABLED: true,
+    EMAIL_TO: 'mrtcsk0320@gmail.com',
+    EMAIL_SUBJECT: 'Kojen Motor Veri Uyarısı - Kayıt Girilmedi'
 };
 
 /**
@@ -231,6 +234,34 @@ async function getAllMotorRecords() {
 }
 
 /**
+ * Mail uyarısı gönder
+ * @param {string} subject - Mail konusu
+ * @param {string} body - Mail içeriği
+ * @returns {Promise<Object>} - Mail sonucu
+ */
+async function sendKojenMotorEmailAlert(subject, body) {
+    if (!KojenMotorSheetsConfig.EMAIL_ENABLED) {
+        console.log('Kojen motor mail gönderme kapalı');
+        return { success: true, message: 'Mail gönderme kapalı' };
+    }
+
+    try {
+        const url = new URL(KojenMotorSheetsConfig.WEB_APP_URL);
+        url.searchParams.append('action', 'sendEmail');
+        url.searchParams.append('to', KojenMotorSheetsConfig.EMAIL_TO);
+        url.searchParams.append('subject', subject || KojenMotorSheetsConfig.EMAIL_SUBJECT);
+        url.searchParams.append('body', body || '');
+
+        const response = await fetch(url, { method: 'GET', mode: 'cors' });
+        return await response.json();
+
+    } catch (error) {
+        console.error('Kojen motor mail gönderme hatası:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
  * Çoklu motor kaydı ekleme
  * @param {Array} records - Kaydedilecek motor verileri dizisi
  * @returns {Promise<Object>} - Kayıt sonucu
@@ -281,3 +312,4 @@ window.getMotorRecordsByMotorAndDate = getMotorRecordsByMotorAndDate;
 window.getLastMotorRecords = getLastMotorRecords;
 window.getAllMotorRecords = getAllMotorRecords;
 window.addMultipleMotorRecords = addMultipleMotorRecords;
+window.sendKojenMotorEmailAlert = sendKojenMotorEmailAlert;

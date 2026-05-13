@@ -35,6 +35,9 @@ function handleRequest(e) {
       case 'getLastRecords':
         result = getLastRecords(parseInt(e.parameter.count) || 32);
         break;
+      case 'sendEmail':
+        result = sendEmailAlert(e.parameter);
+        break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
@@ -358,4 +361,33 @@ function formatDateTimeTR(date) {
   var minutes = String(d.getMinutes()).padStart(2, '0');
   var seconds = String(d.getSeconds()).padStart(2, '0');
   return day + '.' + month + '.' + year + ' ' + hours + ':' + minutes + ':' + seconds;
+}
+
+// Mail gönderme fonksiyonu
+function sendEmailAlert(data) {
+  try {
+    if (!data) {
+      return { success: false, error: 'Veri parametresi eksik' };
+    }
+
+    var to = data.to || 'mrtcsk0320@gmail.com';
+    var subject = data.subject || 'Günlük Veri Girişi Uyarısı';
+    var body = data.body || '';
+
+    Logger.log('Mail gönderiliyor: ' + to + ', Konu: ' + subject);
+
+    MailApp.sendEmail({
+      to: to,
+      subject: subject,
+      body: body,
+      htmlBody: body.replace(/\n/g, '<br>')
+    });
+
+    Logger.log('Mail başarıyla gönderildi: ' + to);
+    return { success: true, message: 'Mail başarıyla gönderildi!' };
+
+  } catch (error) {
+    Logger.log('Mail gönderme hatası: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
 }

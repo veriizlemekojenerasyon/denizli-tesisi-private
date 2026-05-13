@@ -1,5 +1,5 @@
 // Google Apps Script URL - Global
-const USER_URL = 'https://script.google.com/macros/s/AKfycbz1iMTRl0U32pxyuO6mXnkpbzQKtbY6kct2bkLe876KI7fweIiD8L95crTNsaKU53Be/exec';
+const USER_URL = 'https://script.google.com/macros/s/AKfycbx4PqsgAuIvRCfafyqPv30sJf_Pv5hBVXbL8nTorr7LhcbHudFPwMB-CQRM4SoXqH2bYQ/exec';
 
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
