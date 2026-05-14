@@ -5,27 +5,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Motor verileri
     const motorData = {
         gm1: {
-            totalProduction: 1250.5,
-            dailyHours: 18.5,
-            totalHours: 8760,
-            dailyProduction: 2850,
-            avgProduction: 154,
-            progress: 75,
-            status: 'running'
+            totalProduction: 0,
+            dailyHours: 0,
+            totalHours: 0,
+            dailyProduction: 0,
+            avgProduction: 0,
+            progress: 0,
+            status: 'stopped'
         },
         gm2: {
-            totalProduction: 1180.2,
-            dailyHours: 16.8,
-            totalHours: 7520,
-            dailyProduction: 2680,
-            avgProduction: 160,
-            progress: 68,
-            status: 'running'
+            totalProduction: 0,
+            dailyHours: 0,
+            totalHours: 0,
+            dailyProduction: 0,
+            avgProduction: 0,
+            progress: 0,
+            status: 'stopped'
         },
         gm3: {
-            totalProduction: 980.8,
+            totalProduction: 0,
             dailyHours: 0,
-            totalHours: 5240,
+            totalHours: 0,
             dailyProduction: 0,
             avgProduction: 0,
             progress: 0,
@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Buhar verisi config
     const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnhHSmc5GTuOq8hdqgFM2-FA2XNjRdLHoED5gmjXbmWcYycPNXykdd0ZYTzOI3HNJxKg/exec';
     const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOaZM8EVOVY1iE-AF1HDY-Eh6LFWUdv0Y2aVJwbys1xEv-HoYofSiVMiorZUInMXQIQA/exec';
+    const KOJEN_MOTOR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz33FlBicqkZdRw5UOdagkiZK3leF18QuVPETLK_HGysSYbDAxigev0o_UUnYxuHAr-JA/exec';
     const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyimCmn6QQy0hl__KEqcLl_xd0rLjW9S-tS7vWU-nqwepH2Ur4tCDbzMvBafuSLrhQkEw/exec';
     const ANNOUNCEMENTS_STORAGE_KEY = 'shiftAnnouncements';
     const defaultAnnouncements = [
@@ -62,15 +63,20 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
 
     // Sayfa yüklendiğinde verileri göster
-    setTimeout(async () => {
+    setTimeout(loadDashboardData, 1000);
+    setInterval(loadDashboardData, 5 * 60 * 1000);
+
+    async function loadDashboardData() {
         updateAnnouncementTicker();
         await loadDailyProductionData();
+        await loadLatestEnergyData();
+        await loadLatestMotorStatus();
         updateMotorData();
         await loadBuharData(); // Buhar verisini çek
         await loadMaintenanceData();
         updateSummaryData();
         animateProgressBars();
-    }, 1000);
+    }
 
     // Motor verilerini güncelle
     async function updateAnnouncementTicker() {
@@ -329,11 +335,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             summaryData.pendingMaintenance = activeRecords.filter(record => {
-                return normalizeText(record.type) !== 'ariza';
+                return !isFaultRecordType(record.type);
             }).length;
 
             summaryData.activeFaults = activeRecords.filter(record => {
-                return normalizeText(record.type) === 'ariza';
+                return isFaultRecordType(record.type);
             }).length;
         } catch (error) {
             console.error('Bekleyen bakim verisi yuklenemedi:', error);
@@ -351,6 +357,104 @@ document.addEventListener('DOMContentLoaded', function() {
             .replace(/ç/g, 'c');
     }
 
+    function parseDashboardNumber(value) {
+        if (value === null || value === undefined || value === '') return 0;
+        if (typeof value === 'number') return value;
+
+        let normalized = String(value).trim();
+        if (normalized.includes(',')) {
+            normalized = normalized.replace(/\./g, '').replace(',', '.');
+        }
+
+        const parsed = parseFloat(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function getMotorKey(value) {
+        return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    function isStoppedMotorStatus(value) {
+        const status = normalizeText(value);
+        const originalStatus = String(value || '').toLowerCase();
+        return status.includes('calismiyor') ||
+            originalStatus.includes('\u00E7al\u0131\u015Fm\u0131yor') ||
+            status.includes('durdu') ||
+            status.includes('stop');
+    }
+
+    function isFaultRecordType(value) {
+        const type = normalizeText(value);
+        const originalType = String(value || '').toLowerCase();
+        return type === 'ariza' || originalType === 'ar\u0131za';
+    }
+
+    async function loadLatestEnergyData() {
+        try {
+            const url = new URL(KOJEN_ENERJI_APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getLastRecords');
+            url.searchParams.append('count', '100');
+
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+
+            if (!result.success || !Array.isArray(result.data)) {
+                console.error('Son enerji kayitlari alinamadi:', result.error);
+                return;
+            }
+
+            const latestByMotor = {};
+            result.data.forEach(record => {
+                const key = getMotorKey(record.motor);
+                if (!motorData[key] || latestByMotor[key]) return;
+                latestByMotor[key] = record;
+            });
+
+            Object.entries(latestByMotor).forEach(([key, record]) => {
+                const totalEnergyKwh = parseDashboardNumber(record.toplamAktifEnerji);
+                const totalHours = parseDashboardNumber(record.calismaSaati);
+
+                motorData[key].totalProduction = totalEnergyKwh / 1000;
+                motorData[key].totalHours = totalHours;
+
+                if (isStoppedMotorStatus(record.durum)) {
+                    motorData[key].status = 'stopped';
+                }
+            });
+        } catch (error) {
+            console.error('Son enerji verisi yuklenemedi:', error);
+        }
+    }
+
+    async function loadLatestMotorStatus() {
+        try {
+            const url = new URL(KOJEN_MOTOR_APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getLastRecords');
+            url.searchParams.append('count', '100');
+
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+
+            if (!result.success || !Array.isArray(result.data)) {
+                console.error('Son motor kayitlari alinamadi:', result.error);
+                return;
+            }
+
+            const latestByMotor = {};
+            result.data.forEach(record => {
+                const key = getMotorKey(record.motor);
+                if (!motorData[key] || latestByMotor[key]) return;
+                latestByMotor[key] = record;
+            });
+
+            Object.entries(latestByMotor).forEach(([key, record]) => {
+                motorData[key].status = isStoppedMotorStatus(record.durum) ? 'stopped' : 'running';
+            });
+        } catch (error) {
+            console.error('Son motor durumu yuklenemedi:', error);
+        }
+    }
+
     async function loadDailyProductionData() {
         try {
             const url = new URL(KOJEN_ENERJI_APPS_SCRIPT_URL);
@@ -365,25 +469,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            summaryData.dailyProduction = Number(result.totalDailyProductionMwh) || 0;
+            summaryData.dailyProduction = parseDashboardNumber(result.totalDailyProductionMwh);
 
             if (!Array.isArray(result.data)) return;
 
             result.data.forEach(item => {
-                const key = String(item.motor || '').toLowerCase().replace('-', '');
+                const key = getMotorKey(item.motor);
                 if (!motorData[key]) return;
 
-                const dailyKwh = Number(item.dailyProductionKwh) || 0;
-                const dailyHours = Number(item.dailyHours) || 0;
-                const lastEnergy = Number(item.lastEnergy) || 0;
-                const lastWorkingHour = Number(item.lastWorkingHour) || 0;
+                const dailyKwh = parseDashboardNumber(item.dailyProductionKwh);
+                const dailyHours = parseDashboardNumber(item.dailyHours);
+                const lastEnergy = parseDashboardNumber(item.lastEnergy);
+                const lastWorkingHour = parseDashboardNumber(item.lastWorkingHour);
 
                 motorData[key].dailyProduction = Math.round(dailyKwh);
                 motorData[key].dailyHours = dailyHours;
-                motorData[key].totalProduction = lastEnergy / 1000;
-                motorData[key].totalHours = lastWorkingHour;
+                if (lastEnergy > 0) motorData[key].totalProduction = lastEnergy / 1000;
+                if (lastWorkingHour > 0) motorData[key].totalHours = lastWorkingHour;
                 motorData[key].avgProduction = dailyHours > 0 ? dailyKwh / dailyHours : 0;
-                motorData[key].status = dailyKwh > 0 || dailyHours > 0 ? 'running' : 'stopped';
+                motorData[key].progress = Math.min((dailyHours / 24) * 100, 100);
+                if (dailyKwh > 0 || dailyHours > 0) motorData[key].status = 'running';
             });
         } catch (error) {
             console.error('Günlük üretim verisi yüklenemedi:', error);
