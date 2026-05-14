@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Buhar verisi config
     const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnhHSmc5GTuOq8hdqgFM2-FA2XNjRdLHoED5gmjXbmWcYycPNXykdd0ZYTzOI3HNJxKg/exec';
     const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOaZM8EVOVY1iE-AF1HDY-Eh6LFWUdv0Y2aVJwbys1xEv-HoYofSiVMiorZUInMXQIQA/exec';
+    const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyimCmn6QQy0hl__KEqcLl_xd0rLjW9S-tS7vWU-nqwepH2Ur4tCDbzMvBafuSLrhQkEw/exec';
     const ANNOUNCEMENTS_STORAGE_KEY = 'shiftAnnouncements';
     const defaultAnnouncements = [
         {
@@ -66,6 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
         await loadDailyProductionData();
         updateMotorData();
         await loadBuharData(); // Buhar verisini çek
+        await loadMaintenanceData();
         updateSummaryData();
         animateProgressBars();
     }, 1000);
@@ -309,6 +311,46 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Buhar verisi yüklenemedi:', error);
         }
     }
+    async function loadMaintenanceData() {
+        try {
+            const url = new URL(BAKIM_APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getActiveRecords');
+
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+
+            if (!result.success || !Array.isArray(result.records)) {
+                console.error('Bekleyen bakim verisi alinamadi:', result.message || result.error);
+                return;
+            }
+
+            const activeRecords = result.records.filter(record => {
+                return String(record.status || '').toLowerCase() === 'aktif';
+            });
+
+            summaryData.pendingMaintenance = activeRecords.filter(record => {
+                return normalizeText(record.type) !== 'ariza';
+            }).length;
+
+            summaryData.activeFaults = activeRecords.filter(record => {
+                return normalizeText(record.type) === 'ariza';
+            }).length;
+        } catch (error) {
+            console.error('Bekleyen bakim verisi yuklenemedi:', error);
+        }
+    }
+
+    function normalizeText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/ı/g, 'i')
+            .replace(/ğ/g, 'g')
+            .replace(/ü/g, 'u')
+            .replace(/ş/g, 's')
+            .replace(/ö/g, 'o')
+            .replace(/ç/g, 'c');
+    }
+
     async function loadDailyProductionData() {
         try {
             const url = new URL(KOJEN_ENERJI_APPS_SCRIPT_URL);
