@@ -317,12 +317,9 @@ function getRecordByDateTime(tarih, saat) {
 function checkHourlyMissingRecords() {
   try {
     var now = new Date();
-    if (now.getMinutes() < 55) {
-      return { success: true, skipped: true, message: 'Kontrol dakikasi degil' };
-    }
-
-    var tarih = formatDateTR(Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd'));
-    var saat = String(now.getHours()).padStart(2, '0') + ':00';
+    var target = getHourlyCheckTarget(now);
+    var tarih = target.tarih;
+    var saat = target.saat;
     var sentKey = 'saatlikHourlyCheck:' + tarih + ':' + saat;
     var props = PropertiesService.getScriptProperties();
 
@@ -388,10 +385,26 @@ function installHourlyMissingRecordTrigger() {
   return { success: true, message: 'Saatlik eksik kayit tetikleyicisi kuruldu' };
 }
 
+function getHourlyCheckTarget(date) {
+  var target = new Date(date);
+  if (target.getMinutes() < 55) {
+    target.setHours(target.getHours() - 1);
+  }
+
+  return {
+    tarih: Utilities.formatDate(target, Session.getScriptTimeZone(), 'dd.MM.yyyy'),
+    saat: pad2(target.getHours()) + ':00'
+  };
+}
+
 function getVardiyaByHour(hour) {
   if (hour >= 8 && hour < 16) return '08-16';
   if (hour >= 16 && hour < 24) return '16-24';
   return '24-08';
+}
+
+function pad2(value) {
+  return String(value).padStart(2, '0');
 }
 
 function findInsertPosition(sheet, tarih, saat) {

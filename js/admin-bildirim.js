@@ -112,6 +112,7 @@ async function saveAnnouncement(event) {
         shift: document.getElementById('announcementShift').value,
         priority: document.getElementById('announcementPriority').value,
         target: document.getElementById('announcementTarget').value,
+        pageTarget: document.getElementById('announcementPageTarget').value,
         active: document.getElementById('announcementActive').checked,
         attachmentUrl: existingAttachmentUrl,
         attachmentName: existingAttachmentName,
@@ -133,12 +134,14 @@ async function saveAnnouncement(event) {
         }
 
         await loadAnnouncements();
+        window.SystemAuditLog?.write?.(editingId ? 'Bildirim guncellendi' : 'Bildirim eklendi', title, 'ok');
         resetForm();
         return;
     }
 
     saveAnnouncementLocally(record);
     persistAnnouncements();
+    window.SystemAuditLog?.write?.(editingId ? 'Bildirim guncellendi' : 'Bildirim eklendi', title, 'ok');
     resetForm();
     renderAnnouncements();
 }
@@ -198,6 +201,7 @@ function renderAnnouncements() {
                 <span class="badge">${formatDateRange(item)}</span>
                 <span class="badge">${formatCategory(item.category)}</span>
                 <span class="badge">${item.shift || 'Tum vardiyalar'}</span>
+                <span class="badge">${formatPageTarget(item.pageTarget)}</span>
                 <span class="badge">${formatPriority(item.priority)}</span>
                 <span class="badge">${getReadCount(item)} okundu</span>
                 <span class="badge">${item.active === false ? 'Pasif' : 'Aktif'}</span>
@@ -233,6 +237,7 @@ async function handleListAction(event) {
         document.getElementById('announcementShift').value = item.shift || '';
         document.getElementById('announcementPriority').value = item.priority || 'normal';
         document.getElementById('announcementTarget').value = item.target || 'all';
+        document.getElementById('announcementPageTarget').value = item.pageTarget || 'all';
         document.getElementById('announcementActive').checked = item.active !== false;
         document.getElementById('announcementAttachment').value = '';
         document.getElementById('announcementAttachmentUrl').value = item.attachmentUrl || '';
@@ -249,6 +254,7 @@ async function handleListAction(event) {
                 alert('Durum guncellenemedi: ' + (result.error || 'Bilinmeyen hata'));
                 return;
             }
+            window.SystemAuditLog?.write?.('Bildirim durumu degisti', item.title || id, 'ok');
             await loadAnnouncements();
             return;
         }
@@ -256,6 +262,7 @@ async function handleListAction(event) {
         item.active = nextActive;
         item.updatedAt = new Date().toISOString();
         persistAnnouncements();
+        window.SystemAuditLog?.write?.('Bildirim durumu degisti', item.title || id, 'ok');
         renderAnnouncements();
         return;
     }
@@ -267,12 +274,14 @@ async function handleListAction(event) {
                 alert('Bildirim silinemedi: ' + (result.error || 'Bilinmeyen hata'));
                 return;
             }
+            window.SystemAuditLog?.write?.('Bildirim silindi', item.title || id, 'warn');
             await loadAnnouncements();
             return;
         }
 
         announcements = announcements.filter(record => record.id !== id);
         persistAnnouncements();
+        window.SystemAuditLog?.write?.('Bildirim silindi', item.title || id, 'warn');
         renderAnnouncements();
     }
 }
@@ -288,12 +297,14 @@ async function clearInactiveAnnouncements() {
             alert('Pasif bildirimler silinemedi: ' + (result.error || 'Bilinmeyen hata'));
             return;
         }
+        window.SystemAuditLog?.write?.('Pasif bildirimler silindi', `${inactiveCount} kayit`, 'warn');
         await loadAnnouncements();
         return;
     }
 
     announcements = announcements.filter(item => item.active !== false);
     persistAnnouncements();
+    window.SystemAuditLog?.write?.('Pasif bildirimler silindi', `${inactiveCount} kayit`, 'warn');
     renderAnnouncements();
 }
 
@@ -336,6 +347,21 @@ function formatCategory(value) {
         general: 'Genel'
     };
     return labels[value] || 'Genel';
+}
+
+function formatPageTarget(value) {
+    const labels = {
+        all: 'Tum sayfalar',
+        anasayfa: 'Ana sayfa',
+        vardiya: 'Vardiya',
+        saatlik: 'Saatlik',
+        'kojen-motor': 'Kojen Motor',
+        'kojen-enerji': 'Kojen Enerji',
+        bakim: 'Bakim',
+        stok: 'Stok',
+        admin: 'Admin'
+    };
+    return labels[value || 'all'] || 'Tum sayfalar';
 }
 
 function getReadCount(item) {

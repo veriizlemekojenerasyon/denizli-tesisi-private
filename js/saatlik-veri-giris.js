@@ -8,7 +8,7 @@
 // ============================================
 const SAATLIK_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxjY9P0qMA785f6iij04QTC_sR-ZsErMgzrpBkW5rLgA5AJyUt6vxFtteKXBnw8EBuYxw/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxzi0Shn7YvWSWzOv_rDiRHE6WlqiP6Tw7TDCyWC3_34AlFgB4-tzsZjn2JkRShqsd2jQ/exec',
     
     // Sayfa başlığı
     PAGE_NAME: 'Saatlik Veri Girişi',
@@ -490,6 +490,75 @@ const SaatlikApp = {
         } else {
             console.log(`✅ ${checkHour} kaydı mevcut, otomatik kayıt gerekmiyor`);
         }
+    }
+};
+
+// Dayanikli otomatik kontrol: 55. dakikadan sonra mevcut saati,
+// sonraki saatte ise bir onceki saati kontrol eder.
+SaatlikApp.getHourlyCheckTarget = function(date) {
+    const target = new Date(date);
+    if (target.getMinutes() < 55) {
+        target.setHours(target.getHours() - 1);
+    }
+
+    const year = target.getFullYear();
+    const month = String(target.getMonth() + 1).padStart(2, '0');
+    const day = String(target.getDate()).padStart(2, '0');
+    const hour = target.getHours();
+
+    return {
+        isoTarih: `${year}-${month}-${day}`,
+        tarih: `${day}.${month}.${year}`,
+        hour,
+        saat: `${String(hour).padStart(2, '0')}:00`
+    };
+};
+
+SaatlikApp.checkAndAutoRecord = async function() {
+    const target = this.getHourlyCheckTarget(new Date());
+    const sentKey = `saatlikAutoRecordCheck:${target.tarih}:${target.saat}`;
+    if (localStorage.getItem(sentKey)) return;
+
+    const hasRecord = await this.isExistingRecord(target.isoTarih, target.saat);
+    if (hasRecord) {
+        localStorage.setItem(sentKey, new Date().toISOString());
+        console.log(`${target.saat} kaydi mevcut, otomatik kayit gerekmiyor`);
+        return;
+    }
+
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    let kaydedenKullanici = 'OTOMATIK SISTEM';
+    if (loggedInUser) {
+        try {
+            const user = JSON.parse(loggedInUser);
+            const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            kaydedenKullanici = fullName || user.email || 'Bilinmeyen Kullanici';
+        } catch (e) {
+            kaydedenKullanici = 'Bilinmeyen Kullanici';
+        }
+    }
+
+    const vardiya = this.getVardiyaByHour(target.hour);
+    const result = await this.addRecord({
+        tarih: target.isoTarih,
+        saat: target.saat,
+        vardiya,
+        aktifMwh: '0',
+        reaktifMwh: '0',
+        aydemAktif: '0',
+        aydemReaktif: '0',
+        notlar: 'KAYIT GIRILMEDI - OTOMATIK',
+        kaydeden: kaydedenKullanici
+    });
+
+    if (result.success) {
+        localStorage.setItem(sentKey, new Date().toISOString());
+        this.showNotification('Otomatik Kayit', `${target.saat} verisi otomatik olarak kaydedildi`, 'warning');
+        this.loadLastRecords();
+        const mailBody = `Saatlik Veri Girisi Uyarisi\n\nTarih: ${target.isoTarih}\nSaat: ${target.saat}\nVardiya: ${vardiya}\n\n${target.saat} icin saatlik veri girilmedi. Otomatik olarak bos kayit yapildi.`;
+        await this.sendEmailAlert(`Saatlik Veri Girisi Uyarisi - ${target.saat} Kayit Girilmedi`, mailBody);
+    } else {
+        console.error('Otomatik kayit basarisiz:', result.error);
     }
 };
 

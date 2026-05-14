@@ -78,6 +78,18 @@
                         <span class="menu-text">Stok Takip</span>
                     </a>
                 </li>
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-kontrol.html" class="menu-link">
+                        <span class="menu-icon">&#9881;</span>
+                        <span class="menu-text">Merkezi Kontrol</span>
+                    </a>
+                </li>
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-bildirim.html" class="menu-link">
+                        <span class="menu-icon">&#128226;</span>
+                        <span class="menu-text">Bildirim Y&#246;netimi</span>
+                    </a>
+                </li>
                 <li class="menu-item">
                     <a href="kullanici-yonetimi.html" class="menu-link">
                         <span class="menu-icon">👤</span>
@@ -209,6 +221,18 @@
                             <label for="islemAciklama">İşlem Açıklaması</label>
                             <textarea id="islemAciklama" name="islemAciklama" rows="4" placeholder="Yapılan işlemi buraya yazın..."></textarea>
                         </div>
+                        <div class="form-group full-width">
+                            <label for="teslimOzeti">Vardiya Teslim Özeti</label>
+                            <textarea id="teslimOzeti" name="teslimOzeti" rows="3" placeholder="Vardiya sonunda devredilecek genel özeti yazın..."></textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="devredenIsler">Devreden İşler</label>
+                            <textarea id="devredenIsler" name="devredenIsler" rows="3" placeholder="Bir sonraki vardiyaya kalan işleri yazın..."></textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="dikkatNotu">Dikkat Notu</label>
+                            <textarea id="dikkatNotu" name="dikkatNotu" rows="2" placeholder="Risk, arıza, emniyet veya takip edilmesi gereken notlar..."></textarea>
+                        </div>
                         <div class="vardiya-actions">
                             <button type="button" class="action-btn" id="islemKaydetBtn">İŞLEM KAYDET</button>
                             <button type="button" class="action-btn secondary" id="vardiyaBitirBtn">VARDİYA BİTİR</button>
@@ -288,8 +312,10 @@
         </div>
     </div>
 
+    <script src="js/audit-log.js"></script>
     <script src="js/vardiya.js"></script>
     
     <script src="js/global-duyurular.js"></script>
+    <script src="js/admin-menu-visibility.js"></script>
 </body>
 </html>

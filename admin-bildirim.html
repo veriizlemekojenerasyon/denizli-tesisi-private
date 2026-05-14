@@ -80,6 +80,19 @@
                         </div>
                     </div>
 
+                    <label for="announcementPageTarget">Sayfa Hedefi</label>
+                    <select id="announcementPageTarget">
+                        <option value="all">Tum sayfalar</option>
+                        <option value="anasayfa">Ana sayfa</option>
+                        <option value="vardiya">Vardiya takip</option>
+                        <option value="saatlik">Saatlik veri girisi</option>
+                        <option value="kojen-motor">Kojen motor veri</option>
+                        <option value="kojen-enerji">Kojen enerji veri</option>
+                        <option value="bakim">Bakim takibi</option>
+                        <option value="stok">Stok takip</option>
+                        <option value="admin">Admin sayfalari</option>
+                    </select>
+
                     <label for="announcementAttachment">Dosya / Fotograf</label>
                     <input type="file" id="announcementAttachment" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
                     <input type="hidden" id="announcementAttachmentUrl">
@@ -116,6 +129,7 @@
         </main>
     </div>
 
+    <script src="js/audit-log.js"></script>
     <script src="js/bildirim-sheets.js"></script>
     <script src="js/admin-bildirim.js"></script>
     <script src="js/global-duyurular.js"></script>

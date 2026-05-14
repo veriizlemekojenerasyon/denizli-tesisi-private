@@ -121,7 +121,8 @@
         return items.filter(item =>
             item.active !== false &&
             matchesDateRange(item, today) &&
-            matchesTarget(item, user)
+            matchesTarget(item, user) &&
+            matchesPageTarget(item)
         );
     }
 
@@ -137,6 +138,25 @@
         const target = item.target || 'all';
         if (target === 'all') return true;
         return user?.role === target;
+    }
+
+    function matchesPageTarget(item) {
+        const target = item.pageTarget || 'all';
+        if (target === 'all') return true;
+
+        const page = (location.pathname.split('/').pop() || 'anasayfa.html').replace('.html', '');
+        const groups = {
+            anasayfa: ['anasayfa'],
+            vardiya: ['vardiya'],
+            saatlik: ['saatlik-veri-giris'],
+            'kojen-motor': ['kojen-motor-veri'],
+            'kojen-enerji': ['kojen-enerji-veri'],
+            bakim: ['bakim-takibi'],
+            stok: ['stok-takip'],
+            admin: ['admin-bildirim', 'admin-kontrol', 'kullanici-yonetimi', 'motor-takip']
+        };
+
+        return (groups[target] || []).includes(page);
     }
 
     function formatTickerText(item) {

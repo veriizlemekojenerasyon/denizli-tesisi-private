@@ -13,7 +13,7 @@ var ANNOUNCEMENTS_SHEET_NAME = 'VardiyaBildirimleri';
 var ANNOUNCEMENT_HEADERS = [
   'ID', 'Baslangic Tarihi', 'Bitis Tarihi', 'Vardiya', 'Metin', 'Kategori',
   'Oncelik', 'Hedef', 'Aktif', 'Ek URL', 'Ek Adi', 'Okuyanlar',
-  'Olusturan', 'Olusturma Zamani', 'Guncelleme Zamani'
+  'Olusturan', 'Olusturma Zamani', 'Guncelleme Zamani', 'Sayfa Hedefi'
 ];
 
 function doGet(e) {
@@ -103,6 +103,14 @@ function getOrCreateAnnouncementsSheet() {
 function migrateAnnouncementsSheet(sheet) {
   var lastColumn = sheet.getLastColumn();
   var currentHeaders = sheet.getRange(1, 1, 1, Math.max(lastColumn, 1)).getDisplayValues()[0];
+  if (currentHeaders[1] === 'Baslangic Tarihi' && lastColumn === ANNOUNCEMENT_HEADERS.length - 1) {
+    sheet.getRange(1, ANNOUNCEMENT_HEADERS.length).setValue('Sayfa Hedefi');
+    if (sheet.getLastRow() > 1) {
+      sheet.getRange(2, ANNOUNCEMENT_HEADERS.length, sheet.getLastRow() - 1, 1).setValue('all');
+    }
+    sheet.getRange(2, 1, Math.max(1000, sheet.getLastRow()), ANNOUNCEMENT_HEADERS.length).setNumberFormat('@');
+    return;
+  }
   if (currentHeaders[1] === 'Baslangic Tarihi' && lastColumn >= ANNOUNCEMENT_HEADERS.length) return;
 
   var lastRow = sheet.getLastRow();
@@ -110,7 +118,7 @@ function migrateAnnouncementsSheet(sheet) {
   var migratedRows = oldRows.map(function(row) {
     return [
       row[0], row[1], '', row[2], row[3], 'general', row[4] || 'normal',
-      row[5] || 'all', row[6], '', '', '', row[7], row[8], row[9]
+      row[5] || 'all', row[6], '', '', '', row[7], row[8], row[9], 'all'
     ];
   });
 
@@ -185,7 +193,8 @@ function addAnnouncement(data) {
       '',
       data.createdBy || 'Admin',
       data.createdAt || now,
-      now
+      now,
+      data.pageTarget || 'all'
     ]);
 
     formatAnnouncementRow(sheet, sheet.getLastRow());
@@ -221,7 +230,8 @@ function updateAnnouncement(data) {
       existing.readByText || '',
       data.createdBy || existing.createdBy || 'Admin',
       existing.createdAt || now,
-      now
+      now,
+      data.pageTarget || existing.pageTarget || 'all'
     ]];
 
     sheet.getRange(row, 1, 1, ANNOUNCEMENT_HEADERS.length).setValues(values);
@@ -314,7 +324,8 @@ function rowToAnnouncement(row) {
     readBy: parseReadBy(readByText),
     createdBy: row[12],
     createdAt: row[13],
-    updatedAt: row[14]
+    updatedAt: row[14],
+    pageTarget: row[15] || 'all'
   };
 }
 

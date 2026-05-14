@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
     
     // Vardiya Google Apps Script URL
-    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqivV-pLULefXIYv4HhnxrJtWYIyrmIEHz_cchHBh0QEK18C9KpM7Q8D-Nfd7vzt5pZw/exec';
+    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnCKSZtDelL04-ZQY3yx_ePSCK9Qy9R0WgFwtsFXj_B6HayfmwM8i_HYU-AAUETleSRA/exec';
     
     // Tarih seçicisine otomatik bugünün tarihini atama
     const tarihInput = document.getElementById('tarih');
@@ -83,6 +83,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const temizleBtn = document.getElementById('temizleBtn');
     const islemKaydetBtn = document.getElementById('islemKaydetBtn');
     const vardiyaBitirBtn = document.getElementById('vardiyaBitirBtn');
+    const teslimOzetiInput = document.getElementById('teslimOzeti');
+    const devredenIslerInput = document.getElementById('devredenIsler');
+    const dikkatNotuInput = document.getElementById('dikkatNotu');
     
     // Haftalık vardiya kayıtları elementleri
     const baslangicTarihInput = document.getElementById('baslangicTarih');
@@ -282,6 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
 
                 localStorage.setItem('mevcutVardiya', JSON.stringify(vardiyaBilgisi));
+                window.SystemAuditLog?.write?.('Vardiya baslatildi', `${selectedVardiya} - ${selectedPersonel.adSoyad}`, 'ok');
                 mevcutVardiyaBilgisi();
                 alert('Vardiya başarıyla başlatıldı! (ID: ' + result.data.id + ')');
                 haftalikVardiyaKayitlariniGoster();
@@ -318,6 +322,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     url.searchParams.append('id', vardiya.id || '');
                     url.searchParams.append('tarih', formattedTarih);
                     url.searchParams.append('vardiya', vardiya.vardiya || vardiyaSelect.value);
+                    url.searchParams.append('teslimOzeti', teslimOzetiInput?.value.trim() || '');
+                    url.searchParams.append('devredenIsler', devredenIslerInput?.value.trim() || '');
+                    url.searchParams.append('dikkatNotu', dikkatNotuInput?.value.trim() || '');
                     
                     const response = await fetch(url);
                     const result = await response.json();
@@ -326,8 +333,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         localStorage.removeItem('mevcutVardiya');
                         document.getElementById('mevcutVardiya').style.display = 'none';
                         personelSelect.value = '';
+                        if (teslimOzetiInput) teslimOzetiInput.value = '';
+                        if (devredenIslerInput) devredenIslerInput.value = '';
+                        if (dikkatNotuInput) dikkatNotuInput.value = '';
                         operatorStatus.textContent = 'Personel seçiniz.';
                         operatorStatus.style.color = '#e74c3c';
+                        window.SystemAuditLog?.write?.('Vardiya bitirildi', `${vardiya.vardiya || vardiyaSelect.value} - ${vardiya.personelAdSoyad || ''}`, 'ok');
                         
                         alert('Vardiya başarıyla bitirildi! (ID: ' + result.data.id + ')');
                         haftalikVardiyaKayitlariniGoster();
@@ -804,6 +815,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 vardiya.islemler.push(yeniIslem);
                 localStorage.setItem('mevcutVardiya', JSON.stringify(vardiya));
+                window.SystemAuditLog?.write?.('Vardiya islemi eklendi', islemAciklama.value.trim().slice(0, 80), 'ok');
                 
                 // Alanı temizle
                 islemAciklama.value = '';

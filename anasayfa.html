@@ -78,13 +78,19 @@
                         <span class="menu-text">Stok Takip</span>
                     </a>
                 </li>
-                <li class="menu-item">
+                <li class="menu-item admin-menu-item">
                     <a href="kullanici-yonetimi.html" class="menu-link">
                         <span class="menu-icon">👤</span>
                         <span class="menu-text">Kullanıcı Yönetimi</span>
                     </a>
                 </li>
-                <li class="menu-item">
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-kontrol.html" class="menu-link">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Merkezi Kontrol</span>
+                    </a>
+                </li>
+                <li class="menu-item admin-menu-item">
                     <a href="admin-bildirim.html" class="menu-link">
                         <span class="menu-icon">📢</span>
                         <span class="menu-text">Bildirim Yönetimi</span>
@@ -290,12 +296,15 @@
             const logged = localStorage.getItem('loggedInUser');
             const display = document.getElementById('userNameDisplay');
             const sidebarDisplay = document.getElementById('sidebarUserNameDisplay');
+            const adminMenuItems = document.querySelectorAll('.admin-menu-item');
+            let isAdmin = false;
             console.log('DEBUG - loggedInUser:', logged);
             console.log('DEBUG - display element:', display);
             console.log('DEBUG - sidebar display element:', sidebarDisplay);
             if (logged) {
                 try {
                     const user = JSON.parse(logged);
+                    isAdmin = user.role === 'admin';
                     console.log('DEBUG - parsed user:', user);
                     const firstName = user.firstName || user.ad || user['Ad'] || user.name || '';
                     const lastName = user.lastName || user.soyad || user['Soyad'] || user.surname || '';
@@ -312,6 +321,9 @@
                 if (display) display.textContent = 'Misafir';
                 if (sidebarDisplay) sidebarDisplay.textContent = 'Misafir';
             }
+            adminMenuItems.forEach(item => {
+                item.style.display = isAdmin ? '' : 'none';
+            });
         })();
     </script>
     <script src="js/bildirim-sheets.js"></script>

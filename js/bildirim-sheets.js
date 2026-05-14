@@ -1,5 +1,5 @@
 const BildirimSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzDDkaw3VF7gDYb6ZBxhyTj3VZ6_1D1xCnbt4DcNbwbz_CkqR5aHYGwELYn3uSCc6ma1A/exec'
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwX6YHedLGqu6N5YEajQPFqVE1eV8Zj2TK0LlexESUkzM1ISNSBPKdnEtvG58VDnhXj/exec'
 };
 
 function isBildirimSheetsEnabled() {

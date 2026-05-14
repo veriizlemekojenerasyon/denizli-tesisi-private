@@ -85,15 +85,15 @@ function addRecord(data) {
       
       // Başlıklar (10 sütun)
       var headers = [
-        'ID', 'Tarih', 'Vardiya', 'Personel', 'Operatör',
-        'Yardımcı Operatör', 'Başlangıç Saati', 'Bitiş Saati',
-        'Durum', 'Kayıt Tarihi'
+        'ID', 'Tarih', 'Vardiya', 'Personel', 'Operator',
+        'Yardimci Operator', 'Baslangic Saati', 'Bitis Saati',
+        'Durum', 'Kayit Tarihi', 'Teslim Ozeti', 'Devreden Isler', 'Dikkat Notu'
       ];
       
       sheet.appendRow(headers);
       
       // Başlık formatı
-      var headerRange = sheet.getRange(1, 1, 1, 10);
+      var headerRange = sheet.getRange(1, 1, 1, 13);
       headerRange.setFontWeight('bold');
       headerRange.setBackground('#9b59b6');
       headerRange.setFontColor('#ffffff');
@@ -110,6 +110,9 @@ function addRecord(data) {
       sheet.setColumnWidth(8, 130);   // Bitiş Saati
       sheet.setColumnWidth(9, 100);   // Durum
       sheet.setColumnWidth(10, 140);  // Kayıt Tarihi
+      sheet.setColumnWidth(11, 260);  // Teslim Ozeti
+      sheet.setColumnWidth(12, 260);  // Devreden Isler
+      sheet.setColumnWidth(13, 260);  // Dikkat Notu
       
       // Kenarlıklar
       headerRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
@@ -117,9 +120,11 @@ function addRecord(data) {
       // Sütun formatları
       sheet.getRange(2, 1, 1000, 1).setNumberFormat('@');   // ID
       sheet.getRange(2, 2, 1000, 1).setNumberFormat('@');   // Tarih metin
-      sheet.getRange(2, 3, 1000, 7).setNumberFormat('@');  // Diğer metin sütunları
+      sheet.getRange(2, 3, 1000, 11).setNumberFormat('@');  // Diger metin sutunlari
       
       Logger.log('VardiyaTakip sayfası otomatik olarak oluşturuldu.');
+    } else {
+      ensureVardiyaTeslimColumns(sheet);
     }
     
     // Aynı tarih ve vardiya için aktif kayıt var mı kontrol et
@@ -162,15 +167,18 @@ function addRecord(data) {
       data.operator || '',
       data.yardimciOperator || '',
       baslangicSaati,
-      '',  // Bitiş Saati (boş)
+      '',  // Bitis Saati (bos)
       'Aktif',
-      kayitTarihi
+      kayitTarihi,
+      '',
+      '',
+      ''
     ]);
     
     // Yeni satır formatı
     var newRow = sheet.getLastRow();
-    sheet.getRange(newRow, 1, 1, 10).setHorizontalAlignment('center');
-    sheet.getRange(newRow, 1, 1, 10).setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+    sheet.getRange(newRow, 1, 1, 13).setHorizontalAlignment('center');
+    sheet.getRange(newRow, 1, 1, 13).setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
     
     return { 
       success: true, 
@@ -186,6 +194,22 @@ function addRecord(data) {
   }
 }
 
+function ensureVardiyaTeslimColumns(sheet) {
+  if (sheet.getLastColumn() >= 13) return;
+  var headers = ['Teslim Ozeti', 'Devreden Isler', 'Dikkat Notu'];
+  for (var col = sheet.getLastColumn() + 1; col <= 13; col++) {
+    sheet.getRange(1, col).setValue(headers[col - 11]);
+    sheet.setColumnWidth(col, 260);
+  }
+
+  var headerRange = sheet.getRange(1, 1, 1, 13);
+  headerRange.setFontWeight('bold');
+  headerRange.setBackground('#9b59b6');
+  headerRange.setFontColor('#ffffff');
+  headerRange.setHorizontalAlignment('center');
+  sheet.getRange(2, 1, Math.max(1000, sheet.getLastRow()), 13).setNumberFormat('@');
+}
+
 // Vardiya bitir
 function endVardiya(data) {
   try {
@@ -195,6 +219,7 @@ function endVardiya(data) {
     if (!sheet) {
       return { success: false, error: 'Sayfa bulunamadı!' };
     }
+    ensureVardiyaTeslimColumns(sheet);
     
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) {
@@ -233,6 +258,9 @@ function endVardiya(data) {
     sheet.getRange(foundRow, 8).setValue(bitisSaati);
     sheet.getRange(foundRow, 9).setValue('Tamamlandı');
     sheet.getRange(foundRow, 10).setValue(formatDateTimeTR(new Date()));
+    sheet.getRange(foundRow, 11).setValue(data.teslimOzeti || '');
+    sheet.getRange(foundRow, 12).setValue(data.devredenIsler || '');
+    sheet.getRange(foundRow, 13).setValue(data.dikkatNotu || '');
     
     Logger.log('Vardiya sonlandırıldı - Satır ' + foundRow + ' (ID: ' + recordID + ')');
     
@@ -310,7 +338,8 @@ function getRecords() {
       return { success: true, data: [] };
     }
     
-    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getDisplayValues();
+    ensureVardiyaTeslimColumns(sheet);
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 13).getDisplayValues();
     var records = [];
     
     for (var i = data.length - 1; i >= 0; i--) {
@@ -325,7 +354,10 @@ function getRecords() {
         baslangicSaati: row[6],
         bitisSaati: row[7],
         durum: row[8],
-        kayitTarihi: row[9]
+        kayitTarihi: row[9],
+        teslimOzeti: row[10],
+        devredenIsler: row[11],
+        dikkatNotu: row[12]
       });
     }
     

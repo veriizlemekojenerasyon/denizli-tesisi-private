@@ -175,8 +175,11 @@ body {
     margin-right: 12px;
     transition: all 0.3s ease;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-    display: inline-block;
-    width: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
     text-align: center;
 }
 
