@@ -1,7 +1,8 @@
 const AdminControlConfig = {
     saatlik: 'https://script.google.com/macros/s/AKfycbyxw6Lha4yal2pAuPoBLLTBErhmoozphDNcskfjOWhqoveZxQNSvze92gniMhKvn7HWgA/exec',
     motor: 'https://script.google.com/macros/s/AKfycbz33FlBicqkZdRw5UOdagkiZK3leF18QuVPETLK_HGysSYbDAxigev0o_UUnYxuHAr-JA/exec',
-    enerji: 'https://script.google.com/macros/s/AKfycbz18mFe34NwrPa18ARpYLvfuwZKGGGUnxuYaMwqKzVXx0ulhlB45zC1ShOZvg4dHFjfCg/exec',
+    enerji: 'https://script.google.com/macros/s/AKfycbyyyWPaJli8FCAEDLKJNd2TZbbpzC6jMPlGx0urcZeTesmqzWoL8shCjkeSETwNkoBZpQ/exec',
+    uretim: 'https://script.google.com/macros/s/AKfycby46xHXGD1NuPujkMSUMHOUiGl2jSjER1C66Dh_8aIOmvQj9r89lvDFAsQDOEJZiwSebw/exec',
     vardiya: 'https://script.google.com/macros/s/AKfycbxnCKSZtDelL04-ZQY3yx_ePSCK9Qy9R0WgFwtsFXj_B6HayfmwM8i_HYU-AAUETleSRA/exec',
     bildirim: 'https://script.google.com/macros/s/AKfycbyjW5gbtw0BRHjDlmeLYmaio0UQWw8DG1B89X85BYwI-dw4YqaTuEPYilmv6B_xrXDmTA/exec'
 };
@@ -10,6 +11,7 @@ const AdminControlLabels = {
     saatlik: 'Saatlik Veri',
     motor: 'Kojen Motor',
     enerji: 'Kojen Enerji',
+    uretim: 'Üretim',
     vardiya: 'Vardiya',
     bildirim: 'Bildirim'
 };
@@ -18,6 +20,7 @@ const AdminBackupModules = {
     saatlik: { label: 'Saatlik Veri', urlKey: 'saatlik', params: { action: 'getRecords' } },
     motor: { label: 'Kojen Motor', urlKey: 'motor', params: { action: 'getRecords' } },
     enerji: { label: 'Kojen Enerji', urlKey: 'enerji', params: { action: 'getRecords' } },
+    uretim: { label: 'Aylık Üretim Özeti', urlKey: 'uretim', params: { action: 'getMonthlyProductionSummary' } },
     vardiya: { label: 'Vardiya', urlKey: 'vardiya', params: { action: 'getRecords' } },
     bildirim: { label: 'Bildirim', urlKey: 'bildirim', params: { action: 'getAnnouncements' } }
 };

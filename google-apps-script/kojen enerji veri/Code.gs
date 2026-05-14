@@ -59,6 +59,12 @@ function handleRequest(e) {
       case 'getLastRecords':
         result = getLastRecords(parseInt(params.count) || 50);
         break;
+      case 'getDailyProductionSummary':
+        result = getDailyProductionSummary(params.tarih, params.updateSheet === 'true');
+        break;
+      case 'updateDailyProductionSheet':
+        result = updateDailyProductionSheet(params.tarih);
+        break;
       case 'sendEmail':
         result = sendEmailAlert(params);
         break;
@@ -91,7 +97,7 @@ function handleRequest(e) {
 }
 
 function isWriteAction(action) {
-  return ['addRecord', 'addMultipleRecords', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
+  return ['addRecord', 'addMultipleRecords', 'getDailyProductionSummary', 'updateDailyProductionSheet', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
 }
 
 function normalizeDateTR(tarih) {
@@ -511,6 +517,179 @@ function getLastRecords(count) {
       total: total
     };
     
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+function getDailyProductionSummary(tarih, updateSheet) {
+  try {
+    var targetTarih = normalizeDateTR(tarih || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy'));
+    var motors = ['GM-1', 'GM-2', 'GM-3'];
+    var motorSummaries = [];
+    var totalKwh = 0;
+
+    for (var i = 0; i < motors.length; i++) {
+      var motor = motors[i];
+      var sheet = getEnerjiSheetIfExists(motor);
+      var records = [];
+
+      if (sheet && sheet.getLastRow() >= 2) {
+        var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues();
+        for (var j = 0; j < rows.length; j++) {
+          var record = mapEnerjiRow(rows[j]);
+          if (String(record.tarih || '').trim() === targetTarih) {
+            records.push(record);
+          }
+        }
+      }
+
+      records.sort(function(a, b) {
+        return parseDateTimeTR(a.tarih, a.saat) - parseDateTimeTR(b.tarih, b.saat);
+      });
+
+      var detailRows = [];
+      var firstEnergy = null;
+      var lastEnergy = null;
+      var firstHour = null;
+      var lastHour = null;
+      var previousEnergy = null;
+
+      for (var k = 0; k < records.length; k++) {
+        var item = records[k];
+        var energy = parseEnerjiNumber(item.toplamAktifEnerji);
+        var workingHour = parseEnerjiNumber(item.calismaSaati);
+        var hourlyKwh = previousEnergy === null ? 0 : Math.max(0, energy - previousEnergy);
+
+        if (firstEnergy === null) firstEnergy = energy;
+        if (firstHour === null) firstHour = workingHour;
+        lastEnergy = energy;
+        lastHour = workingHour;
+        previousEnergy = energy;
+
+        detailRows.push({
+          saat: item.saat,
+          calismaSaati: workingHour,
+          toplamAktifEnerji: energy,
+          saatlikUretimMw: hourlyKwh / 1000,
+          saatlikUretimKwh: hourlyKwh
+        });
+      }
+
+      var dailyKwh = firstEnergy === null || lastEnergy === null ? 0 : Math.max(0, lastEnergy - firstEnergy);
+      var dailyHours = firstHour === null || lastHour === null ? 0 : Math.max(0, lastHour - firstHour);
+      totalKwh += dailyKwh;
+
+      motorSummaries.push({
+        motor: motor,
+        recordCount: records.length,
+        firstEnergy: firstEnergy || 0,
+        lastEnergy: lastEnergy || 0,
+        dailyProductionKwh: dailyKwh,
+        dailyProductionMwh: dailyKwh / 1000,
+        dailyHours: dailyHours,
+        lastWorkingHour: lastHour || 0,
+        rows: detailRows
+      });
+    }
+
+    var summary = {
+      success: true,
+      tarih: targetTarih,
+      totalDailyProductionKwh: totalKwh,
+      totalDailyProductionMwh: totalKwh / 1000,
+      data: motorSummaries
+    };
+
+    if (updateSheet) {
+      var sheetResult = updateDailyProductionSheetFromSummary(summary);
+      summary.sheet = sheetResult;
+    }
+
+    return summary;
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+function updateDailyProductionSheet(tarih) {
+  var summary = getDailyProductionSummary(tarih, false);
+  if (!summary.success) return summary;
+  var sheetResult = updateDailyProductionSheetFromSummary(summary);
+  summary.sheet = sheetResult;
+  return summary;
+}
+
+function updateDailyProductionSheetFromSummary(summary) {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = 'GunlukUretimOzeti';
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet(sheetName);
+    }
+
+    sheet.getDataRange().breakApart();
+    sheet.clear();
+    var blockWidth = 3;
+    var gap = 1;
+    var maxRows = 0;
+
+    for (var i = 0; i < summary.data.length; i++) {
+      var motorSummary = summary.data[i];
+      var startCol = i * (blockWidth + gap) + 1;
+      var titleRange = sheet.getRange(1, startCol, 1, blockWidth);
+      titleRange.merge();
+      titleRange.setValue(motorSummary.motor + ' - ' + summary.tarih);
+      titleRange.setFontWeight('bold');
+      titleRange.setHorizontalAlignment('center');
+      titleRange.setBackground('#c4d79b');
+
+      var headers = [['Çalışma Saati', 'Toplam Aktif Enerji (kWh)', 'Saatlik Üretim (MW)']];
+      sheet.getRange(2, startCol, 1, blockWidth).setValues(headers);
+      sheet.getRange(2, startCol, 1, blockWidth).setFontWeight('bold');
+      sheet.getRange(2, startCol, 1, blockWidth).setHorizontalAlignment('center');
+
+      var values = motorSummary.rows.map(function(row) {
+        return [row.calismaSaati, row.toplamAktifEnerji, row.saatlikUretimMw];
+      });
+
+      if (values.length > 0) {
+        sheet.getRange(3, startCol, values.length, blockWidth).setValues(values);
+        sheet.getRange(3, startCol, values.length, blockWidth).setHorizontalAlignment('center');
+        sheet.getRange(3, startCol, values.length, 1).setNumberFormat('0.00');
+        sheet.getRange(3, startCol + 1, values.length, 1).setNumberFormat('0.00');
+        sheet.getRange(3, startCol + 2, values.length, 1).setNumberFormat('0.000');
+      }
+
+      var totalRow = values.length + 3;
+      sheet.getRange(totalRow, startCol, 1, 2).merge();
+      sheet.getRange(totalRow, startCol).setValue('Günlük Üretim (MWh)');
+      sheet.getRange(totalRow, startCol + 2).setValue(motorSummary.dailyProductionMwh);
+      sheet.getRange(totalRow, startCol, 1, blockWidth).setFontWeight('bold');
+      sheet.getRange(totalRow, startCol + 2).setNumberFormat('0.000');
+
+      var rangeHeight = Math.max(values.length + 3, 4);
+      sheet.getRange(1, startCol, rangeHeight, blockWidth)
+        .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+
+      sheet.setColumnWidth(startCol, 100);
+      sheet.setColumnWidth(startCol + 1, 130);
+      sheet.setColumnWidth(startCol + 2, 110);
+      maxRows = Math.max(maxRows, totalRow);
+    }
+
+    var footerRow = maxRows + 2;
+    sheet.getRange(footerRow, 1).setValue('Toplam Günlük Üretim (MWh)');
+    sheet.getRange(footerRow, 2).setValue(summary.totalDailyProductionMwh);
+    sheet.getRange(footerRow, 1, 1, 2).setFontWeight('bold');
+    sheet.getRange(footerRow, 2).setNumberFormat('0.000');
+
+    return {
+      success: true,
+      sheetName: sheetName,
+      updatedAt: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss')
+    };
   } catch (error) {
     return { success: false, error: error.toString() };
   }

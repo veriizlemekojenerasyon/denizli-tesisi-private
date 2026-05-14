@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Günlük özet verileri
     const summaryData = {
-        dailyProduction: 5.53,
+        dailyProduction: 0,
         dailySteam: null, // Buhar verisinden çekilecek
         pendingMaintenance: 3,
         activeFaults: 1
@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Buhar verisi config
     const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnhHSmc5GTuOq8hdqgFM2-FA2XNjRdLHoED5gmjXbmWcYycPNXykdd0ZYTzOI3HNJxKg/exec';
+    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyyWPaJli8FCAEDLKJNd2TZbbpzC6jMPlGx0urcZeTesmqzWoL8shCjkeSETwNkoBZpQ/exec';
     const ANNOUNCEMENTS_STORAGE_KEY = 'shiftAnnouncements';
     const defaultAnnouncements = [
         {
@@ -62,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sayfa yüklendiğinde verileri göster
     setTimeout(async () => {
         updateAnnouncementTicker();
+        await loadDailyProductionData();
         updateMotorData();
         await loadBuharData(); // Buhar verisini çek
         updateSummaryData();
@@ -307,6 +309,45 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Buhar verisi yüklenemedi:', error);
         }
     }
+    async function loadDailyProductionData() {
+        try {
+            const url = new URL(KOJEN_ENERJI_APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getDailyProductionSummary');
+            url.searchParams.append('updateSheet', 'true');
+
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
+
+            if (!result.success) {
+                console.error('Günlük üretim özeti alınamadı:', result.error);
+                return;
+            }
+
+            summaryData.dailyProduction = Number(result.totalDailyProductionMwh) || 0;
+
+            if (!Array.isArray(result.data)) return;
+
+            result.data.forEach(item => {
+                const key = String(item.motor || '').toLowerCase().replace('-', '');
+                if (!motorData[key]) return;
+
+                const dailyKwh = Number(item.dailyProductionKwh) || 0;
+                const dailyHours = Number(item.dailyHours) || 0;
+                const lastEnergy = Number(item.lastEnergy) || 0;
+                const lastWorkingHour = Number(item.lastWorkingHour) || 0;
+
+                motorData[key].dailyProduction = Math.round(dailyKwh);
+                motorData[key].dailyHours = dailyHours;
+                motorData[key].totalProduction = lastEnergy / 1000;
+                motorData[key].totalHours = lastWorkingHour;
+                motorData[key].avgProduction = dailyHours > 0 ? dailyKwh / dailyHours : 0;
+                motorData[key].status = dailyKwh > 0 || dailyHours > 0 ? 'running' : 'stopped';
+            });
+        } catch (error) {
+            console.error('Günlük üretim verisi yüklenemedi:', error);
+        }
+    }
+
     function animateProgressBars() {
         for (const [motorId, data] of Object.entries(motorData)) {
             const progressEl = document.getElementById(`${motorId}-progress`);
@@ -476,36 +517,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Gerçek zamanlı veri güncelleme simülasyonu
-    setInterval(() => {
-        // Rastgele veri değişiklikleri
-        const motors = ['gm1', 'gm2', 'gm3'];
-        const randomMotor = motors[Math.floor(Math.random() * motors.length)];
-        
-        if (motorData[randomMotor].status === 'running') {
-            // Günlük üretimi güncelle
-            motorData[randomMotor].dailyProduction += Math.floor(Math.random() * 10);
-            motorData[randomMotor].dailyHours += 0.1;
-            
-            const dailyProductionEl = document.getElementById(`${randomMotor}-daily-production`);
-            if (dailyProductionEl) {
-                dailyProductionEl.textContent = motorData[randomMotor].dailyProduction + ' kWh';
-            }
-            
-            const dailyHoursEl = document.getElementById(`${randomMotor}-daily-hours`);
-            if (dailyHoursEl) {
-                dailyHoursEl.textContent = motorData[randomMotor].dailyHours.toFixed(1) + ' saat';
-            }
-        }
-
-        // Günlük özet verilerini güncelle
-        summaryData.dailyProduction += 0.01;
-        const dailyProductionEl = document.getElementById('daily-production-value');
-        if (dailyProductionEl) {
-            dailyProductionEl.textContent = summaryData.dailyProduction.toFixed(2) + ' MWh';
-        }
-
-    }, 10000); // Her 10 saniyede bir güncelle
+    setInterval(async () => {
+        await loadDailyProductionData();
+        updateMotorData();
+        updateSummaryData();
+    }, 300000);
 
     // Klavye kısayolları
     document.addEventListener('keydown', function(e) {
@@ -529,9 +545,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Sayfa görünürlük değişikliği
-    document.addEventListener('visibilitychange', function() {
+    document.addEventListener('visibilitychange', async function() {
         if (!document.hidden) {
             // Sayfa tekrar görünür olduğunda verileri güncelle
+            await loadDailyProductionData();
             updateMotorData();
             updateSummaryData();
         }
