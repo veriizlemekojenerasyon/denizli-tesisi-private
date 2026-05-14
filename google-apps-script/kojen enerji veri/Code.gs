@@ -23,40 +23,44 @@ function doPost(e) {
 }
 
 function handleRequest(e) {
-  var lock = LockService.getScriptLock();
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action;
+  var lock = null;
   try {
-    lock.waitLock(10000); // 10 saniye - daha hızlı kilitleme
+    if (isWriteAction(action)) {
+      lock = LockService.getScriptLock();
+      lock.waitLock(5000);
+    }
     
-    var action = e.parameter.action;
     var result = {};
     
     switch(action) {
       case 'addRecord':
-        result = addRecord(e.parameter);
+        result = addRecord(params);
         break;
       case 'getRecords':
         result = getRecords();
         break;
       case 'getRecordsByDate':
-        result = getRecordsByDate(e.parameter.tarih);
+        result = getRecordsByDate(params.tarih);
         break;
       case 'getRecordsByMotorAndDate':
-        result = getRecordsByMotorAndDate(e.parameter.motor, e.parameter.tarih);
+        result = getRecordsByMotorAndDate(params.motor, params.tarih);
         break;
       case 'checkExistingRecord':
-        result = checkExistingRecord(e.parameter.motor, e.parameter.tarih, e.parameter.saat);
+        result = checkExistingRecord(params.motor, params.tarih, params.saat);
         break;
       case 'checkMultipleRecords':
-        result = checkMultipleRecords(e.parameter.data);
+        result = checkMultipleRecords(params.data);
         break;
       case 'addMultipleRecords':
-        result = addMultipleRecords(e.parameter.data);
+        result = addMultipleRecords(params.data);
         break;
       case 'getLastRecords':
-        result = getLastRecords(parseInt(e.parameter.count) || 50);
+        result = getLastRecords(parseInt(params.count) || 50);
         break;
       case 'sendEmail':
-        result = sendEmailAlert(e.parameter);
+        result = sendEmailAlert(params);
         break;
       case 'checkHourlyMissingRecords':
         result = checkHourlyMissingRecords();
@@ -68,22 +72,62 @@ function handleRequest(e) {
         result = getTriggerHealth();
         break;
       case 'getSystemLogs':
-        result = getSystemLogs(parseInt(e.parameter.count, 10) || 100);
+        result = getSystemLogs(parseInt(params.count, 10) || 100);
         break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
     
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
     
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function isWriteAction(action) {
+  return ['addRecord', 'addMultipleRecords', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
+}
+
+function normalizeDateTR(tarih) {
+  var value = String(tarih || '').trim();
+  if (value.indexOf('-') !== -1) {
+    var parts = value.split('-');
+    return parts[2] + '.' + parts[1] + '.' + parts[0];
+  }
+  return value;
+}
+
+function getEnerjiSheetIfExists(motor) {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Enerji GM-' + motor);
+}
+
+function mapEnerjiRow(row) {
+  return {
+    tarih: row[0],
+    vardiya: row[1],
+    saat: row[2],
+    motor: row[3],
+    aydemVoltaji: row[4],
+    aktifGuc: row[5],
+    reaktifGuc: row[6],
+    cosPhi: row[7],
+    ortAkim: row[8],
+    ortGerilim: row[9],
+    notrAkim: row[10],
+    tahrikGerilimi: row[11],
+    toplamAktifEnerji: row[12],
+    calismaSaati: row[13],
+    kalkisSayisi: row[14],
+    durum: row[15],
+    kaydeden: row[16],
+    kayitTarihi: row[17]
+  };
 }
 
 // 🔥 MOTOR BAZLI SAYFA GETİRME FONKSİYONU
@@ -158,38 +202,23 @@ function addRecord(data) {
     // Aynı tarih, saat ve motor için kayıt var mı kontrol et
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
-      var allData = sheet.getRange(2, 1, lastRow - 1, 18).getValues();
-      
-      // Input tarihini dd.MM.yyyy formatına çevir
-      var inputTarih = data.tarih;
-      if (inputTarih.includes('-')) {
-        var inputParts = inputTarih.split('-');
-        inputTarih = inputParts[2] + '.' + inputParts[1] + '.' + inputParts[0];
-      }
-      
+      var allData = sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
+      var inputTarih = normalizeDateTR(data.tarih);
+      var inputSaat = String(data.saat || '').trim();
+
       for (var i = 0; i < allData.length; i++) {
         var row = allData[i];
-        var rowTarih = row[0];
-        var rowVardiya = row[1];
-        var rowSaat = row[2];
-        var rowMotor = row[3];
-        
-        if (rowTarih instanceof Date) {
-          rowTarih = Utilities.formatDate(rowTarih, Session.getScriptTimeZone(), 'dd.MM.yyyy');
-        }
-        
-        if (rowTarih === inputTarih && rowSaat === data.saat && rowMotor === data.motor) {
+        var rowTarih = String(row[0] || '').trim();
+        var rowSaat = String(row[2] || '').trim();
+
+        if (rowTarih === inputTarih && rowSaat === inputSaat) {
           return { success: false, error: 'Bu tarih, saat ve motor için kayıt zaten var!' };
         }
       }
     }
     
     // Tarih formatını düzelt ve Sheets formatına çevir
-    var formattedTarih = data.tarih;
-    if (formattedTarih.includes('-')) {
-      var tarihParts = formattedTarih.split('-');
-      formattedTarih = tarihParts[2] + '.' + tarihParts[1] + '.' + tarihParts[0];
-    }
+    var formattedTarih = normalizeDateTR(data.tarih);
     
     // dd.MM.yyyy formatını tarih nesnesine çevir
     var tarihObj;
@@ -242,10 +271,7 @@ function addRecord(data) {
     }
     
     // 🔥 SAAT SIRALAMASI İÇİN DOĞRU KONUMU BUL
-    var insertRow = findInsertPositionByDateTime(sheet, formattedTarih, data.saat);
-    
-    // Kaydı doğru konuma ekle
-    sheet.insertRowBefore(insertRow);
+    var insertRow = sheet.getLastRow() + 1;
     sheet.getRange(insertRow, 1, 1, 18).setValues([values]);
     
     // Yeni eklenen satırın formatını ayarla
@@ -299,31 +325,7 @@ function getRecords() {
       for (var j = data.length - 1; j >= 0; j--) {
         var row = data[j];
         
-        records.push({
-          tarih: row[0],
-          vardiya: row[1],
-          saat: row[2],
-          motor: row[3],
-          aydemVoltaji: row[4],
-          aktifGuc: row[5],
-          reaktifGuc: row[6],
-          cosPhi: row[7],
-          ortAkim: row[8],
-          ortGerilim: row[9],
-          notrAkim: row[10],
-          tahrikGerilimi: row[11],
-          toplamAktifEnerji: row[12],
-          calismaSaati: row[13],
-          kalkisSayisi: row[14],
-          durum: row[15],
-          kaydeden: row[16],
-          kayitTarihi: row[17]
-        });
-        
-        // Debug: Cos φ ve NÖTR AKIMI değerlerini kontrol et
-        console.log('🔍 Debug - row[7] (Cos φ):', row[7]);
-        console.log('🔍 Debug - row[8] (ORT.AKIM):', row[8]);
-        console.log('🔍 Debug - row[10] (NÖTR AKIMI):', row[10]);
+        records.push(mapEnerjiRow(row));
       }
     }
     
@@ -362,19 +364,16 @@ function getRecordsByDate(tarih) {
 // Motor ve tarihe göre kayıtları getir
 function getRecordsByMotorAndDate(motor, tarih) {
   try {
-    var allRecords = getRecords();
-    if (!allRecords.success) return allRecords;
-    
-    // Tarih formatını normalize et
-    var searchTarih = tarih;
-    if (searchTarih.includes('-')) {
-      var parts = searchTarih.split('-');
-      searchTarih = parts[2] + '.' + parts[1] + '.' + parts[0];
+    var sheet = getEnerjiSheetIfExists(motor);
+    if (!sheet || sheet.getLastRow() < 2) return { success: true, data: [] };
+
+    var searchTarih = normalizeDateTR(tarih);
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues();
+    var filtered = [];
+    for (var i = rows.length - 1; i >= 0; i--) {
+      var record = mapEnerjiRow(rows[i]);
+      if (record.tarih === searchTarih) filtered.push(record);
     }
-    
-    var filtered = allRecords.data.filter(function(record) {
-      return record.motor === motor && record.tarih === searchTarih;
-    });
     
     return { success: true, data: filtered };
     
@@ -386,54 +385,34 @@ function getRecordsByMotorAndDate(motor, tarih) {
 // Kayıt var mı kontrol et
 function checkExistingRecord(motor, tarih, saat) {
   try {
-    console.log('🔍 GAS checkExistingRecord başlatıldı: ' + motor + ', ' + tarih + ', ' + saat);
-    
-    var allRecords = getRecords();
-    if (!allRecords.success) {
-      console.log('❌ getRecords başarısız: ' + JSON.stringify(allRecords));
-      return allRecords;
+    var sheet = getEnerjiSheetIfExists(motor);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: true, exists: false, record: null };
     }
-    
-    console.log('📊 Toplam kayıt sayısı: ' + allRecords.data.length);
-    
-    // Tarih formatını normalize et
-    var searchTarih = tarih;
-    if (searchTarih.includes('-')) {
-      var parts = searchTarih.split('-');
-      searchTarih = parts[2] + '.' + parts[1] + '.' + parts[0];
-    }
-    
-    console.log('📅 Arama tarihi (normalize): ' + searchTarih);
-    
-    // Motor ve saat değerlerini trim et ve string olarak kullan
+
+    var searchTarih = normalizeDateTR(tarih);
     var searchMotor = String(motor || '').trim();
     var searchSaat = String(saat || '').trim();
-    
-    console.log('🔍 Arama kriterleri: motor=' + searchMotor + ', tarih=' + searchTarih + ', saat=' + searchSaat);
-    
-    var existing = allRecords.data.find(function(record) {
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues();
+    var existing = null;
+
+    for (var i = 0; i < data.length; i++) {
+      var record = mapEnerjiRow(data[i]);
       var recMotor = String(record.motor || '').trim();
       var recTarih = String(record.tarih || '').trim();
       var recSaat = String(record.saat || '').trim();
-      
-      var match = recMotor === searchMotor && 
-                  recTarih === searchTarih && 
-                  recSaat === searchSaat;
-      
-      if (match) {
-        console.log('✅ Eşleşen kayıt bulundu: ' + JSON.stringify(record));
+
+      if (recMotor === searchMotor && recTarih === searchTarih && recSaat === searchSaat) {
+        existing = record;
+        break;
       }
-      
-      return match;
-    });
+    }
     
     var result = { 
       success: true, 
       exists: !!existing,
       record: existing || null
     };
-    
-    console.log('📊 Sonuç: ' + JSON.stringify(result));
     
     return result;
     
@@ -445,65 +424,46 @@ function checkExistingRecord(motor, tarih, saat) {
 // 🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
 function checkMultipleRecords(data) {
   try {
-    console.log('🚀 GAS checkMultipleRecords başlatıldı: ' + data);
-    
-    var allRecords = getRecords();
-    if (!allRecords.success) {
-      console.log('❌ getRecords başarısız: ' + JSON.stringify(allRecords));
-      return allRecords;
-    }
-    
-    console.log('📊 Toplam kayıt sayısı: ' + allRecords.data.length);
-    
-    // Veriyi parse et
     var kombinasyonlar = data.split(',');
-    console.log('📋 Kontrol edilecek kombinasyon sayısı: ' + kombinasyonlar.length);
-    
     var sonuclar = {};
     var varOlanlar = [];
-    
-    // Her kombinasyonu kontrol et
+    var recordsByMotor = {};
+
     for (var i = 0; i < kombinasyonlar.length; i++) {
       var parts = kombinasyonlar[i].split('|');
       if (parts.length !== 3) continue;
-      
+
       var motor = parts[0].trim();
       var tarih = parts[1].trim();
       var saat = parts[2].trim();
-      
-      // Tarih formatını normalize et
-      var searchTarih = tarih;
-      if (searchTarih.includes('-')) {
-        var tarihParts = searchTarih.split('-');
-        searchTarih = tarihParts[2] + '.' + tarihParts[1] + '.' + tarihParts[0];
-      }
-      
+      var searchTarih = normalizeDateTR(tarih);
       var key = motor + '|' + tarih + '|' + saat;
-      
-      // Mevcut kayıtlarda ara
-      var existing = allRecords.data.find(function(record) {
+
+      if (!recordsByMotor[motor]) {
+        var sheet = getEnerjiSheetIfExists(motor);
+        recordsByMotor[motor] = !sheet || sheet.getLastRow() < 2
+          ? []
+          : sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues().map(mapEnerjiRow);
+      }
+
+      var existing = recordsByMotor[motor].find(function(record) {
         var recMotor = String(record.motor || '').trim();
         var recTarih = String(record.tarih || '').trim();
         var recSaat = String(record.saat || '').trim();
-        
-        return recMotor === motor && 
-               recTarih === searchTarih && 
-               recSaat === saat;
+
+        return recMotor === motor && recTarih === searchTarih && recSaat === saat;
       });
-      
+
       sonuclar[key] = {
         exists: !!existing,
         record: existing || null
       };
-      
+
       if (existing) {
         varOlanlar.push(key);
-        console.log('✅ Mevcut kayıt bulundu: ' + key);
       }
     }
-    
-    console.log('📊 Toplu kontrol sonuçları: ' + varOlanlar.length + ' var, ' + (kombinasyonlar.length - varOlanlar.length) + ' yok');
-    
+
     return { 
       success: true, 
       results: sonuclar,
@@ -520,13 +480,35 @@ function checkMultipleRecords(data) {
 // Son N kaydı getir
 function getLastRecords(count) {
   try {
-    var result = getRecords();
-    if (!result.success) return result;
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheets = spreadsheet.getSheets();
+    var records = [];
+    var total = 0;
+    var perSheetCount = Math.max(count || 50, 10);
+
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      if (!sheet.getName().startsWith('Enerji GM-')) continue;
+      var lastRow = sheet.getLastRow();
+      if (lastRow < 2) continue;
+
+      total += lastRow - 1;
+      var rowCount = Math.min(perSheetCount, lastRow - 1);
+      var startRow = Math.max(2, lastRow - rowCount + 1);
+      var rows = sheet.getRange(startRow, 1, rowCount, 18).getDisplayValues();
+      for (var j = 0; j < rows.length; j++) {
+        records.push(mapEnerjiRow(rows[j]));
+      }
+    }
+
+    records.sort(function(a, b) {
+      return parseDateTimeTR(b.tarih, b.saat) - parseDateTimeTR(a.tarih, a.saat);
+    });
     
     return { 
       success: true, 
-      data: result.data.slice(0, count),
-      total: result.data.length
+      data: records.slice(0, count),
+      total: total
     };
     
   } catch (error) {
@@ -677,8 +659,7 @@ function addMultipleRecords(dataString) {
         }
         
         // Satırı ekle
-        var newRow = findInsertPositionByDateTime(sheet, tarih, record.saat);
-        sheet.insertRowBefore(newRow);
+        var newRow = sheet.getLastRow() + 1;
         sheet.getRange(newRow, 1, 1, 18).setValues([rowData]);
         var dataRange = sheet.getRange(newRow, 1, 1, 18);
         dataRange.setHorizontalAlignment('center');

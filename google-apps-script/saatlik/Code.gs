@@ -19,31 +19,38 @@ function doPost(e) {
 }
 
 function handleRequest(e) {
-  var lock = LockService.getScriptLock();
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action;
+  var lock = null;
   try {
-    lock.waitLock(30000);
+    if (isWriteAction(action)) {
+      lock = LockService.getScriptLock();
+      lock.waitLock(5000);
+    }
     
-    var action = e.parameter.action;
     var result = {};
     
     switch(action) {
+      case 'saveRecord':
+        result = saveRecord(params);
+        break;
       case 'addRecord':
-        result = addRecord(e.parameter);
+        result = addRecord(params);
         break;
       case 'updateRecord':
-        result = updateRecord(e.parameter);
+        result = updateRecord(params);
         break;
       case 'getRecords':
         result = getRecords();
         break;
       case 'getLastRecords':
-        result = getLastRecords(parseInt(e.parameter.count) || 48);
+        result = getLastRecords(parseInt(params.count) || 48);
         break;
       case 'getRecordByDateTime':
-        result = getRecordByDateTime(e.parameter.tarih, e.parameter.saat);
+        result = getRecordByDateTime(params.tarih, params.saat);
         break;
       case 'sendEmail':
-        result = sendEmailAlert(e.parameter);
+        result = sendEmailAlert(params);
         break;
       case 'checkHourlyMissingRecords':
         result = checkHourlyMissingRecords();
@@ -55,22 +62,22 @@ function handleRequest(e) {
         result = getTriggerHealth();
         break;
       case 'getSystemLogs':
-        result = getSystemLogs(parseInt(e.parameter.count, 10) || 100);
+        result = getSystemLogs(parseInt(params.count, 10) || 100);
         break;
       case 'addSystemLog':
-        result = addSystemLog(e.parameter);
+        result = addSystemLog(params);
         break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
     
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
     
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
     return ContentService.createTextOutput(JSON.stringify({ 
       success: false, 
       error: error.toString() 
@@ -78,71 +85,102 @@ function handleRequest(e) {
   }
 }
 
+function isWriteAction(action) {
+  return ['saveRecord', 'addRecord', 'updateRecord', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger', 'addSystemLog'].indexOf(action) !== -1;
+}
+
+function getSaatlikSheet(createIfMissing) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName('SaatlikVeriler');
+  if (!sheet && createIfMissing) {
+    sheet = createSaatlikSheet(spreadsheet);
+  }
+  return sheet;
+}
+
+function createSaatlikSheet(spreadsheet) {
+  var sheet = spreadsheet.insertSheet('SaatlikVeriler');
+  var headers = [
+    'ID', 'Tarih', 'Saat', 'Vardiya',
+    'Aktif Enerji (MWh)', 'Reaktif Enerji (kVArh)', 'Aydem Aktif (MWh)', 'Aydem Reaktif (kVArh)', 'Kaydeden', 'Notlar', 'Kayıt Tarihi'
+  ];
+
+  sheet.appendRow(headers);
+  var headerRange = sheet.getRange(1, 1, 1, 11);
+  headerRange.setFontWeight('bold');
+  headerRange.setBackground('#3498db');
+  headerRange.setFontColor('#ffffff');
+  headerRange.setHorizontalAlignment('center');
+  headerRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+
+  sheet.setColumnWidth(1, 60);
+  sheet.setColumnWidth(2, 100);
+  sheet.setColumnWidth(3, 80);
+  sheet.setColumnWidth(4, 100);
+  sheet.setColumnWidth(5, 140);
+  sheet.setColumnWidth(6, 160);
+  sheet.setColumnWidth(7, 140);
+  sheet.setColumnWidth(8, 160);
+  sheet.setColumnWidth(9, 120);
+  sheet.setColumnWidth(10, 180);
+  sheet.setColumnWidth(11, 140);
+
+  sheet.getRange(2, 1, 1000, 4).setNumberFormat('@');
+  sheet.getRange(2, 5, 1000, 4).setNumberFormat('0.000');
+  sheet.getRange(2, 9, 1000, 3).setNumberFormat('@');
+  return sheet;
+}
+
+function mapSaatlikRow(row) {
+  return {
+    id: row[0],
+    tarih: row[1],
+    saat: row[2],
+    vardiya: row[3],
+    aktifMwh: row[4],
+    reaktifMwh: row[5],
+    aydemAktif: row[6],
+    aydemReaktif: row[7],
+    kaydeden: row[8],
+    notlar: row[9],
+    kayitTarihi: row[10]
+  };
+}
+
+function findSaatlikRowByDateTime(sheet, tarih, saat) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return -1;
+  var values = sheet.getRange(2, 2, lastRow - 1, 2).getDisplayValues();
+  var targetTarih = formatDateTR(tarih);
+  var targetSaat = String(saat || '').trim();
+  for (var i = 0; i < values.length; i++) {
+    if (values[i][0] === targetTarih && String(values[i][1] || '').trim() === targetSaat) {
+      return i + 2;
+    }
+  }
+  return -1;
+}
+
+function saveRecord(data) {
+  var sheet = getSaatlikSheet(true);
+  var foundRow = findSaatlikRowByDateTime(sheet, data.tarih, data.saat);
+  return foundRow === -1 ? addRecord(data) : updateRecord(data);
+}
+
 // Yeni kayıt ekle
 function addRecord(data) {
   try {
-    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = spreadsheet.getSheetByName('SaatlikVeriler');
-    
-    // Sayfa yoksa otomatik oluştur
-    if (!sheet) {
-      sheet = spreadsheet.insertSheet('SaatlikVeriler');
-      
-      // Başlıklar (11 sütun - Aydem alanları eklendi)
-      var headers = [
-        'ID', 'Tarih', 'Saat', 'Vardiya', 
-        'Aktif Enerji (MWh)', 'Reaktif Enerji (kVArh)', 'Aydem Aktif (MWh)', 'Aydem Reaktif (kVArh)', 'Kaydeden', 'Notlar', 'Kayıt Tarihi'
-      ];
-      
-      sheet.appendRow(headers);
-      
-      // Başlık formatı (11 sütun)
-      var headerRange = sheet.getRange(1, 1, 1, 11);
-      headerRange.setFontWeight('bold');
-      headerRange.setBackground('#3498db');
-      headerRange.setFontColor('#ffffff');
-      headerRange.setHorizontalAlignment('center');
-      
-      // Sütun genişlikleri (11 sütun)
-      sheet.setColumnWidth(1, 60);    // ID
-      sheet.setColumnWidth(2, 100);   // Tarih
-      sheet.setColumnWidth(3, 80);    // Saat
-      sheet.setColumnWidth(4, 100);   // Vardiya
-      sheet.setColumnWidth(5, 140);   // Aktif Enerji
-      sheet.setColumnWidth(6, 160);   // Reaktif Enerji
-      sheet.setColumnWidth(7, 140);   // Aydem Aktif
-      sheet.setColumnWidth(8, 160);   // Aydem Reaktif
-      sheet.setColumnWidth(9, 120);   // Kaydeden
-      sheet.setColumnWidth(10, 180);  // Notlar
-      sheet.setColumnWidth(11, 140);  // Kayit Tarihi
-      
-      // Kenarlıklar
-      headerRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
-      
-      // Sütun formatları
-      sheet.getRange(2, 1, 1000, 4).setNumberFormat('@');     // ID, Tarih, Saat, Vardiya metin
-      sheet.getRange(2, 5, 1000, 4).setNumberFormat('0.000');  // Sayısal değerler (4 sütun)
-      sheet.getRange(2, 9, 1000, 3).setNumberFormat('@');      // Kaydeden, Notlar ve Kayit Tarihi
-      
-      Logger.log('SaatlikVeriler sayfası otomatik olarak oluşturuldu.');
-    }
+    var sheet = getSaatlikSheet(true);
     
     // Aynı tarih ve saat için kayıt var mı kontrol et
     var lastRow = sheet.getLastRow();
     var nextID = 1;
     
     if (lastRow > 1) {
-      var dates = sheet.getRange(2, 2, lastRow - 1, 1).getDisplayValues();
-      var times = sheet.getRange(2, 3, lastRow - 1, 1).getDisplayValues();
-      var inputTarih = formatDateTR(data.tarih);
-      var inputSaat = data.saat;
-      
-      for (var i = 0; i < dates.length; i++) {
-        if (dates[i][0] === inputTarih && times[i][0] === inputSaat) {
-          return { success: false, error: 'Bu tarih ve saat için kayıt zaten var! Düzenleme yapın.' };
-        }
+      if (findSaatlikRowByDateTime(sheet, data.tarih, data.saat) !== -1) {
+        return { success: false, error: 'Bu tarih ve saat için kayıt zaten var! Düzenleme yapın.' };
       }
-      
+
       // Son ID'yi bul
       var ids = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
       var maxID = 0;
@@ -171,12 +209,10 @@ function addRecord(data) {
       data.notlar || '',
       kayitTarihi
     ];
-    var insertRow = findInsertPosition(sheet, formattedTarih, data.saat);
-    sheet.insertRowBefore(insertRow);
-    sheet.getRange(insertRow, 1, 1, 11).setValues([rowData]);
+    var newRow = sheet.getLastRow() + 1;
+    sheet.getRange(newRow, 1, 1, 11).setValues([rowData]);
     
     // Yeni satır formatı
-    var newRow = insertRow;
     sheet.getRange(newRow, 1, 1, 11).setHorizontalAlignment('center');
     sheet.getRange(newRow, 1, 1, 11).setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
     
@@ -190,8 +226,7 @@ function addRecord(data) {
 // Kayıt güncelle
 function updateRecord(data) {
   try {
-    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = spreadsheet.getSheetByName('SaatlikVeriler');
+    var sheet = getSaatlikSheet(false);
     
     if (!sheet) {
       return { success: false, error: 'Sayfa bulunamadı!' };
@@ -202,20 +237,8 @@ function updateRecord(data) {
       return { success: false, error: 'Kayıt bulunamadı!' };
     }
     
-    // Tarih ve saati bul
-    var dates = sheet.getRange(2, 2, lastRow - 1, 1).getDisplayValues();
-    var times = sheet.getRange(2, 3, lastRow - 1, 1).getDisplayValues();
-    var targetTarih = formatDateTR(data.tarih);
-    var targetSaat = data.saat;
-    var foundRow = -1;
+    var foundRow = findSaatlikRowByDateTime(sheet, data.tarih, data.saat);
     var recordID = '';
-    
-    for (var i = 0; i < dates.length; i++) {
-      if (dates[i][0] === targetTarih && times[i][0] === targetSaat) {
-        foundRow = i + 2;
-        break;
-      }
-    }
     
     if (foundRow === -1) {
       return { success: false, error: 'Kayıt bulunamadı!' };
@@ -246,8 +269,7 @@ function updateRecord(data) {
 // Tüm kayıtları getir
 function getRecords() {
   try {
-    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = spreadsheet.getSheetByName('SaatlikVeriler');
+    var sheet = getSaatlikSheet(false);
     
     if (!sheet) {
       return { success: true, data: [], message: 'Sayfa henüz oluşturulmamış.' };
@@ -262,19 +284,7 @@ function getRecords() {
     
     for (var i = data.length - 1; i >= 0; i--) {
       var row = data[i];
-      records.push({
-        id: row[0],
-        tarih: row[1],
-        saat: row[2],
-        vardiya: row[3],
-        aktifMwh: row[4],
-        reaktifMwh: row[5],
-        aydemAktif: row[6],
-        aydemReaktif: row[7],
-        kaydeden: row[8],
-        notlar: row[9],
-        kayitTarihi: row[10]
-      });
+      records.push(mapSaatlikRow(row));
     }
     
     return { success: true, data: records };
@@ -287,14 +297,25 @@ function getRecords() {
 // Son N kaydı getir
 function getLastRecords(count) {
   try {
-    var result = getRecords();
-    if (!result.success) return result;
+    var sheet = getSaatlikSheet(false);
+    if (!sheet) {
+      return { success: true, data: [], total: 0, message: 'Sayfa henüz oluşturulmamış.' };
+    }
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: true, data: [], total: 0 };
+    }
+
+    var total = lastRow - 1;
+    var rowCount = Math.min(count || 48, total);
+    var startRow = Math.max(2, lastRow - rowCount + 1);
+    var rows = sheet.getRange(startRow, 1, rowCount, 11).getDisplayValues();
+    var records = rows.map(mapSaatlikRow).reverse();
     
     return { 
       success: true, 
-      data: result.data.slice(0, count),
-      total: result.data.length,
-      message: result.message
+      data: records,
+      total: total
     };
     
   } catch (error) {
@@ -305,11 +326,11 @@ function getLastRecords(count) {
 // Tarih ve saate göre kayıt getir
 function getRecordByDateTime(tarih, saat) {
   try {
-    var result = getRecords();
-    if (!result.success) return result;
-    
-    var formattedTarih = formatDateTR(tarih);
-    var record = result.data.find(r => r.tarih === formattedTarih && r.saat === saat);
+    var sheet = getSaatlikSheet(false);
+    if (!sheet) return { success: true, data: null, found: false };
+
+    var foundRow = findSaatlikRowByDateTime(sheet, tarih, saat);
+    var record = foundRow === -1 ? null : mapSaatlikRow(sheet.getRange(foundRow, 1, 1, 11).getDisplayValues()[0]);
     
     if (record) {
       return { success: true, data: record, found: true };

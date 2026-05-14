@@ -136,6 +136,32 @@
             <section class="panel">
                 <div class="panel-header">
                     <div>
+                        <h2>Veri Yedeği</h2>
+                        <p>Saatlik, motor, enerji, vardiya ve bildirim kayıtlarını JSON, Excel veya PDF olarak alır.</p>
+                    </div>
+                    <div class="backup-actions">
+                        <select id="backupFormatSelect" class="backup-format" aria-label="Yedek formatı">
+                            <option value="json">JSON</option>
+                            <option value="excel">Excel</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                        <button type="button" class="btn secondary" id="backupAllBtn">Tüm Yedeği Al</button>
+                    </div>
+                </div>
+                <div class="backup-grid">
+                    <button type="button" class="btn ghost" data-backup-module="saatlik">Saatlik</button>
+                    <button type="button" class="btn ghost" data-backup-module="motor">Motor</button>
+                    <button type="button" class="btn ghost" data-backup-module="enerji">Enerji</button>
+                    <button type="button" class="btn ghost" data-backup-module="vardiya">Vardiya</button>
+                    <button type="button" class="btn ghost" data-backup-module="bildirim">Bildirim</button>
+                    <button type="button" class="btn ghost" data-backup-module="loglar">Loglar</button>
+                </div>
+                <div class="backup-result" id="backupResultBox">Yedek sonucu burada görünecek.</div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
                         <h2>Sistem Logları</h2>
                         <p>Admin işlemleri ve kontrol ekranı sonuçları bu tarayıcıda tutulur.</p>
                     </div>

@@ -8,7 +8,7 @@
 // ============================================
 const SAATLIK_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyFwSoehdajKxEGYnw5UWNlPYvpVMl0WJ43i_sl3wsxdD5-AoRAMgIX3-uxXFZUfJTC-Q/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyxw6Lha4yal2pAuPoBLLTBErhmoozphDNcskfjOWhqoveZxQNSvze92gniMhKvn7HWgA/exec',
     
     // Sayfa başlığı
     PAGE_NAME: 'Saatlik Veri Girişi',
@@ -200,15 +200,7 @@ const SaatlikApp = {
             return;
         }
         
-        // Kayıt var mı kontrol et ve Google Sheets'e gönder
-        const isEdit = await this.isExistingRecord(formData.tarih, formData.saat);
-        
-        let result;
-        if (isEdit) {
-            result = await this.updateRecord(formData);
-        } else {
-            result = await this.addRecord(formData);
-        }
+        const result = await this.saveRecord(formData);
         
         if (submitBtn) {
             submitBtn.textContent = originalBtnText;
@@ -425,6 +417,39 @@ const SaatlikApp = {
                 this.showNotification('Eksik saat secildi', `${this.formatDateTR(date)} ${this.formatHour(date)} forma alindi`, 'warning');
             });
         });
+    },
+
+    saveRecord: async function(data) {
+        try {
+            this.attachCurrentUser(data);
+
+            const url = new URL(SAATLIK_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'saveRecord');
+            Object.keys(data).forEach(key => {
+                url.searchParams.append(key, data[key]);
+            });
+
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            return await response.json();
+        } catch (error) {
+            console.error('Kayit kaydetme hatasi:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    attachCurrentUser: function(data) {
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (loggedInUser) {
+            try {
+                const user = JSON.parse(loggedInUser);
+                const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+                data.kaydeden = fullName || user.email || 'Bilinmeyen Kullanici';
+                return;
+            } catch (e) {
+                console.error('Kullanici bilgileri okunamadi:', e);
+            }
+        }
+        data.kaydeden = 'Misafir Kullanici';
     },
 
     normalizeDateKey: function(value) {

@@ -77,7 +77,8 @@ h2 {
 }
 
 .header-actions,
-.panel-header {
+.panel-header,
+.backup-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -114,6 +115,16 @@ h2 {
     border-radius: 7px;
     background: #f1f5f9;
     color: #334155;
+    font-weight: 700;
+}
+
+.backup-format {
+    min-width: 118px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 10px 12px;
+    background: #ffffff;
+    color: var(--text);
     font-weight: 700;
 }
 
@@ -222,6 +233,7 @@ h2 {
 
 .health-grid,
 .test-actions,
+.backup-grid,
 .quality-list,
 .user-activity-list,
 .operator-mobile-list {
@@ -234,6 +246,7 @@ h2 {
 .quality-item,
 .activity-item,
 .operator-action-card,
+.backup-result,
 .test-result {
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -260,6 +273,7 @@ h2 {
 .quality-item p,
 .activity-item p,
 .operator-action-card p,
+.backup-result,
 .test-result {
     margin: 0;
     color: var(--muted);
@@ -270,11 +284,24 @@ h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.backup-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .test-actions .btn {
     width: 100%;
 }
 
+.backup-grid .btn {
+    width: 100%;
+}
+
 .test-result {
+    min-height: 46px;
+}
+
+.backup-result {
+    margin-top: 12px;
     min-height: 46px;
 }
 
@@ -370,6 +397,10 @@ h2 {
         grid-template-columns: 1fr 1fr;
     }
 
+    .backup-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .admin-header {
         align-items: flex-start;
         flex-direction: column;
@@ -387,19 +418,22 @@ h2 {
         grid-template-columns: 1fr;
     }
 
-    .test-actions {
+    .test-actions,
+    .backup-grid {
         grid-template-columns: 1fr;
     }
 
     .header-actions,
-    .panel-header {
+    .panel-header,
+    .backup-actions {
         align-items: stretch;
         flex-direction: column;
         width: 100%;
     }
 
     .btn,
-    .current-user {
+    .current-user,
+    .backup-format {
         width: 100%;
         text-align: center;
     }

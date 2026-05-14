@@ -23,40 +23,44 @@ function doPost(e) {
 }
 
 function handleRequest(e) {
-  var lock = LockService.getScriptLock();
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action;
+  var lock = null;
   try {
-    lock.waitLock(10000); // 10 saniye - daha hızlı kilitleme
+    if (isWriteAction(action)) {
+      lock = LockService.getScriptLock();
+      lock.waitLock(5000);
+    }
     
-    var action = e.parameter.action;
     var result = {};
     
     switch(action) {
       case 'addRecord':
-        result = addRecord(e.parameter);
+        result = addRecord(params);
         break;
       case 'getRecords':
         result = getRecords();
         break;
       case 'getRecordsByDate':
-        result = getRecordsByDate(e.parameter.tarih);
+        result = getRecordsByDate(params.tarih);
         break;
       case 'getRecordsByMotorAndDate':
-        result = getRecordsByMotorAndDate(e.parameter.motor, e.parameter.tarih);
+        result = getRecordsByMotorAndDate(params.motor, params.tarih);
         break;
       case 'checkExistingRecord':
-        result = checkExistingRecord(e.parameter.motor, e.parameter.tarih, e.parameter.saat);
+        result = checkExistingRecord(params.motor, params.tarih, params.saat);
         break;
       case 'checkMultipleRecords':
-        result = checkMultipleRecords(e.parameter.data);
+        result = checkMultipleRecords(params.data);
         break;
       case 'addMultipleRecords':
-        result = addMultipleRecords(e.parameter.data);
+        result = addMultipleRecords(params.data);
         break;
       case 'getLastRecords':
-        result = getLastRecords(parseInt(e.parameter.count) || 50);
+        result = getLastRecords(parseInt(params.count) || 50);
         break;
       case 'sendEmail':
-        result = sendEmailAlert(e.parameter);
+        result = sendEmailAlert(params);
         break;
       case 'checkHourlyMissingRecords':
         result = checkHourlyMissingRecords();
@@ -68,22 +72,66 @@ function handleRequest(e) {
         result = getTriggerHealth();
         break;
       case 'getSystemLogs':
-        result = getSystemLogs(parseInt(e.parameter.count, 10) || 100);
+        result = getSystemLogs(parseInt(params.count, 10) || 100);
         break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
     
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
     
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function isWriteAction(action) {
+  return ['addRecord', 'addMultipleRecords', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
+}
+
+function normalizeDateTR(tarih) {
+  var value = String(tarih || '').trim();
+  if (value.indexOf('-') !== -1) {
+    var parts = value.split('-');
+    return parts[2] + '.' + parts[1] + '.' + parts[0];
+  }
+  return value;
+}
+
+function getMotorSheetIfExists(motor) {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Motor GM-' + motor);
+}
+
+function mapMotorRow(row) {
+  return {
+    tarih: row[0],
+    vardiya: row[1],
+    saat: row[2],
+    motor: row[3],
+    jenYatakSicaklikDE: row[4],
+    jenYatakSicaklikNDE: row[5],
+    sogutmaSuyuSicaklik: row[6],
+    sogutmaSuyuBasinc: row[7],
+    yagSicaklik: row[8],
+    yagBasinc: row[9],
+    sarjSicaklik: row[10],
+    sarjBasinc: row[11],
+    gazRegulatoru: row[12],
+    makineDairesiSicaklik: row[13],
+    karterBasinc: row[14],
+    onKamaraFarkBasinc: row[15],
+    sargiSicaklik1: row[16],
+    sargiSicaklik2: row[17],
+    sargiSicaklik3: row[18],
+    durum: row[19],
+    kaydeden: row[20],
+    kayitTarihi: row[21]
+  };
 }
 
 // 🔥 MOTOR BAZLI SAYFA GETİRME FONKSİYONU
@@ -170,38 +218,23 @@ function addRecord(data) {
     // Aynı tarih, saat ve motor için kayıt var mı kontrol et
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
-      var allData = sheet.getRange(2, 1, lastRow - 1, 22).getValues();
-      
-      // Input tarihini dd.MM.yyyy formatına çevir
-      var inputTarih = data.tarih;
-      if (inputTarih.includes('-')) {
-        var inputParts = inputTarih.split('-');
-        inputTarih = inputParts[2] + '.' + inputParts[1] + '.' + inputParts[0];
-      }
-      
+      var allData = sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
+      var inputTarih = normalizeDateTR(data.tarih);
+      var inputSaat = String(data.saat || '').trim();
+
       for (var i = 0; i < allData.length; i++) {
         var row = allData[i];
-        var rowTarih = row[0];
-        var rowVardiya = row[1];
-        var rowSaat = row[2];
-        var rowMotor = row[3];
-        
-        if (rowTarih instanceof Date) {
-          rowTarih = Utilities.formatDate(rowTarih, Session.getScriptTimeZone(), 'dd.MM.yyyy');
-        }
-        
-        if (rowTarih === inputTarih && rowSaat === data.saat && rowMotor === data.motor) {
+        var rowTarih = String(row[0] || '').trim();
+        var rowSaat = String(row[2] || '').trim();
+
+        if (rowTarih === inputTarih && rowSaat === inputSaat) {
           return { success: false, error: 'Bu tarih, saat ve motor için kayıt zaten var!' };
         }
       }
     }
     
     // Tarih formatını düzelt ve Sheets formatına çevir
-    var formattedTarih = data.tarih;
-    if (formattedTarih.includes('-')) {
-      var tarihParts = formattedTarih.split('-');
-      formattedTarih = tarihParts[2] + '.' + tarihParts[1] + '.' + tarihParts[0];
-    }
+    var formattedTarih = normalizeDateTR(data.tarih);
     
     // dd.MM.yyyy formatını tarih nesnesine çevir
     var tarihObj;
@@ -255,8 +288,7 @@ function addRecord(data) {
     }
     
     // Kayıt ekle
-    var insertRow = findInsertPosition(sheet, formattedTarih, data.saat);
-    sheet.insertRowBefore(insertRow);
+    var insertRow = sheet.getLastRow() + 1;
     sheet.getRange(insertRow, 1, 1, 22).setValues([values]);
     
     // Yeni eklenen satırın formatını ayarla
@@ -310,30 +342,7 @@ function getRecords() {
       for (var j = data.length - 1; j >= 0; j--) {
         var row = data[j];
         
-        records.push({
-          tarih: row[0],
-          vardiya: row[1],
-          saat: row[2],
-          motor: row[3],
-          jenYatakSicaklikDE: row[4],
-          jenYatakSicaklikNDE: row[5],
-          sogutmaSuyuSicaklik: row[6],
-          sogutmaSuyuBasinc: row[7],
-          yagSicaklik: row[8],
-          yagBasinc: row[9],
-          sarjSicaklik: row[10],
-          sarjBasinc: row[11],
-          gazRegulatoru: row[12],
-          makineDairesiSicaklik: row[13],
-          karterBasinc: row[14],
-          onKamaraFarkBasinc: row[15],
-          sargiSicaklik1: row[16],
-          sargiSicaklik2: row[17],
-          sargiSicaklik3: row[18],
-          durum: row[19],
-          kaydeden: row[20],
-          kayitTarihi: row[21]
-        });
+        records.push(mapMotorRow(row));
       }
     }
     
@@ -372,31 +381,21 @@ function getRecordsByDate(tarih) {
 // Motor ve tarihe göre kayıtları getir
 function getRecordsByMotorAndDate(motor, tarih, vardiya) {
   try {
-    Logger.log('getRecordsByMotorAndDate çağrıldı: motor=' + motor + ', tarih=' + tarih + ', vardiya=' + vardiya);
-    
-    var allRecords = getRecords();
-    if (!allRecords.success) return allRecords;
-    
-    // Tarih formatını normalize et
-    var searchTarih = tarih;
-    if (searchTarih.includes('-')) {
-      var parts = searchTarih.split('-');
-      searchTarih = parts[2] + '.' + parts[1] + '.' + parts[0];
-    }
-    
-    Logger.log('Arama tarihi: ' + searchTarih);
-    Logger.log('Toplam kayıt sayısı: ' + allRecords.data.length);
-    
-    var filtered = allRecords.data.filter(function(record) {
-      var matchMotor = record.motor === motor;
+    var sheet = getMotorSheetIfExists(motor);
+    if (!sheet || sheet.getLastRow() < 2) return { success: true, data: [] };
+
+    var searchTarih = normalizeDateTR(tarih);
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 22).getDisplayValues();
+    var filtered = [];
+
+    for (var i = data.length - 1; i >= 0; i--) {
+      var record = mapMotorRow(data[i]);
       var matchTarih = record.tarih === searchTarih;
       var matchVardiya = true;
-      
-      // Vardiya parametresi varsa, saate göre filtrele
+
       if (vardiya) {
         var saat = record.saat || '';
         var hour = parseInt(saat.split(':')[0]) || 0;
-        
         if (vardiya === '08-16') {
           matchVardiya = (hour >= 8 && hour < 16);
         } else if (vardiya === '16-24') {
@@ -405,11 +404,9 @@ function getRecordsByMotorAndDate(motor, tarih, vardiya) {
           matchVardiya = (hour >= 0 && hour < 8);
         }
       }
-      
-      return matchMotor && matchTarih && matchVardiya;
-    });
-    
-    Logger.log('Filtrelenmiş kayıt sayısı: ' + filtered.length);
+
+      if (matchTarih && matchVardiya) filtered.push(record);
+    }
     
     return { success: true, data: filtered };
     
@@ -422,29 +419,28 @@ function getRecordsByMotorAndDate(motor, tarih, vardiya) {
 // Kayıt var mı kontrol et
 function checkExistingRecord(motor, tarih, saat) {
   try {
-    var allRecords = getRecords();
-    if (!allRecords.success) return allRecords;
-    
-    // Tarih formatını normalize et (yyyy-MM-dd -> dd.MM.yyyy)
-    var searchTarih = tarih;
-    if (searchTarih.includes('-')) {
-      var parts = searchTarih.split('-');
-      searchTarih = parts[2] + '.' + parts[1] + '.' + parts[0];
+    var sheet = getMotorSheetIfExists(motor);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: true, exists: false, record: null };
     }
-    
-    // Motor ve saat değerlerini trim et ve string olarak kullan
+
+    var searchTarih = normalizeDateTR(tarih);
     var searchMotor = String(motor || '').trim();
     var searchSaat = String(saat || '').trim();
-    
-    var existing = allRecords.data.find(function(record) {
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 22).getDisplayValues();
+    var existing = null;
+
+    for (var i = 0; i < data.length; i++) {
+      var record = mapMotorRow(data[i]);
       var recMotor = String(record.motor || '').trim();
       var recTarih = String(record.tarih || '').trim();
       var recSaat = String(record.saat || '').trim();
-      
-      return recMotor === searchMotor && 
-             recTarih === searchTarih && 
-             recSaat === searchSaat;
-    });
+
+      if (recMotor === searchMotor && recTarih === searchTarih && recSaat === searchSaat) {
+        existing = record;
+        break;
+      }
+    }
     
     return { 
       success: true, 
@@ -460,65 +456,46 @@ function checkExistingRecord(motor, tarih, saat) {
 // 🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
 function checkMultipleRecords(data) {
   try {
-    console.log('🚀 MOTOR checkMultipleRecords başlatıldı: ' + data);
-    
-    var allRecords = getRecords();
-    if (!allRecords.success) {
-      console.log('❌ getRecords başarısız: ' + JSON.stringify(allRecords));
-      return allRecords;
-    }
-    
-    console.log('📊 Toplam kayıt sayısı: ' + allRecords.data.length);
-    
-    // Veriyi parse et
     var kombinasyonlar = data.split(',');
-    console.log('📋 Kontrol edilecek kombinasyon sayısı: ' + kombinasyonlar.length);
-    
     var sonuclar = {};
     var varOlanlar = [];
-    
-    // Her kombinasyonu kontrol et
+    var recordsByMotor = {};
+
     for (var i = 0; i < kombinasyonlar.length; i++) {
       var parts = kombinasyonlar[i].split('|');
       if (parts.length !== 3) continue;
-      
+
       var motor = parts[0].trim();
       var tarih = parts[1].trim();
       var saat = parts[2].trim();
-      
-      // Tarih formatını normalize et
-      var searchTarih = tarih;
-      if (searchTarih.includes('-')) {
-        var tarihParts = searchTarih.split('-');
-        searchTarih = tarihParts[2] + '.' + tarihParts[1] + '.' + tarihParts[0];
-      }
-      
+      var searchTarih = normalizeDateTR(tarih);
       var key = motor + '|' + tarih + '|' + saat;
-      
-      // Mevcut kayıtlarda ara
-      var existing = allRecords.data.find(function(record) {
+
+      if (!recordsByMotor[motor]) {
+        var sheet = getMotorSheetIfExists(motor);
+        recordsByMotor[motor] = !sheet || sheet.getLastRow() < 2
+          ? []
+          : sheet.getRange(2, 1, sheet.getLastRow() - 1, 22).getDisplayValues().map(mapMotorRow);
+      }
+
+      var existing = recordsByMotor[motor].find(function(record) {
         var recMotor = String(record.motor || '').trim();
         var recTarih = String(record.tarih || '').trim();
         var recSaat = String(record.saat || '').trim();
-        
-        return recMotor === motor && 
-               recTarih === searchTarih && 
-               recSaat === saat;
+
+        return recMotor === motor && recTarih === searchTarih && recSaat === saat;
       });
-      
+
       sonuclar[key] = {
         exists: !!existing,
         record: existing || null
       };
-      
+
       if (existing) {
         varOlanlar.push(key);
-        console.log('✅ Mevcut motor kaydı bulundu: ' + key);
       }
     }
-    
-    console.log('📊 Toplu motor kontrol sonuçları: ' + varOlanlar.length + ' var, ' + (kombinasyonlar.length - varOlanlar.length) + ' yok');
-    
+
     return { 
       success: true, 
       results: sonuclar,
@@ -535,13 +512,35 @@ function checkMultipleRecords(data) {
 // Son N kaydı getir
 function getLastRecords(count) {
   try {
-    var result = getRecords();
-    if (!result.success) return result;
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheets = spreadsheet.getSheets();
+    var records = [];
+    var total = 0;
+    var perSheetCount = Math.max(count || 50, 10);
+
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      if (!sheet.getName().startsWith('Motor GM-')) continue;
+      var lastRow = sheet.getLastRow();
+      if (lastRow < 2) continue;
+
+      total += lastRow - 1;
+      var rowCount = Math.min(perSheetCount, lastRow - 1);
+      var startRow = Math.max(2, lastRow - rowCount + 1);
+      var rows = sheet.getRange(startRow, 1, rowCount, 22).getDisplayValues();
+      for (var j = 0; j < rows.length; j++) {
+        records.push(mapMotorRow(rows[j]));
+      }
+    }
+
+    records.sort(function(a, b) {
+      return parseRecordDateTime(b.tarih, b.saat) - parseRecordDateTime(a.tarih, a.saat);
+    });
     
     return { 
       success: true, 
-      data: result.data.slice(0, count),
-      total: result.data.length
+      data: records.slice(0, count),
+      total: total
     };
     
   } catch (error) {
@@ -665,8 +664,7 @@ function addMultipleRecords(dataString) {
         rowData[19] = record.durum || 'MOTOR ÇALIŞMIYOR';
         
         // Satırı ekle
-        var newRow = findInsertPosition(sheet, tarih, record.saat);
-        sheet.insertRowBefore(newRow);
+        var newRow = sheet.getLastRow() + 1;
         sheet.getRange(newRow, 1, 1, 22).setValues([rowData]);
         var dataRange = sheet.getRange(newRow, 1, 1, 22);
         dataRange.setHorizontalAlignment('center');

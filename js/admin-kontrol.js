@@ -1,7 +1,7 @@
 const AdminControlConfig = {
-    saatlik: 'https://script.google.com/macros/s/AKfycbyFwSoehdajKxEGYnw5UWNlPYvpVMl0WJ43i_sl3wsxdD5-AoRAMgIX3-uxXFZUfJTC-Q/exec',
-    motor: 'https://script.google.com/macros/s/AKfycbxNCwKHONUEqjf-Ptc-FuiwFPIYDjd_hLoYBgYs7uosM3eTa2gQZySnUHUQdrE55k2QaQ/exec',
-    enerji: 'https://script.google.com/macros/s/AKfycbw80nNh6VtH3ZTwSPl5Z6W4ekI65Zo1UAm9CTnR4WESugakAnMsPzfFdbemzNgqAsDHhQ/exec',
+    saatlik: 'https://script.google.com/macros/s/AKfycbyxw6Lha4yal2pAuPoBLLTBErhmoozphDNcskfjOWhqoveZxQNSvze92gniMhKvn7HWgA/exec',
+    motor: 'https://script.google.com/macros/s/AKfycbz33FlBicqkZdRw5UOdagkiZK3leF18QuVPETLK_HGysSYbDAxigev0o_UUnYxuHAr-JA/exec',
+    enerji: 'https://script.google.com/macros/s/AKfycbz18mFe34NwrPa18ARpYLvfuwZKGGGUnxuYaMwqKzVXx0ulhlB45zC1ShOZvg4dHFjfCg/exec',
     vardiya: 'https://script.google.com/macros/s/AKfycbxnCKSZtDelL04-ZQY3yx_ePSCK9Qy9R0WgFwtsFXj_B6HayfmwM8i_HYU-AAUETleSRA/exec',
     bildirim: 'https://script.google.com/macros/s/AKfycbyjW5gbtw0BRHjDlmeLYmaio0UQWw8DG1B89X85BYwI-dw4YqaTuEPYilmv6B_xrXDmTA/exec'
 };
@@ -14,6 +14,14 @@ const AdminControlLabels = {
     bildirim: 'Bildirim'
 };
 
+const AdminBackupModules = {
+    saatlik: { label: 'Saatlik Veri', urlKey: 'saatlik', params: { action: 'getRecords' } },
+    motor: { label: 'Kojen Motor', urlKey: 'motor', params: { action: 'getRecords' } },
+    enerji: { label: 'Kojen Enerji', urlKey: 'enerji', params: { action: 'getRecords' } },
+    vardiya: { label: 'Vardiya', urlKey: 'vardiya', params: { action: 'getRecords' } },
+    bildirim: { label: 'Bildirim', urlKey: 'bildirim', params: { action: 'getAnnouncements' } }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     if (!requireAdmin()) return;
 
@@ -21,12 +29,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('clearLogsBtn')?.addEventListener('click', clearLogs);
     document.getElementById('installTriggersBtn')?.addEventListener('click', installAllTriggers);
     document.getElementById('testMailBtn')?.addEventListener('click', runTestMail);
+    document.getElementById('backupAllBtn')?.addEventListener('click', runFullBackup);
+    document.querySelectorAll('[data-backup-module]').forEach(button => {
+        button.addEventListener('click', () => runModuleBackup(button.dataset.backupModule));
+    });
     document.querySelectorAll('[data-test-module]').forEach(button => {
         button.addEventListener('click', () => runModuleTest(button.dataset.testModule));
     });
 
     loadDashboard();
-    renderLogs();
 });
 
 function requireAdmin() {
@@ -59,15 +70,14 @@ async function loadDashboard() {
     if (statusGrid) statusGrid.innerHTML = loadingCard();
     if (checkList) checkList.innerHTML = '<div class="empty">Kontroller calisiyor...</div>';
 
-    const [saatlik, motor, enerji, vardiya, bildirim, saatlikHealth, motorHealth, enerjiHealth] = await Promise.all([
+    renderTriggerHealthLoading();
+
+    const [saatlik, motor, enerji, vardiya, bildirim] = await Promise.all([
         fetchJson(AdminControlConfig.saatlik, { action: 'getLastRecords', count: '24' }),
         fetchJson(AdminControlConfig.motor, { action: 'getLastRecords', count: '60' }),
         fetchJson(AdminControlConfig.enerji, { action: 'getLastRecords', count: '60' }),
         fetchJson(AdminControlConfig.vardiya, { action: 'getLastRecordsWithIslemler', count: '12' }),
-        fetchJson(AdminControlConfig.bildirim, { action: 'getAnnouncements', active: 'true' }),
-        fetchJson(AdminControlConfig.saatlik, { action: 'getTriggerHealth' }),
-        fetchJson(AdminControlConfig.motor, { action: 'getTriggerHealth' }),
-        fetchJson(AdminControlConfig.enerji, { action: 'getTriggerHealth' })
+        fetchJson(AdminControlConfig.bildirim, { action: 'getAnnouncements', active: 'true' })
     ]);
 
     const checks = [
@@ -83,11 +93,6 @@ async function loadDashboard() {
 
     if (statusGrid) statusGrid.innerHTML = checks.map(renderStatusCard).join('');
     if (checkList) checkList.innerHTML = checks.concat(qualityChecks).map(renderCheckItem).join('');
-    renderTriggerHealth([
-        { key: 'saatlik', title: 'Saatlik Veri', result: saatlikHealth },
-        { key: 'motor', title: 'Kojen Motor', result: motorHealth },
-        { key: 'enerji', title: 'Kojen Enerji', result: enerjiHealth }
-    ]);
     renderShiftCloseChecklist(shiftChecks);
     renderQualityDetails(qualityDetails);
     renderOperatorMobileSummary(checks, shiftChecks);
@@ -98,6 +103,21 @@ async function loadDashboard() {
         `${checks.length} ana kontrol, ${qualityDetails.length} kalite uyarisi`,
         checks.some(item => item.level === 'danger') ? 'warn' : 'ok'
     );
+    loadDeferredAdminData();
+}
+
+async function loadDeferredAdminData() {
+    const [saatlikHealth, motorHealth, enerjiHealth] = await Promise.all([
+        fetchJson(AdminControlConfig.saatlik, { action: 'getTriggerHealth' }),
+        fetchJson(AdminControlConfig.motor, { action: 'getTriggerHealth' }),
+        fetchJson(AdminControlConfig.enerji, { action: 'getTriggerHealth' })
+    ]);
+
+    renderTriggerHealth([
+        { key: 'saatlik', title: 'Saatlik Veri', result: saatlikHealth },
+        { key: 'motor', title: 'Kojen Motor', result: motorHealth },
+        { key: 'enerji', title: 'Kojen Enerji', result: enerjiHealth }
+    ]);
     await renderLogs();
 }
 
@@ -308,6 +328,12 @@ function renderTriggerHealth(items) {
     }).join('');
 }
 
+function renderTriggerHealthLoading() {
+    const list = document.getElementById('triggerHealthList');
+    if (!list) return;
+    list.innerHTML = '<div class="empty">Tetikleyici sagligi arka planda okunuyor...</div>';
+}
+
 function renderShiftCloseChecklist(items) {
     const list = document.getElementById('shiftCloseChecklist');
     if (!list) return;
@@ -411,6 +437,214 @@ async function runTestMail() {
     if (box) box.textContent = summary;
     await postCentralLog('Test maili', summary, result.success ? 'ok' : 'danger');
     renderLogs();
+}
+
+async function runFullBackup() {
+    const box = document.getElementById('backupResultBox');
+    setBackupStatus('Tum yedek hazirlaniyor...');
+    const keys = Object.keys(AdminBackupModules);
+    const results = await Promise.all(keys.map(key => fetchBackupModule(key)));
+    const data = {};
+    const errors = [];
+
+    results.forEach(item => {
+        data[item.key] = item.result.success ? item.result.data : [];
+        if (!item.result.success) {
+            errors.push(`${item.label}: ${item.result.error || 'Yedek alinamadi'}`);
+        }
+    });
+
+    const logs = await buildLogsBackup();
+    data.loglar = logs.data;
+    if (logs.errors.length) errors.push(...logs.errors);
+
+    const payload = createBackupPayload('tum-veriler', data, errors);
+    exportBackupPayload(payload, `kojenerasyon-tum-yedek-${fileDateStamp()}`);
+
+    const total = Object.keys(data).reduce((sum, key) => sum + (Array.isArray(data[key]) ? data[key].length : 0), 0);
+    const message = errors.length
+        ? `Yedek indirildi; ${errors.length} bolumde uyari var. Toplam ${total} kayit.`
+        : `Yedek indirildi. Toplam ${total} kayit.`;
+    if (box) box.textContent = message;
+    await postCentralLog('Veri yedegi', message, errors.length ? 'warn' : 'ok');
+}
+
+async function runModuleBackup(moduleKey) {
+    setBackupStatus(`${AdminControlLabels[moduleKey] || moduleKey} yedegi hazirlaniyor...`);
+    let payload;
+
+    if (moduleKey === 'loglar') {
+        const logs = await buildLogsBackup();
+        payload = createBackupPayload('loglar', { loglar: logs.data }, logs.errors);
+    } else {
+        const item = await fetchBackupModule(moduleKey);
+        const errors = item.result.success ? [] : [item.result.error || 'Yedek alinamadi'];
+        payload = createBackupPayload(moduleKey, { [moduleKey]: item.result.success ? item.result.data : [] }, errors);
+    }
+
+    exportBackupPayload(payload, `kojenerasyon-${moduleKey}-yedek-${fileDateStamp()}`);
+    const count = Object.values(payload.data).reduce((sum, value) => sum + (Array.isArray(value) ? value.length : 0), 0);
+    const message = `${payload.title} yedegi indirildi. Kayit: ${count}${payload.errors.length ? ', uyari: ' + payload.errors.length : ''}.`;
+    setBackupStatus(message);
+    await postCentralLog('Modul yedegi', message, payload.errors.length ? 'warn' : 'ok');
+}
+
+async function fetchBackupModule(moduleKey) {
+    const config = AdminBackupModules[moduleKey];
+    if (!config) {
+        return { key: moduleKey, label: moduleKey, result: { success: false, error: 'Bilinmeyen modul' } };
+    }
+    const result = await fetchJson(AdminControlConfig[config.urlKey], config.params);
+    return { key: moduleKey, label: config.label, result };
+}
+
+async function buildLogsBackup() {
+    const errors = [];
+    const remoteLogs = await fetchAllSystemLogs().catch(error => {
+        errors.push(error.message || String(error));
+        return [];
+    });
+    const localLogs = window.SystemAuditLog?.read?.() || [];
+    return {
+        data: remoteLogs.concat(localLogs.map(log => ({
+            kayitZamani: log.at,
+            modul: log.page,
+            eksikKayit: log.action,
+            otomatikKayitSonucu: log.status,
+            detay: log.detail,
+            kaynak: 'local'
+        }))),
+        errors
+    };
+}
+
+function createBackupPayload(title, data, errors) {
+    return {
+        title,
+        createdAt: new Date().toISOString(),
+        createdAtLocal: new Date().toLocaleString('tr-TR'),
+        version: 1,
+        data,
+        errors: errors || []
+    };
+}
+
+function exportBackupPayload(payload, fileBaseName) {
+    const format = getBackupFormat();
+    if (format === 'excel') {
+        downloadExcelBackup(payload, `${fileBaseName}.xls`);
+        return;
+    }
+    if (format === 'pdf') {
+        openPdfBackup(payload);
+        return;
+    }
+    downloadJsonBackup(payload, `${fileBaseName}.json`);
+}
+
+function getBackupFormat() {
+    return document.getElementById('backupFormatSelect')?.value || 'json';
+}
+
+function downloadJsonBackup(payload, fileName) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+    downloadBlob(blob, fileName);
+}
+
+function downloadExcelBackup(payload, fileName) {
+    const html = buildExcelHtml(payload);
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    downloadBlob(blob, fileName);
+}
+
+function downloadBlob(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
+function openPdfBackup(payload) {
+    const win = window.open('', '_blank');
+    if (!win) {
+        setBackupStatus('PDF penceresi acilamadi. Tarayici popup iznini kontrol edin.');
+        return;
+    }
+    win.document.open();
+    win.document.write(buildPdfHtml(payload));
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
+}
+
+function buildExcelHtml(payload) {
+    const sections = Object.keys(payload.data || {}).map(key => {
+        const rows = Array.isArray(payload.data[key]) ? payload.data[key] : [];
+        return `<h2>${escapeHtml(getBackupSectionTitle(key))}</h2>${buildHtmlTable(rows)}`;
+    }).join('<br>');
+    return `\uFEFF<html><head><meta charset="UTF-8"></head><body>
+        <h1>${escapeHtml(payload.title)}</h1>
+        <p>Olusturma: ${escapeHtml(payload.createdAtLocal)}</p>
+        ${sections}
+        ${payload.errors.length ? `<h2>Uyarilar</h2><p>${escapeHtml(payload.errors.join(' | '))}</p>` : ''}
+    </body></html>`;
+}
+
+function buildPdfHtml(payload) {
+    const sections = Object.keys(payload.data || {}).map(key => {
+        const rows = Array.isArray(payload.data[key]) ? payload.data[key] : [];
+        return `<section><h2>${escapeHtml(getBackupSectionTitle(key))} (${rows.length})</h2>${buildHtmlTable(rows.slice(0, 250))}${rows.length > 250 ? '<p>PDF on izlemede ilk 250 kayit gosterildi. Tum kayitlar icin JSON/Excel alin.</p>' : ''}</section>`;
+    }).join('');
+    return `<!doctype html><html><head><meta charset="UTF-8"><title>${escapeHtml(payload.title)}</title>
+        <style>
+            body{font-family:Arial,sans-serif;color:#172033;margin:24px}
+            h1{font-size:22px;margin-bottom:4px} h2{font-size:16px;margin-top:22px}
+            p{color:#64748b} table{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}
+            th,td{border:1px solid #d9e2ef;padding:5px;text-align:left;vertical-align:top}
+            th{background:#eef4ff} section{page-break-inside:auto}
+            @media print{button{display:none} body{margin:10mm}}
+        </style></head><body>
+        <button onclick="window.print()">PDF Kaydet / Yazdir</button>
+        <h1>${escapeHtml(payload.title)}</h1>
+        <p>Olusturma: ${escapeHtml(payload.createdAtLocal)}</p>
+        ${sections}
+        ${payload.errors.length ? `<h2>Uyarilar</h2><p>${escapeHtml(payload.errors.join(' | '))}</p>` : ''}
+    </body></html>`;
+}
+
+function buildHtmlTable(rows) {
+    if (!rows.length) return '<p>Kayit yok.</p>';
+    const columns = Array.from(rows.reduce((set, row) => {
+        Object.keys(row || {}).forEach(key => set.add(key));
+        return set;
+    }, new Set()));
+    return `<table><thead><tr>${columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}</tr></thead><tbody>
+        ${rows.map(row => `<tr>${columns.map(col => `<td>${escapeHtml(formatBackupCell(row?.[col]))}</td>`).join('')}</tr>`).join('')}
+    </tbody></table>`;
+}
+
+function formatBackupCell(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+}
+
+function getBackupSectionTitle(key) {
+    return AdminBackupModules[key]?.label || (key === 'loglar' ? 'Loglar' : key);
+}
+
+function setBackupStatus(message) {
+    const box = document.getElementById('backupResultBox');
+    if (box) box.textContent = message;
+}
+
+function fileDateStamp() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
 }
 
 async function renderLogs() {
