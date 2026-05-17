@@ -52,6 +52,9 @@ function handleRequest(e) {
       case 'addIslem':
         result = addIslem(e.parameter);
         break;
+      case 'updateDevredenIsler':
+        result = updateDevredenIsler(e.parameter);
+        break;
       case 'getIslemlerByVardiyaId':
         result = getIslemlerByVardiyaId(e.parameter.vardiyaId);
         break;
@@ -305,6 +308,53 @@ function endVardiya(data) {
 }
 
 // Kayıt güncelle
+function updateDevredenIsler(data) {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = spreadsheet.getSheetByName('VardiyaTakip');
+
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: false, error: 'Vardiya kaydi bulunamadi!' };
+    }
+
+    var devredenColumn = ensureVardiyaDevredenIslerColumn(sheet);
+    var lastRow = sheet.getLastRow();
+    var ids = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
+    var dates = sheet.getRange(2, 2, lastRow - 1, 1).getDisplayValues();
+    var vardiyas = sheet.getRange(2, 3, lastRow - 1, 1).getDisplayValues();
+    var targetId = String(data.id || data.vardiyaId || '').trim();
+    var targetTarih = formatDateTR(data.tarih || '');
+    var targetVardiya = String(data.vardiya || '').trim();
+    var foundRow = -1;
+
+    for (var i = 0; i < ids.length; i++) {
+      var idMatches = targetId && String(ids[i][0] || '').trim() === targetId;
+      var dateShiftMatches = targetTarih && targetVardiya && dates[i][0] === targetTarih && vardiyas[i][0] === targetVardiya;
+      if (idMatches || dateShiftMatches) {
+        foundRow = i + 2;
+        break;
+      }
+    }
+
+    if (foundRow === -1) {
+      return { success: false, error: 'Devreden isler icin vardiya kaydi bulunamadi!' };
+    }
+
+    sheet.getRange(foundRow, devredenColumn).setValue(data.devredenIsler || '');
+
+    return {
+      success: true,
+      message: 'Devreden isler kaydedildi',
+      data: {
+        id: sheet.getRange(foundRow, 1).getDisplayValue(),
+        devredenIsler: data.devredenIsler || ''
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
 function updateRecord(data) {
   try {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();

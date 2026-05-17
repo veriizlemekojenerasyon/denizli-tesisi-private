@@ -72,11 +72,11 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
     
     // Vardiya Google Apps Script URL
-    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWUsx0E6N3shAbO8m3bgRtkdanajrXfGAuGyI-IJL5sAqQ8fKqW4_hHHbEXIk33Qi20g/exec';
+    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbylytHcQf5Uf_exGe9UZxwie9r8xzYhKFzRcrEBd0OLm7rXjulkkMd33O63rn0KL3QXeg/exec';
     const VARDIYA_CONTROL_URLS = {
         saatlik: 'https://script.google.com/macros/s/AKfycbwNEMx76k1ZE6dNWP7XtoxY8NCc7eDzF31Utfd6I03qXDlQVPaAH7iJRcWvDL9ED7yzqQ/exec',
         motor: 'https://script.google.com/macros/s/AKfycbzqMKhkZXsKyywOZ3D-Ks3xzLz4HxBeR6vkLUdD57nfgcgf5NJleuAt24uv1-1Av7-jHQ/exec',
-        enerji: 'https://script.google.com/macros/s/AKfycbw0sWjTQ6wUrBC1zGfVYQxWZFyhlo6Pz3AR-F5Lp81ppd_vRl_pGNdKxVtBD6jPk155zA/exec',
+        enerji: 'https://script.google.com/macros/s/AKfycbxWFpI3J4TLm0WTccaT0pNYe9TUZdn6I4to1R-GaAQuXSKHzMr3FW43m5e0BjDUEKb72Q/exec',
         bildirim: 'https://script.google.com/macros/s/AKfycbyjW5gbtw0BRHjDlmeLYmaio0UQWw8DG1B89X85BYwI-dw4YqaTuEPYilmv6B_xrXDmTA/exec'
     };
     
@@ -705,7 +705,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // İşlemi olan vardiyaları filtrele
             const islemliVardiyalar = tumVardiyaKayitlari.filter(vardiya => {
                 const islemler = vardiyaIslemleriMap.get(vardiya.id);
-                return islemler && islemler.length > 0;
+                return (islemler && islemler.length > 0) || !!vardiya.devredenIsler;
             });
             
             if (islemliVardiyalar.length > 0) {
@@ -738,6 +738,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 `).join('') : 
                                                 '<div class="bos-mesaj">Bu vardiya için işlem kaydedilmemiş.</div>'
                                             }
+                                            ${vardiya.devredenIsler ? `
+                                                <div class="islem-item">
+                                                    <div class="islem-baslik">Devreden Isler</div>
+                                                    <div class="islem-zaman">${vardiya.devredenIsler}</div>
+                                                </div>
+                                            ` : ''}
                                         </div>
                                     </div>
                                 `;
@@ -851,8 +857,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     islemKaydetmeBtn.addEventListener('click', async function() {
         const aciklama = islemAciklama.value.trim();
+        const devredenIsler = devredenIslerInput?.value.trim() || '';
         
-        if (!aciklama) {
+        if (!aciklama && !devredenIsler) {
             alert('Lütfen işlem açıklamasını girin!');
             return;
         }
@@ -871,6 +878,29 @@ document.addEventListener('DOMContentLoaded', function() {
         islemKaydetmeBtn.disabled = true;
         
         try {
+            if (!aciklama && devredenIsler) {
+                const devredenUrl = new URL(VARDIYA_APPS_SCRIPT_URL);
+                devredenUrl.searchParams.append('action', 'updateDevredenIsler');
+                devredenUrl.searchParams.append('vardiyaId', vardiya.id);
+                devredenUrl.searchParams.append('tarih', toIsoDateParam(vardiya.tarih));
+                devredenUrl.searchParams.append('vardiya', vardiya.vardiya || vardiyaSelect.value);
+                devredenUrl.searchParams.append('devredenIsler', devredenIsler);
+
+                const devredenResponse = await fetch(devredenUrl);
+                const devredenResult = await devredenResponse.json();
+
+                if (devredenResult.success) {
+                    vardiya.devredenIsler = devredenIsler;
+                    localStorage.setItem('mevcutVardiya', JSON.stringify(vardiya));
+                    window.SystemAuditLog?.write?.('Vardiya devreden isi kaydedildi', devredenIsler.slice(0, 80), 'ok');
+                    alert('Devreden isler kaydedildi!');
+                    haftalikVardiyaKayitlariniGoster();
+                } else {
+                    alert('Hata: ' + (devredenResult.error || 'Devreden isler kaydedilemedi!'));
+                }
+                return;
+            }
+
             // Google Sheets'e işlem kaydet
             const url = new URL(VARDIYA_APPS_SCRIPT_URL);
             url.searchParams.append('action', 'addIslem');
@@ -881,8 +911,21 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const response = await fetch(url);
             const result = await response.json();
+
+            let devredenResult = { success: true };
+            if (devredenIsler) {
+                const devredenUrl = new URL(VARDIYA_APPS_SCRIPT_URL);
+                devredenUrl.searchParams.append('action', 'updateDevredenIsler');
+                devredenUrl.searchParams.append('vardiyaId', vardiya.id);
+                devredenUrl.searchParams.append('tarih', toIsoDateParam(vardiya.tarih));
+                devredenUrl.searchParams.append('vardiya', vardiya.vardiya || vardiyaSelect.value);
+                devredenUrl.searchParams.append('devredenIsler', devredenIsler);
+
+                const devredenResponse = await fetch(devredenUrl);
+                devredenResult = await devredenResponse.json();
+            }
             
-            if (result.success) {
+            if (result.success && devredenResult.success) {
                 const yeniIslem = {
                     islem: aciklama,
                     zaman: new Date().toLocaleString('tr-TR'),
@@ -894,11 +937,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     vardiya.islemler = [];
                 }
                 vardiya.islemler.push(yeniIslem);
+                if (devredenIsler) {
+                    vardiya.devredenIsler = devredenIsler;
+                }
                 localStorage.setItem('mevcutVardiya', JSON.stringify(vardiya));
-                window.SystemAuditLog?.write?.('Vardiya islemi eklendi', islemAciklama.value.trim().slice(0, 80), 'ok');
+                window.SystemAuditLog?.write?.('Vardiya islemi/devreden isi kaydedildi', (aciklama || devredenIsler).slice(0, 80), 'ok');
                 
                 // Alanı temizle
                 islemAciklama.value = '';
+                haftalikVardiyaKayitlariniGoster();
                 
                 alert('İşlem başarıyla kaydedildi! (ID: ' + result.data.id + ')');
             } else {
@@ -920,7 +967,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Loading mesajı göster
         haftalikVardiyaTableBody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
+                <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
                     Kayıtlar yükleniyor...
                 </td>
             </tr>
@@ -938,7 +985,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!result.success) {
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #e74c3c; padding: 20px;">
+                        <td colspan="8" style="text-align: center; color: #e74c3c; padding: 20px;">
                             Kayıtlar yüklenemedi: ${result.error || 'Bilinmeyen hata'}
                         </td>
                     </tr>
@@ -954,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tumIslemler.length === 0) {
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
+                        <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
                             Vardiya kaydı bulunamadı.
                         </td>
                     </tr>
@@ -984,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!baslangicDate || !bitisDate) {
                     haftalikVardiyaTableBody.innerHTML = `
                         <tr>
-                            <td colspan="7" style="text-align: center; color: #e74c3c; padding: 20px;">
+                            <td colspan="8" style="text-align: center; color: #e74c3c; padding: 20px;">
                                 Tarih araligi gecersiz.
                             </td>
                         </tr>
@@ -1000,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Tarih girilmediyse kayıtları gösterme
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
+                        <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
                             Tarih aralığı seçin.
                         </td>
                     </tr>
@@ -1015,7 +1062,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">
+                        <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
                             ${mesaj}
                         </td>
                     </tr>
@@ -1034,9 +1081,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // İşlem detaylarını formatla (VardiyaIslemleri sheet'inden)
                 let islemDetaylariText = '-';
                 const islemler = vardiyaIslemleriMap.get(vardiya.id) || [];
+                const detaylar = [];
+                const devredenIslerText = vardiya.devredenIsler || '-';
                 
                 if (islemler.length > 0) {
-                    islemDetaylariText = islemler.map(i => `${i.islem} (${i.zaman})`).join(' | ');
+                    detaylar.push(...islemler.map(i => `${i.islem} (${i.zaman})`));
+                }
+                if (detaylar.length > 0) {
+                    islemDetaylariText = detaylar.join(' | ');
                 }
                 
                 tr.innerHTML = `
@@ -1047,6 +1099,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>${vardiya.baslangicSaati || '-'}</td>
                     <td>${vardiya.bitisSaati || '-'}</td>
                     <td>${islemDetaylariText}</td>
+                    <td>${devredenIslerText}</td>
                 `;
                 
                 haftalikVardiyaTableBody.appendChild(tr);
@@ -1055,7 +1108,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Vardiya kayıtları yükleme hatası:', error);
             haftalikVardiyaTableBody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; color: #e74c3c; padding: 20px;">
+                    <td colspan="8" style="text-align: center; color: #e74c3c; padding: 20px;">
                         Bağlantı hatası! Kayıtlar yüklenemedi.
                     </td>
                 </tr>

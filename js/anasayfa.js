@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Günlük özet verileri
     const summaryData = {
+        dailyProduction: 0,
         dailySteam: null, // Buhar verisinden çekilecek
         pendingMaintenance: 3,
         activeFaults: 1
@@ -30,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Buhar verisi config
     const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAI0OS8V5naHu1-k0c57QwZTJgt2WeVX8pmmeT45d56wZqiFyCHv8jMLu-1StLSfwy1Q/exec';
-    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0sWjTQ6wUrBC1zGfVYQxWZFyhlo6Pz3AR-F5Lp81ppd_vRl_pGNdKxVtBD6jPk155zA/exec';
+    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxWFpI3J4TLm0WTccaT0pNYe9TUZdn6I4to1R-GaAQuXSKHzMr3FW43m5e0BjDUEKb72Q/exec';
     const KOJEN_MOTOR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqMKhkZXsKyywOZ3D-Ks3xzLz4HxBeR6vkLUdD57nfgcgf5NJleuAt24uv1-1Av7-jHQ/exec';
     const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyimCmn6QQy0hl__KEqcLl_xd0rLjW9S-tS7vWU-nqwepH2Ur4tCDbzMvBafuSLrhQkEw/exec';
     const ANNOUNCEMENTS_STORAGE_KEY = 'shiftAnnouncements';
@@ -118,6 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (result.summary) {
+                summaryData.dailyProduction = parseDashboardNumber(result.summary.dailyProduction);
                 summaryData.dailySteam = result.summary.dailySteam === null || result.summary.dailySteam === undefined
                     ? null
                     : parseDashboardNumber(result.summary.dailySteam);
@@ -295,6 +297,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Özet verilerini güncelle
     function updateSummaryData() {
+        const dailyProductionEl = document.getElementById('daily-production-value');
+        if (dailyProductionEl) {
+            animateValue(dailyProductionEl, 0, summaryData.dailyProduction, 1500, ' MWh');
+        }
+
         // Günlük buhar
         const dailySteamEl = document.getElementById('daily-steam-value');
         if (dailySteamEl && summaryData.dailySteam !== null) {

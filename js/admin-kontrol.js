@@ -1,10 +1,10 @@
 const AdminControlConfig = {
     saatlik: 'https://script.google.com/macros/s/AKfycbwNEMx76k1ZE6dNWP7XtoxY8NCc7eDzF31Utfd6I03qXDlQVPaAH7iJRcWvDL9ED7yzqQ/exec',
     motor: 'https://script.google.com/macros/s/AKfycbzqMKhkZXsKyywOZ3D-Ks3xzLz4HxBeR6vkLUdD57nfgcgf5NJleuAt24uv1-1Av7-jHQ/exec',
-    enerji: 'https://script.google.com/macros/s/AKfycbw0sWjTQ6wUrBC1zGfVYQxWZFyhlo6Pz3AR-F5Lp81ppd_vRl_pGNdKxVtBD6jPk155zA/exec',
+    enerji: 'https://script.google.com/macros/s/AKfycbxWFpI3J4TLm0WTccaT0pNYe9TUZdn6I4to1R-GaAQuXSKHzMr3FW43m5e0BjDUEKb72Q/exec',
     buhar: 'https://script.google.com/macros/s/AKfycbwAI0OS8V5naHu1-k0c57QwZTJgt2WeVX8pmmeT45d56wZqiFyCHv8jMLu-1StLSfwy1Q/exec',
     gunluk: 'https://script.google.com/macros/s/AKfycbyJILN_PHL9Tw_BxRf_TuAOOsc7YqpmYQCgc-MYuhNJeRgiL9P9tczw2njQ7HndQE_8XA/exec',
-    vardiya: 'https://script.google.com/macros/s/AKfycbxnCKSZtDelL04-ZQY3yx_ePSCK9Qy9R0WgFwtsFXj_B6HayfmwM8i_HYU-AAUETleSRA/exec',
+    vardiya: 'https://script.google.com/macros/s/AKfycbylytHcQf5Uf_exGe9UZxwie9r8xzYhKFzRcrEBd0OLm7rXjulkkMd33O63rn0KL3QXeg/exec',
     bildirim: 'https://script.google.com/macros/s/AKfycbyjW5gbtw0BRHjDlmeLYmaio0UQWw8DG1B89X85BYwI-dw4YqaTuEPYilmv6B_xrXDmTA/exec'
 };
 

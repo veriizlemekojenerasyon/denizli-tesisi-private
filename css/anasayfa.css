@@ -640,6 +640,11 @@ body {
 }
 
 /* Kart Renkleri */
+.summary-card.production .card-icon {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
+}
+
 .summary-card.steam .card-icon {
     background: linear-gradient(135deg, #3498db, #2980b9);
     box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);

@@ -595,6 +595,7 @@ function getDashboardSummary(tarih) {
   var targetTarih = normalizeDateTR(tarih || Utilities.formatDate(startedAt, Session.getScriptTimeZone(), 'dd.MM.yyyy'));
   var motorData = createEmptyDashboardMotors();
   var summary = {
+    dailyProduction: 0,
     dailySteam: null,
     pendingMaintenance: 0,
     activeFaults: 0
@@ -602,6 +603,8 @@ function getDashboardSummary(tarih) {
   var errors = [];
 
   try {
+    summary.dailyProduction = getDashboardDailyProductionMwh(targetTarih);
+
     var latestEnergy = getLastRecords(100);
     if (latestEnergy.success && latestEnergy.data) {
       applyLatestEnergyToDashboard(motorData, latestEnergy.data);
@@ -644,6 +647,43 @@ function createEmptyDashboardMotors() {
     gm2: { totalProduction: 0, totalHours: 0, status: 'stopped' },
     gm3: { totalProduction: 0, totalHours: 0, status: 'stopped' }
   };
+}
+
+function getDashboardDailyProductionMwh(tarih) {
+  var motors = ['GM-1', 'GM-2', 'GM-3'];
+  var totalMwh = 0;
+
+  for (var i = 0; i < motors.length; i++) {
+    var sheet = getEnerjiSheetIfExists(motors[i]);
+    if (!sheet || sheet.getLastRow() < 2) continue;
+
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues();
+    var records = [];
+    for (var j = 0; j < rows.length; j++) {
+      var record = mapEnerjiRow(rows[j]);
+      if (String(record.tarih || '').trim() === tarih) {
+        records.push(record);
+      }
+    }
+
+    records.sort(function(a, b) {
+      return parseDateTimeTR(a.tarih, a.saat) - parseDateTimeTR(b.tarih, b.saat);
+    });
+
+    var firstEnergy = null;
+    var lastEnergy = null;
+    for (var k = 0; k < records.length; k++) {
+      var energy = parseEnerjiNumber(records[k].toplamAktifEnerji);
+      if (firstEnergy === null) firstEnergy = energy;
+      lastEnergy = energy;
+    }
+
+    if (firstEnergy !== null && lastEnergy !== null) {
+      totalMwh += Math.max(0, lastEnergy - firstEnergy);
+    }
+  }
+
+  return totalMwh;
 }
 
 function getDashboardMotorKey(value) {
@@ -937,11 +977,11 @@ function buildYearlyEnergyRecordLookup(motor, year) {
 
 function buildYearlyEnergySlotOutput(record, previousEnergy, previousHours) {
   if (record) {
-    var hourlyKwh = previousEnergy === null ? 0 : Math.max(0, record.toplamAktifEnerji - previousEnergy);
+    var hourlyMwh = previousEnergy === null ? 0 : Math.max(0, record.toplamAktifEnerji - previousEnergy);
     return {
       calismaSaati: record.calismaSaati,
       toplamAktifEnerji: record.toplamAktifEnerji,
-      saatlikUretim: hourlyKwh / 1000,
+      saatlikUretim: hourlyMwh,
       nextEnergy: record.toplamAktifEnerji,
       nextHours: record.calismaSaati
     };
@@ -993,7 +1033,7 @@ function renderYearlyEnergySheet(sheet, model) {
 
     values[0][startCol] = day.headerText;
     values[1][startCol] = 'Calisma Saati';
-    values[1][startCol + 1] = 'Toplam Aktif Enerji (kWh)';
+    values[1][startCol + 1] = 'Toplam Aktif Enerji (MWh)';
     values[1][startCol + 2] = 'Saatlik Uretim (MW)';
     backgrounds[0][startCol] = '#c4d79b';
     backgrounds[0][startCol + 1] = '#c4d79b';
@@ -1234,7 +1274,7 @@ function renderYearlyEnergyDayBlock(sheet, model, dayIndex) {
   titleRange.setBackground('#c4d79b');
 
   var headerRange = sheet.getRange(2, startCol, 1, 3);
-  headerRange.setValues([['Calisma Saati', 'Toplam Aktif Enerji (kWh)', 'Saatlik Uretim (MW)']]);
+  headerRange.setValues([['Calisma Saati', 'Toplam Aktif Enerji (MWh)', 'Saatlik Uretim (MW)']]);
   headerRange.setFontWeight('bold');
   headerRange.setHorizontalAlignment('center');
   headerRange.setWrap(true);
@@ -1314,7 +1354,8 @@ function updateYearlyEnergySummaryDayBlocks(year, dates) {
     }
 
     var updatedDates = [];
-    ensureSheetGridSize(sheet, model.days.length * 5, 5);
+    ensureSheetGridSize(sheet, getYearlyEnergySummaryRowCount(), getYearlyEnergySummaryColumnCount(model));
+    renderYearlyEnergySummaryLabels(sheet);
 
     for (var i = 0; i < dates.length; i++) {
       var date = parseEnerjiDateOnly(dates[i]);
@@ -1424,11 +1465,13 @@ function buildYearlyEnergyDailyMetric(rows) {
 }
 
 function renderYearlyEnergySummarySheet(sheet, model) {
-  var totalRows = model.days.length * 5;
+  var totalRows = getYearlyEnergySummaryRowCount();
+  var totalCols = getYearlyEnergySummaryColumnCount(model);
   backupSheetBeforeFullRender(sheet, 'Yillik enerji toplam tam guncelleme');
-  ensureSheetGridSize(sheet, totalRows, 5);
+  ensureSheetGridSize(sheet, totalRows, totalCols);
   sheet.getDataRange().breakApart();
   sheet.clear();
+  renderYearlyEnergySummaryLabels(sheet);
 
   for (var i = 0; i < model.days.length; i++) {
     renderYearlyEnergySummaryBlock(sheet, model.days[i], i);
@@ -1438,53 +1481,91 @@ function renderYearlyEnergySummarySheet(sheet, model) {
 }
 
 function renderYearlyEnergySummaryBlock(sheet, day, dayIndex) {
-  var startRow = 1 + (dayIndex * 5);
+  var startCol = 2 + (dayIndex * 4);
   var values = [
-    [day.headerText, '', '', '', ''],
-    ['', 'GM1', 'GM2', 'GM3', 'TOPLAM'],
-    ['Uretim (MWh)', day.gm1.productionMwh, day.gm2.productionMwh, day.gm3.productionMwh, day.total.productionMwh],
-    ['Calisma Saati', day.gm1.hours, day.gm2.hours, day.gm3.hours, day.total.hours],
-    ['Ort. Guc (MW)', day.gm1.averageMw, day.gm2.averageMw, day.gm3.averageMw, day.total.averageMw]
+    [day.headerText, '', '', ''],
+    ['GM1', 'GM2', 'GM3', 'TOPLAM'],
+    [day.gm1.productionMwh, day.gm2.productionMwh, day.gm3.productionMwh, day.total.productionMwh],
+    [day.gm1.hours, day.gm2.hours, day.gm3.hours, day.total.hours],
+    [day.gm1.averageMw, day.gm2.averageMw, day.gm3.averageMw, day.total.averageMw]
   ];
   var backgrounds = [
-    ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#cfe2f3'],
-    ['#f3f3f3', '#ffffff', '#ffffff', '#ffffff', '#cfe2f3'],
-    ['#f3f3f3', '#ffffff', '#ffffff', '#ffffff', '#cfe2f3'],
-    ['#f3f3f3', '#ffffff', '#ffffff', '#ffffff', '#cfe2f3'],
-    ['#f3f3f3', '#ffffff', '#ffffff', '#ffffff', '#cfe2f3']
+    ['#ffffff', '#ffffff', '#ffffff', '#cfe2f3'],
+    ['#f3f3f3', '#f3f3f3', '#f3f3f3', '#cfe2f3'],
+    ['#ffffff', '#ffffff', '#ffffff', '#cfe2f3'],
+    ['#ffffff', '#ffffff', '#ffffff', '#cfe2f3'],
+    ['#ffffff', '#ffffff', '#ffffff', '#cfe2f3']
   ];
 
-  var titleRange = sheet.getRange(startRow, 1, 1, 5);
+  var titleRange = sheet.getRange(1, startCol, 1, 4);
   titleRange.breakApart();
-  sheet.getRange(startRow, 1, 5, 5).setValues(values);
-  sheet.getRange(startRow, 1, 5, 5).setBackgrounds(backgrounds);
+  sheet.getRange(1, startCol, 5, 4).setValues(values);
+  sheet.getRange(1, startCol, 5, 4).setBackgrounds(backgrounds);
   titleRange.merge();
   titleRange.setValue(day.headerText);
   titleRange.setFontWeight('bold');
   titleRange.setHorizontalAlignment('center');
-  sheet.getRange(startRow + 1, 1, 1, 5).setFontWeight('bold');
-  sheet.getRange(startRow, 1, 5, 5)
+  sheet.getRange(2, startCol, 1, 4).setFontWeight('bold');
+  sheet.getRange(1, startCol, 5, 4)
     .setHorizontalAlignment('center')
     .setVerticalAlignment('middle')
     .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
-  sheet.getRange(startRow + 2, 2, 1, 4).setNumberFormat('0.#');
-  sheet.getRange(startRow + 3, 2, 1, 4).setNumberFormat('0.#');
-  sheet.getRange(startRow + 4, 2, 1, 4).setNumberFormat('0.##');
+  sheet.getRange(3, startCol, 1, 4).setNumberFormat('0.#');
+  sheet.getRange(4, startCol, 1, 4).setNumberFormat('0.#');
+  sheet.getRange(5, startCol, 1, 4).setNumberFormat('0.##');
 }
 
 function shouldRenderFullYearlyEnergySummarySheet(sheet, model) {
-  return sheet.getLastRow() < model.days.length * 5 || sheet.getLastColumn() < 5;
+  return sheet.getLastRow() < getYearlyEnergySummaryRowCount() ||
+    sheet.getLastColumn() < getYearlyEnergySummaryColumnCount(model) ||
+    String(sheet.getRange(3, 1).getDisplayValue()).trim() !== 'Uretim (MWh)';
 }
 
 function formatYearlyEnergySummarySheet(sheet, dayCount) {
-  sheet.setFrozenRows(0);
+  var totalCols = 1 + (dayCount * 4);
+  sheet.setFrozenRows(2);
   sheet.setFrozenColumns(1);
-  sheet.setColumnWidth(1, 110);
-  sheet.setColumnWidth(2, 80);
-  sheet.setColumnWidth(3, 80);
-  sheet.setColumnWidth(4, 80);
-  sheet.setColumnWidth(5, 90);
-  sheet.getRange(1, 1, Math.max(dayCount * 5, 1), 5).setFontSize(10);
+  sheet.setColumnWidth(1, 125);
+  for (var i = 0; i < dayCount; i++) {
+    var startCol = 2 + (i * 4);
+    sheet.setColumnWidth(startCol, 75);
+    sheet.setColumnWidth(startCol + 1, 75);
+    sheet.setColumnWidth(startCol + 2, 75);
+    sheet.setColumnWidth(startCol + 3, 90);
+  }
+  sheet.getRange(1, 1, getYearlyEnergySummaryRowCount(), Math.max(totalCols, 1)).setFontSize(10);
+}
+
+function renderYearlyEnergySummaryLabels(sheet) {
+  var values = [
+    ['Tarih'],
+    ['Motor'],
+    ['Uretim (MWh)'],
+    ['Calisma Saati'],
+    ['Ort. Guc (MW)']
+  ];
+  var backgrounds = [
+    ['#ffffff'],
+    ['#f3f3f3'],
+    ['#f3f3f3'],
+    ['#f3f3f3'],
+    ['#f3f3f3']
+  ];
+  var range = sheet.getRange(1, 1, getYearlyEnergySummaryRowCount(), 1);
+  range.setValues(values);
+  range.setBackgrounds(backgrounds);
+  range.setFontWeight('bold');
+  range.setHorizontalAlignment('center');
+  range.setVerticalAlignment('middle');
+  range.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+}
+
+function getYearlyEnergySummaryRowCount() {
+  return 5;
+}
+
+function getYearlyEnergySummaryColumnCount(model) {
+  return 1 + ((model.days || []).length * 4);
 }
 
 function backupYearlyEnergySheets(year) {
