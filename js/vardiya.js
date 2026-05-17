@@ -72,11 +72,11 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
     
     // Vardiya Google Apps Script URL
-    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnCKSZtDelL04-ZQY3yx_ePSCK9Qy9R0WgFwtsFXj_B6HayfmwM8i_HYU-AAUETleSRA/exec';
+    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWUsx0E6N3shAbO8m3bgRtkdanajrXfGAuGyI-IJL5sAqQ8fKqW4_hHHbEXIk33Qi20g/exec';
     const VARDIYA_CONTROL_URLS = {
-        saatlik: 'https://script.google.com/macros/s/AKfycbyxw6Lha4yal2pAuPoBLLTBErhmoozphDNcskfjOWhqoveZxQNSvze92gniMhKvn7HWgA/exec',
-        motor: 'https://script.google.com/macros/s/AKfycbz33FlBicqkZdRw5UOdagkiZK3leF18QuVPETLK_HGysSYbDAxigev0o_UUnYxuHAr-JA/exec',
-        enerji: 'https://script.google.com/macros/s/AKfycbwM-Ulgf4QuvdZ_jnl5Po4qUecOZ5VJaWpazXzUSGFvOLDtG7-lyHwLuHOq1Bk2mTahyQ/exec',
+        saatlik: 'https://script.google.com/macros/s/AKfycbwNEMx76k1ZE6dNWP7XtoxY8NCc7eDzF31Utfd6I03qXDlQVPaAH7iJRcWvDL9ED7yzqQ/exec',
+        motor: 'https://script.google.com/macros/s/AKfycbzqMKhkZXsKyywOZ3D-Ks3xzLz4HxBeR6vkLUdD57nfgcgf5NJleuAt24uv1-1Av7-jHQ/exec',
+        enerji: 'https://script.google.com/macros/s/AKfycbw0sWjTQ6wUrBC1zGfVYQxWZFyhlo6Pz3AR-F5Lp81ppd_vRl_pGNdKxVtBD6jPk155zA/exec',
         bildirim: 'https://script.google.com/macros/s/AKfycbyjW5gbtw0BRHjDlmeLYmaio0UQWw8DG1B89X85BYwI-dw4YqaTuEPYilmv6B_xrXDmTA/exec'
     };
     
@@ -89,9 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const temizleBtn = document.getElementById('temizleBtn');
     const islemKaydetBtn = document.getElementById('islemKaydetBtn');
     const vardiyaBitirBtn = document.getElementById('vardiyaBitirBtn');
-    const teslimOzetiInput = document.getElementById('teslimOzeti');
     const devredenIslerInput = document.getElementById('devredenIsler');
-    const dikkatNotuInput = document.getElementById('dikkatNotu');
     
     // Haftalık vardiya kayıtları elementleri
     const baslangicTarihInput = document.getElementById('baslangicTarih');
@@ -385,14 +383,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const mevcutVardiya = localStorage.getItem('mevcutVardiya');
             if (mevcutVardiya) {
                 const vardiya = JSON.parse(mevcutVardiya);
-                const teslimOzeti = teslimOzetiInput?.value.trim() || '';
-
-                if (teslimOzeti.length < 10) {
-                    alert('Vardiya bitirmek icin teslim ozeti zorunludur. En az 10 karakterlik kisa ozet yazin.');
-                    teslimOzetiInput?.focus();
-                    return;
-                }
-                
                 // Buton loading durumu
                 vardiyaBitirBtn.textContent = 'BİTİRİLİYOR...';
                 vardiyaBitirBtn.disabled = true;
@@ -416,9 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     url.searchParams.append('id', vardiya.id || '');
                     url.searchParams.append('tarih', formattedTarih);
                     url.searchParams.append('vardiya', vardiya.vardiya || vardiyaSelect.value);
-                    url.searchParams.append('teslimOzeti', teslimOzeti);
                     url.searchParams.append('devredenIsler', devredenIslerInput?.value.trim() || '');
-                    url.searchParams.append('dikkatNotu', dikkatNotuInput?.value.trim() || '');
                     
                     const response = await fetch(url);
                     const result = await response.json();
@@ -427,9 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         localStorage.removeItem('mevcutVardiya');
                         document.getElementById('mevcutVardiya').style.display = 'none';
                         personelSelect.value = '';
-                        if (teslimOzetiInput) teslimOzetiInput.value = '';
                         if (devredenIslerInput) devredenIslerInput.value = '';
-                        if (dikkatNotuInput) dikkatNotuInput.value = '';
                         operatorStatus.textContent = 'Personel seçiniz.';
                         operatorStatus.style.color = '#e74c3c';
                         window.SystemAuditLog?.write?.('Vardiya bitirildi', `${vardiya.vardiya || vardiyaSelect.value} - ${vardiya.personelAdSoyad || ''}`, 'ok');
