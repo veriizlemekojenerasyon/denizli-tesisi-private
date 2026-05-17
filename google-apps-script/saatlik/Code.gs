@@ -55,6 +55,12 @@ function handleRequest(e) {
       case 'checkHourlyMissingRecords':
         result = checkHourlyMissingRecords();
         break;
+      case 'fillMissingRecordsForDate':
+        result = fillMissingRecordsForDate(params.tarih, params.startSaat, params.endSaat);
+        break;
+      case 'fillMissingRecordGaps':
+        result = fillMissingRecordGaps(params.tarih);
+        break;
       case 'installHourlyMissingRecordTrigger':
         result = installHourlyMissingRecordTrigger();
         break;
@@ -86,7 +92,7 @@ function handleRequest(e) {
 }
 
 function isWriteAction(action) {
-  return ['saveRecord', 'addRecord', 'updateRecord', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger', 'addSystemLog'].indexOf(action) !== -1;
+  return ['saveRecord', 'addRecord', 'updateRecord', 'sendEmail', 'checkHourlyMissingRecords', 'fillMissingRecordsForDate', 'fillMissingRecordGaps', 'installHourlyMissingRecordTrigger', 'addSystemLog'].indexOf(action) !== -1;
 }
 
 function getSaatlikSheet(createIfMissing) {
@@ -209,7 +215,10 @@ function addRecord(data) {
       data.notlar || '',
       kayitTarihi
     ];
-    var newRow = sheet.getLastRow() + 1;
+    var newRow = findInsertPosition(sheet, formattedTarih, data.saat);
+    if (newRow <= sheet.getLastRow()) {
+      sheet.insertRowBefore(newRow);
+    }
     sheet.getRange(newRow, 1, 1, 11).setValues([rowData]);
     
     // Yeni satır formatı
@@ -372,7 +381,7 @@ function checkHourlyMissingRecords() {
       return { success: true, missing: false, added: false, message: 'Kayit mevcut' };
     }
 
-    var vardiya = getVardiyaByHour(now.getHours());
+    var vardiya = getVardiyaByHour(target.hour);
     var addResult = addRecord({
       tarih: tarih,
       saat: saat,
@@ -394,7 +403,9 @@ function checkHourlyMissingRecords() {
       'Otomatik kayit sonucu: ' + (addResult.success ? 'Basarili' : addResult.error);
 
     var mailResult = sendEmailAlert({ subject: subject, body: body });
-    props.setProperty(sentKey, new Date().toISOString());
+    if (addResult.success) {
+      props.setProperty(sentKey, new Date().toISOString());
+    }
     addSystemLog({
       tarih: tarih,
       saat: saat,
@@ -421,6 +432,229 @@ function checkHourlyMissingRecords() {
       hataMesaji: error.toString(),
       detay: 'checkHourlyMissingRecords'
     });
+    return { success: false, error: error.toString() };
+  }
+}
+
+function fillMissingRecordsForDate(tarih, startSaat, endSaat) {
+  try {
+    var sheet = getSaatlikSheet(false);
+    if (!sheet || sheet.getLastRow() < 2) {
+      if (!startSaat || !endSaat) {
+        return { success: false, error: 'Saatlik veri yok. Bos bir gun icin startSaat ve endSaat gondermelisiniz.' };
+      }
+    }
+
+    var targetTarih = formatDateTR(tarih);
+    if (!targetTarih) {
+      return { success: false, error: 'Tarih zorunludur.' };
+    }
+
+    var rows = sheet && sheet.getLastRow() >= 2
+      ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 11).getDisplayValues()
+      : [];
+    var existingByHour = {};
+    var hoursOnDate = [];
+
+    for (var i = 0; i < rows.length; i++) {
+      var record = mapSaatlikRow(rows[i]);
+      if (String(record.tarih || '').trim() !== targetTarih) continue;
+      var hourValue = parseSaatLabel(record.saat);
+      if (hourValue === null) continue;
+      existingByHour[hourValue] = true;
+      hoursOnDate.push(hourValue);
+    }
+
+    var startHour = startSaat ? parseSaatLabel(startSaat) : (hoursOnDate.length ? Math.min.apply(null, hoursOnDate) : null);
+    var endHour = endSaat ? parseSaatLabel(endSaat) : (hoursOnDate.length ? Math.max.apply(null, hoursOnDate) : null);
+
+    if (startHour === null || endHour === null) {
+      return { success: false, error: 'Bu tarihte mevcut kayit yoksa startSaat ve endSaat gonderin. Ornek: 08:00' };
+    }
+
+    if (endHour < startHour) {
+      return { success: false, error: 'Bitis saati baslangic saatinden kucuk olamaz.' };
+    }
+
+    var added = [];
+    var skipped = [];
+    var errors = [];
+
+    for (var hour = startHour; hour <= endHour; hour++) {
+      if (existingByHour[hour]) {
+        skipped.push(formatHourLabel(hour));
+        continue;
+      }
+
+      var saat = formatHourLabel(hour);
+      var addResult = addRecord({
+        tarih: targetTarih,
+        saat: saat,
+        vardiya: getVardiyaByHour(hour),
+        aktifMwh: '0',
+        reaktifMwh: '0',
+        aydemAktif: '0',
+        aydemReaktif: '0',
+        kaydeden: 'OTOMATIK SISTEM',
+        notlar: 'ARADAKI BOS SAAT - OTOMATIK'
+      });
+
+      if (addResult.success) {
+        added.push(saat);
+      } else {
+        errors.push(saat + ': ' + addResult.error);
+      }
+    }
+
+    addSystemLog({
+      tarih: targetTarih,
+      modul: 'Saatlik Veri',
+      eksikKayit: added.join(', '),
+      otomatikKayitSonucu: added.length ? 'Test Backfill' : 'Gerekmedi',
+      mailSonucu: 'Gonderilmedi',
+      hataMesaji: errors.join('; '),
+      detay: 'Aradaki bos saatler otomatik dolduruldu'
+    });
+
+    return {
+      success: true,
+      tarih: targetTarih,
+      startSaat: formatHourLabel(startHour),
+      endSaat: formatHourLabel(endHour),
+      addedCount: added.length,
+      addedHours: added,
+      skippedHours: skipped,
+      errors: errors
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+function fillMissingRecordGaps(tarih) {
+  try {
+    var sheet = getSaatlikSheet(false);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: false, error: 'Saatlik veri sayfasi bos.' };
+    }
+
+    var targetTarih = tarih ? formatDateTR(tarih) : '';
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 11).getDisplayValues();
+    var hoursByDate = {};
+    var allDates = [];
+
+    for (var i = 0; i < rows.length; i++) {
+      var record = mapSaatlikRow(rows[i]);
+      var recordTarih = String(record.tarih || '').trim();
+      if (!recordTarih) continue;
+      if (targetTarih && recordTarih !== targetTarih) continue;
+
+      var hourValue = parseSaatLabel(record.saat);
+      if (hourValue === null) continue;
+
+      if (!hoursByDate[recordTarih]) {
+        hoursByDate[recordTarih] = {};
+        allDates.push(recordTarih);
+      }
+
+      hoursByDate[recordTarih][hourValue] = true;
+    }
+
+    if (!allDates.length) {
+      return {
+        success: false,
+        error: targetTarih
+          ? 'Bu tarihte kayit bulunamadi.'
+          : 'Taranacak saatlik kayit bulunamadi.'
+      };
+    }
+
+    allDates.sort(function(a, b) {
+      return parseDateTimeTR(a, '00:00') - parseDateTimeTR(b, '00:00');
+    });
+
+    var perDate = [];
+    var totalAdded = 0;
+    var totalSkipped = 0;
+    var allErrors = [];
+
+    for (var j = 0; j < allDates.length; j++) {
+      var currentDate = allDates[j];
+      var hourMap = hoursByDate[currentDate];
+      var existingHours = Object.keys(hourMap).map(function(hour) {
+        return parseInt(hour, 10);
+      }).sort(function(a, b) {
+        return a - b;
+      });
+
+      if (!existingHours.length) continue;
+
+      var startHour = existingHours[0];
+      var endHour = existingHours[existingHours.length - 1];
+      var addedHours = [];
+      var skippedHours = [];
+      var errors = [];
+
+      for (var hour = startHour; hour <= endHour; hour++) {
+        if (hourMap[hour]) {
+          skippedHours.push(formatHourLabel(hour));
+          totalSkipped++;
+          continue;
+        }
+
+        var addResult = addRecord({
+          tarih: currentDate,
+          saat: formatHourLabel(hour),
+          vardiya: getVardiyaByHour(hour),
+          aktifMwh: '0',
+          reaktifMwh: '0',
+          aydemAktif: '0',
+          aydemReaktif: '0',
+          kaydeden: 'OTOMATIK SISTEM',
+          notlar: 'KAYIT SAYFASI ARADAKI BOS SAAT - OTOMATIK'
+        });
+
+        if (addResult.success) {
+          addedHours.push(formatHourLabel(hour));
+          totalAdded++;
+          hourMap[hour] = true;
+        } else {
+          errors.push(formatHourLabel(hour) + ': ' + addResult.error);
+          allErrors.push(currentDate + ' ' + formatHourLabel(hour) + ': ' + addResult.error);
+        }
+      }
+
+      perDate.push({
+        tarih: currentDate,
+        baslangicSaat: formatHourLabel(startHour),
+        bitisSaat: formatHourLabel(endHour),
+        addedCount: addedHours.length,
+        addedHours: addedHours,
+        skippedCount: skippedHours.length,
+        skippedHours: skippedHours,
+        errors: errors
+      });
+    }
+
+    addSystemLog({
+      tarih: targetTarih || allDates[0],
+      modul: 'Saatlik Veri',
+      eksikKayit: totalAdded ? ('Toplam ' + totalAdded + ' saat dolduruldu') : 'Yok',
+      otomatikKayitSonucu: totalAdded ? 'Kayit sayfasi bosluk doldurma' : 'Gerekmedi',
+      mailSonucu: 'Gonderilmedi',
+      hataMesaji: allErrors.join('; '),
+      detay: targetTarih ? 'Tek tarih icin aradaki bos saatler dolduruldu' : 'Tum sayfada aradaki bos saatler dolduruldu'
+    });
+
+    return {
+      success: true,
+      scannedDateCount: allDates.length,
+      totalAddedCount: totalAdded,
+      totalSkippedCount: totalSkipped,
+      dates: perDate,
+      errors: allErrors
+    };
+  } catch (error) {
     return { success: false, error: error.toString() };
   }
 }
@@ -539,6 +773,7 @@ function getHourlyCheckTarget(date) {
   }
 
   return {
+    hour: target.getHours(),
     tarih: Utilities.formatDate(target, Session.getScriptTimeZone(), 'dd.MM.yyyy'),
     saat: pad2(target.getHours()) + ':00'
   };
@@ -552,6 +787,18 @@ function getVardiyaByHour(hour) {
 
 function pad2(value) {
   return String(value).padStart(2, '0');
+}
+
+function parseSaatLabel(value) {
+  var text = String(value || '').trim();
+  if (!text) return null;
+  var parts = text.split(':');
+  var hour = parseInt(parts[0], 10);
+  return isNaN(hour) || hour < 0 || hour > 23 ? null : hour;
+}
+
+function formatHourLabel(hour) {
+  return pad2(hour) + ':00';
 }
 
 function findInsertPosition(sheet, tarih, saat) {

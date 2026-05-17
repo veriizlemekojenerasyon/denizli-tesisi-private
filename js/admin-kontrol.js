@@ -1,8 +1,9 @@
 const AdminControlConfig = {
-    saatlik: 'https://script.google.com/macros/s/AKfycbyxw6Lha4yal2pAuPoBLLTBErhmoozphDNcskfjOWhqoveZxQNSvze92gniMhKvn7HWgA/exec',
-    motor: 'https://script.google.com/macros/s/AKfycbz33FlBicqkZdRw5UOdagkiZK3leF18QuVPETLK_HGysSYbDAxigev0o_UUnYxuHAr-JA/exec',
-    enerji: 'https://script.google.com/macros/s/AKfycbwM-Ulgf4QuvdZ_jnl5Po4qUecOZ5VJaWpazXzUSGFvOLDtG7-lyHwLuHOq1Bk2mTahyQ/exec',
-    uretim: 'https://script.google.com/macros/s/AKfycby46xHXGD1NuPujkMSUMHOUiGl2jSjER1C66Dh_8aIOmvQj9r89lvDFAsQDOEJZiwSebw/exec',
+    saatlik: 'https://script.google.com/macros/s/AKfycbwNEMx76k1ZE6dNWP7XtoxY8NCc7eDzF31Utfd6I03qXDlQVPaAH7iJRcWvDL9ED7yzqQ/exec',
+    motor: 'https://script.google.com/macros/s/AKfycbzqMKhkZXsKyywOZ3D-Ks3xzLz4HxBeR6vkLUdD57nfgcgf5NJleuAt24uv1-1Av7-jHQ/exec',
+    enerji: 'https://script.google.com/macros/s/AKfycbw0sWjTQ6wUrBC1zGfVYQxWZFyhlo6Pz3AR-F5Lp81ppd_vRl_pGNdKxVtBD6jPk155zA/exec',
+    buhar: 'https://script.google.com/macros/s/AKfycbwAI0OS8V5naHu1-k0c57QwZTJgt2WeVX8pmmeT45d56wZqiFyCHv8jMLu-1StLSfwy1Q/exec',
+    gunluk: 'https://script.google.com/macros/s/AKfycbyJILN_PHL9Tw_BxRf_TuAOOsc7YqpmYQCgc-MYuhNJeRgiL9P9tczw2njQ7HndQE_8XA/exec',
     vardiya: 'https://script.google.com/macros/s/AKfycbxnCKSZtDelL04-ZQY3yx_ePSCK9Qy9R0WgFwtsFXj_B6HayfmwM8i_HYU-AAUETleSRA/exec',
     bildirim: 'https://script.google.com/macros/s/AKfycbyjW5gbtw0BRHjDlmeLYmaio0UQWw8DG1B89X85BYwI-dw4YqaTuEPYilmv6B_xrXDmTA/exec'
 };
@@ -11,7 +12,8 @@ const AdminControlLabels = {
     saatlik: 'Saatlik Veri',
     motor: 'Kojen Motor',
     enerji: 'Kojen Enerji',
-    uretim: 'Üretim',
+    buhar: 'Buhar',
+    gunluk: 'Gunluk Veri',
     vardiya: 'Vardiya',
     bildirim: 'Bildirim'
 };
@@ -20,7 +22,8 @@ const AdminBackupModules = {
     saatlik: { label: 'Saatlik Veri', urlKey: 'saatlik', params: { action: 'getRecords' } },
     motor: { label: 'Kojen Motor', urlKey: 'motor', params: { action: 'getRecords' } },
     enerji: { label: 'Kojen Enerji', urlKey: 'enerji', params: { action: 'getRecords' } },
-    uretim: { label: 'Aylık Üretim Özeti', urlKey: 'uretim', params: { action: 'getMonthlyProductionSummary' } },
+    buhar: { label: 'Buhar', urlKey: 'buhar', params: { action: 'getRecords' } },
+    gunluk: { label: 'Gunluk Veri', urlKey: 'gunluk', params: { action: 'getRecords' } },
     vardiya: { label: 'Vardiya', urlKey: 'vardiya', params: { action: 'getRecords' } },
     bildirim: { label: 'Bildirim', urlKey: 'bildirim', params: { action: 'getAnnouncements' } }
 };
@@ -110,16 +113,20 @@ async function loadDashboard() {
 }
 
 async function loadDeferredAdminData() {
-    const [saatlikHealth, motorHealth, enerjiHealth] = await Promise.all([
+    const [saatlikHealth, motorHealth, enerjiHealth, buharHealth, gunlukHealth] = await Promise.all([
         fetchJson(AdminControlConfig.saatlik, { action: 'getTriggerHealth' }),
         fetchJson(AdminControlConfig.motor, { action: 'getTriggerHealth' }),
-        fetchJson(AdminControlConfig.enerji, { action: 'getTriggerHealth' })
+        fetchJson(AdminControlConfig.enerji, { action: 'getTriggerHealth' }),
+        fetchJson(AdminControlConfig.buhar, { action: 'getTriggerHealth' }),
+        fetchJson(AdminControlConfig.gunluk, { action: 'getTriggerHealth' })
     ]);
 
     renderTriggerHealth([
         { key: 'saatlik', title: 'Saatlik Veri', result: saatlikHealth },
         { key: 'motor', title: 'Kojen Motor', result: motorHealth },
-        { key: 'enerji', title: 'Kojen Enerji', result: enerjiHealth }
+        { key: 'enerji', title: 'Kojen Enerji', result: enerjiHealth },
+        { key: 'buhar', title: 'Buhar', result: buharHealth },
+        { key: 'gunluk', title: 'Gunluk Veri', result: gunlukHealth }
     ]);
     await renderLogs();
 }
@@ -405,7 +412,7 @@ function renderUserActivity() {
 async function installAllTriggers() {
     const box = document.getElementById('testResultBox');
     if (box) box.textContent = 'Tetikleyiciler kuruluyor...';
-    const modules = ['saatlik', 'motor', 'enerji'];
+    const modules = ['saatlik', 'motor', 'enerji', 'buhar', 'gunluk'];
     const results = await Promise.all(modules.map(moduleName =>
         fetchJson(AdminControlConfig[moduleName], { action: 'installHourlyMissingRecordTrigger' })
             .then(result => ({ moduleName, result }))
@@ -694,6 +701,8 @@ async function fetchAllSystemLogs() {
         fetchJson(AdminControlConfig.saatlik, { action: 'getSystemLogs', count: '30' }),
         fetchJson(AdminControlConfig.motor, { action: 'getSystemLogs', count: '30' }),
         fetchJson(AdminControlConfig.enerji, { action: 'getSystemLogs', count: '30' }),
+        fetchJson(AdminControlConfig.buhar, { action: 'getSystemLogs', count: '30' }),
+        fetchJson(AdminControlConfig.gunluk, { action: 'getSystemLogs', count: '30' }),
         fetchJson(AdminControlConfig.bildirim, { action: 'getSystemLogs', count: '30' })
     ]);
     return results.flatMap(result => result.success && Array.isArray(result.data) ? result.data : []);

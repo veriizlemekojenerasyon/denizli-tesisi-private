@@ -793,7 +793,9 @@ function checkHourlyMissingRecords() {
       '\nBu saat icin veri girilmedigi icin sistem otomatik bos kayit olusturdu.';
 
     var mailResult = sendEmailAlert({ subject: subject, body: body });
-    props.setProperty(sentKey, new Date().toISOString());
+    if (added.length === missing.length) {
+      props.setProperty(sentKey, new Date().toISOString());
+    }
     addSystemLog({
       tarih: tarih,
       saat: saat,

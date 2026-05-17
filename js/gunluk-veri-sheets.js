@@ -8,7 +8,7 @@
 // ============================================
 const GUNLUK_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwV6xKa2cuNdRrVgQUZdnJrW7RFnaNPgCX2WSB08VTeg1wH7uUq7DuZ2f-s_ObQXsb4nA/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyJILN_PHL9Tw_BxRf_TuAOOsc7YqpmYQCgc-MYuhNJeRgiL9P9tczw2njQ7HndQE_8XA/exec',
     
     // Sayfa başlığı
     PAGE_NAME: 'Günlük Veri Girişi',

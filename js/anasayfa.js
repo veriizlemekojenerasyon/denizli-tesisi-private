@@ -6,45 +6,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const motorData = {
         gm1: {
             totalProduction: 0,
-            dailyHours: 0,
             totalHours: 0,
-            dailyProduction: 0,
-            avgProduction: 0,
-            progress: 0,
             status: 'stopped'
         },
         gm2: {
             totalProduction: 0,
-            dailyHours: 0,
             totalHours: 0,
-            dailyProduction: 0,
-            avgProduction: 0,
-            progress: 0,
             status: 'stopped'
         },
         gm3: {
             totalProduction: 0,
-            dailyHours: 0,
             totalHours: 0,
-            dailyProduction: 0,
-            avgProduction: 0,
-            progress: 0,
             status: 'stopped'
         }
     };
 
     // Günlük özet verileri
     const summaryData = {
-        dailyProduction: 0,
         dailySteam: null, // Buhar verisinden çekilecek
         pendingMaintenance: 3,
         activeFaults: 1
     };
 
     // Buhar verisi config
-    const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnhHSmc5GTuOq8hdqgFM2-FA2XNjRdLHoED5gmjXbmWcYycPNXykdd0ZYTzOI3HNJxKg/exec';
-    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwM-Ulgf4QuvdZ_jnl5Po4qUecOZ5VJaWpazXzUSGFvOLDtG7-lyHwLuHOq1Bk2mTahyQ/exec';
-    const KOJEN_MOTOR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz33FlBicqkZdRw5UOdagkiZK3leF18QuVPETLK_HGysSYbDAxigev0o_UUnYxuHAr-JA/exec';
+    const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAI0OS8V5naHu1-k0c57QwZTJgt2WeVX8pmmeT45d56wZqiFyCHv8jMLu-1StLSfwy1Q/exec';
+    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0sWjTQ6wUrBC1zGfVYQxWZFyhlo6Pz3AR-F5Lp81ppd_vRl_pGNdKxVtBD6jPk155zA/exec';
+    const KOJEN_MOTOR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqMKhkZXsKyywOZ3D-Ks3xzLz4HxBeR6vkLUdD57nfgcgf5NJleuAt24uv1-1Av7-jHQ/exec';
     const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyimCmn6QQy0hl__KEqcLl_xd0rLjW9S-tS7vWU-nqwepH2Ur4tCDbzMvBafuSLrhQkEw/exec';
     const ANNOUNCEMENTS_STORAGE_KEY = 'shiftAnnouncements';
     const defaultAnnouncements = [
@@ -71,7 +58,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const dashboardLoaded = await loadDashboardSummary();
         if (!dashboardLoaded) {
             await updateAnnouncementTicker();
-            await loadDailyProductionData();
             await loadLatestEnergyData();
             await loadLatestMotorStatus();
             await loadBuharData();
@@ -81,7 +67,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         updateMotorData();
         updateSummaryData();
-        animateProgressBars();
     }
 
     // Motor verilerini güncelle
@@ -133,7 +118,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (result.summary) {
-                summaryData.dailyProduction = parseDashboardNumber(result.summary.dailyProduction);
                 summaryData.dailySteam = result.summary.dailySteam === null || result.summary.dailySteam === undefined
                     ? null
                     : parseDashboardNumber(result.summary.dailySteam);
@@ -145,11 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 Object.entries(result.motors).forEach(([key, data]) => {
                     if (!motorData[key]) return;
                     motorData[key].totalProduction = parseDashboardNumber(data.totalProduction);
-                    motorData[key].dailyHours = parseDashboardNumber(data.dailyHours);
                     motorData[key].totalHours = parseDashboardNumber(data.totalHours);
-                    motorData[key].dailyProduction = Math.round(parseDashboardNumber(data.dailyProduction));
-                    motorData[key].avgProduction = parseDashboardNumber(data.avgProduction);
-                    motorData[key].progress = Math.min(parseDashboardNumber(data.progress), 100);
                     motorData[key].status = data.status === 'running' ? 'running' : 'stopped';
                 });
             }
@@ -295,28 +275,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 animateValue(totalProductionEl, 0, data.totalProduction, 1500, ' MWh');
             }
 
-            // Günlük çalışma
-            const dailyHoursEl = document.getElementById(`${motorId}-daily-hours`);
-            if (dailyHoursEl) {
-                animateValue(dailyHoursEl, 0, data.dailyHours, 1500, ' saat');
-            }
-
             // Toplam çalışma
             const totalHoursEl = document.getElementById(`${motorId}-total-hours`);
             if (totalHoursEl) {
                 animateValue(totalHoursEl, 0, data.totalHours, 1500, ' saat');
-            }
-
-            // Günlük üretim
-            const dailyProductionEl = document.getElementById(`${motorId}-daily-production`);
-            if (dailyProductionEl) {
-                animateValue(dailyProductionEl, 0, data.dailyProduction, 1500, ' kWh');
-            }
-
-            // Ortalama üretim
-            const avgProductionEl = document.getElementById(`${motorId}-avg-production`);
-            if (avgProductionEl) {
-                animateValue(avgProductionEl, 0, data.avgProduction, 1500, ' kWh/saat');
             }
 
             // Motor durumunu güncelle
@@ -333,12 +295,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Özet verilerini güncelle
     function updateSummaryData() {
-        // Günlük üretim
-        const dailyProductionEl = document.getElementById('daily-production-value');
-        if (dailyProductionEl) {
-            animateValue(dailyProductionEl, 0, summaryData.dailyProduction, 1500, ' MWh');
-        }
-
         // Günlük buhar
         const dailySteamEl = document.getElementById('daily-steam-value');
         if (dailySteamEl && summaryData.dailySteam !== null) {
@@ -516,57 +472,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function loadDailyProductionData() {
-        try {
-            const url = new URL(KOJEN_ENERJI_APPS_SCRIPT_URL);
-            url.searchParams.append('action', 'getDailyProductionSummary');
-            url.searchParams.append('updateSheet', 'true');
-
-            const response = await fetch(url, { method: 'GET', mode: 'cors' });
-            const result = await response.json();
-
-            if (!result.success) {
-                console.error('Günlük üretim özeti alınamadı:', result.error);
-                return;
-            }
-
-            summaryData.dailyProduction = parseDashboardNumber(result.totalDailyProductionMwh);
-
-            if (!Array.isArray(result.data)) return;
-
-            result.data.forEach(item => {
-                const key = getMotorKey(item.motor);
-                if (!motorData[key]) return;
-
-                const dailyKwh = parseDashboardNumber(item.dailyProductionKwh);
-                const dailyHours = parseDashboardNumber(item.dailyHours);
-                const lastEnergy = parseDashboardNumber(item.lastEnergy);
-                const lastWorkingHour = parseDashboardNumber(item.lastWorkingHour);
-
-                motorData[key].dailyProduction = Math.round(dailyKwh);
-                motorData[key].dailyHours = dailyHours;
-                if (lastEnergy > 0) motorData[key].totalProduction = lastEnergy / 1000;
-                if (lastWorkingHour > 0) motorData[key].totalHours = lastWorkingHour;
-                motorData[key].avgProduction = dailyHours > 0 ? dailyKwh / dailyHours : 0;
-                motorData[key].progress = Math.min((dailyHours / 24) * 100, 100);
-                if (dailyKwh > 0 || dailyHours > 0) motorData[key].status = 'running';
-            });
-        } catch (error) {
-            console.error('Günlük üretim verisi yüklenemedi:', error);
-        }
-    }
-
-    function animateProgressBars() {
-        for (const [motorId, data] of Object.entries(motorData)) {
-            const progressEl = document.getElementById(`${motorId}-progress`);
-            if (progressEl) {
-                setTimeout(() => {
-                    progressEl.style.width = `${data.progress}%`;
-                }, 500);
-            }
-        }
-    }
-
     // Sayısal değer animasyonu
     function animateValue(element, start, end, duration, suffix = '') {
         const startTime = performance.now();
@@ -725,12 +630,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    setInterval(async () => {
-        await loadDailyProductionData();
-        updateMotorData();
-        updateSummaryData();
-    }, 300000);
-
     // Klavye kısayolları
     document.addEventListener('keydown', function(e) {
         // Ctrl + L: Çıkış yap
@@ -756,9 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('visibilitychange', async function() {
         if (!document.hidden) {
             // Sayfa tekrar görünür olduğunda verileri güncelle
-            await loadDailyProductionData();
-            updateMotorData();
-            updateSummaryData();
+            await loadDashboardData();
         }
     });
 

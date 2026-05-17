@@ -567,40 +567,6 @@ body {
     background-clip: text;
 }
 
-.progress-bar {
-    height: 12px;
-    background: #ecf0f1;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-top: 15px;
-    position: relative;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3498db, #2ecc71);
-    border-radius: 6px;
-    width: 0%;
-    transition: width 1.5s ease;
-    position: relative;
-}
-
-.progress-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-}
-
 /* Özet Kartları */
 .summary-cards {
     display: grid;
@@ -674,11 +640,6 @@ body {
 }
 
 /* Kart Renkleri */
-.summary-card.production .card-icon {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-    box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
-}
-
 .summary-card.steam .card-icon {
     background: linear-gradient(135deg, #3498db, #2980b9);
     box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
