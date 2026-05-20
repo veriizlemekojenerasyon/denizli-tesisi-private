@@ -10,7 +10,7 @@ const DRIVE_FOLDERS = {
   FAULT: "1TGrKfYHrayZmiGW1J8GQd70jPtByBKY9"     // Arıza Bakım Drive ID (Periyodik ile aynı)
 };
 
-const KOJEN_ENERJI_API_URL = "https://script.google.com/macros/s/AKfycby5FigD2Hj_Qq9fzrjDjPmg44xQUGu2gklxfdXFS8UD6wIFtwhgbdUC9lIj3EkYb3tViQ/exec";
+const KOJEN_ENERJI_API_URL = "https://script.google.com/macros/s/AKfycbx3usRu6DJa0fBclzDmwEEnN5kt3Wp6t31mMfenaQkb8vs2H94wHTRYjankIhhu8yWKPA/exec";
 const OIL_SAMPLE_INTERVAL_HOURS = 500;
 const OIL_SAMPLE_WARNING_HOURS = 400;
 const ALTERNATOR_GREASE_INTERVAL_HOURS = 1000;
@@ -1615,6 +1615,9 @@ function getMotorHoursV2(ss) {
       const motorName = row[0];
       const energyHours = getLatestEnergyMotorHours(ss, motorName);
       const currentHours = energyHours > 0 ? energyHours : parseBakimNumber(row[1]);
+      if (energyHours > 0 && parseBakimNumber(row[1]) !== energyHours) {
+        sheet.getRange(i + 2, 2).setValue(energyHours);
+      }
 
       const lastOilSample = parseBakimNumber(row[2]);
       const nextOilSample = parseBakimNumber(row[4]) || (lastOilSample + OIL_SAMPLE_INTERVAL_HOURS);
@@ -1667,13 +1670,19 @@ function getLatestEnergyMotorHours(ss, motor) {
 }
 
 function getLatestEnergyMotorHoursFromSheets(ss, motor) {
+  const normalizedMotor = normalizeBakimMotorLabel(motor);
   const sheetNames = [
-    'Enerji GM-' + motor,
-    'Enerji ' + motor,
-    'Enerji ' + String(motor || '').replace('-', ' ')
+    'Enerji GM-' + normalizedMotor,
+    'Enerji ' + normalizedMotor,
+    'Enerji ' + String(normalizedMotor || '').replace('-', ' '),
+    'Enerji ' + String(motor || '').trim()
   ];
+  const seenSheetNames = {};
 
   for (let i = 0; i < sheetNames.length; i++) {
+    if (seenSheetNames[sheetNames[i]]) continue;
+    seenSheetNames[sheetNames[i]] = true;
+
     const sheet = ss.getSheetByName(sheetNames[i]);
     if (!sheet || sheet.getLastRow() < 2) continue;
 
@@ -1699,9 +1708,10 @@ function getLatestEnergyMotorHoursFromApi(motor) {
     const payload = JSON.parse(response.getContentText());
     if (!payload.success || !payload.data) return 0;
 
+    const normalizedMotor = normalizeBakimMotorLabel(motor);
     for (let i = 0; i < payload.data.length; i++) {
       const record = payload.data[i];
-      if (String(record.motor || '').trim() === String(motor || '').trim()) {
+      if (normalizeBakimMotorLabel(record.motor) === normalizedMotor) {
         return parseBakimNumber(record.calismaSaati);
       }
     }
@@ -1710,6 +1720,17 @@ function getLatestEnergyMotorHoursFromApi(motor) {
   }
 
   return 0;
+}
+
+function normalizeBakimMotorLabel(motor) {
+  let value = String(motor || 'GM-1').trim().toUpperCase();
+  if (!value) return 'GM-1';
+  value = value.replace(/\s+/g, '');
+
+  const gmMatch = value.match(/GM-?(\d+)$/);
+  if (gmMatch) return 'GM-' + gmMatch[1];
+  if (/^\d+$/.test(value)) return 'GM-' + value;
+  return value;
 }
 
 function parseBakimNumber(value) {

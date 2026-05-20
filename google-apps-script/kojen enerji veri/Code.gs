@@ -203,6 +203,11 @@ function getEnerjiSheetName(motor) {
 function getEnerjiSheetIfExists(motor) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var targetMotor = normalizeEnerjiMotorLabel(motor);
+  var exactSheet = spreadsheet.getSheetByName(getEnerjiSheetName(targetMotor));
+  if (exactSheet) {
+    return exactSheet;
+  }
+
   var sheets = spreadsheet.getSheets();
   var bestSheet = null;
   var bestScore = -1;
@@ -212,6 +217,10 @@ function getEnerjiSheetIfExists(motor) {
     var currentSheet = sheets[i];
     var sheetName = currentSheet.getName();
     if (sheetName.indexOf('YillikEnerji') === 0 || sheetName === 'SistemLoglari') {
+      continue;
+    }
+
+    if (!/^Enerji\s+/i.test(sheetName)) {
       continue;
     }
 
@@ -248,7 +257,7 @@ function getEnerjiSheetIfExists(motor) {
     return bestSheet;
   }
 
-  return spreadsheet.getSheetByName(getEnerjiSheetName(targetMotor));
+  return null;
 }
 
 function mapEnerjiRow(row) {
