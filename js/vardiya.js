@@ -1,11 +1,11 @@
-﻿// â° Otomatik yÃ¶nlendirme kontrolÃ¼ (15:59, 23:59, 07:59)
+// ⏰ Otomatik yönlendirme kontrolü (15:59, 23:59, 07:59)
 function checkAutoRedirect() {
     const now = new Date();
     const hour = now.getHours();
     const minute = now.getMinutes();
     const currentTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
     
-    // YÃ¶nlendirme saatleri: 15:59, 23:59, 07:59
+    // Yönlendirme saatleri: 15:59, 23:59, 07:59
     const redirectTimes = ['15:59', '23:59', '07:59'];
     
     if (redirectTimes.includes(currentTime)) {
@@ -14,17 +14,17 @@ function checkAutoRedirect() {
             console.log('Aktif vardiya var, otomatik yonlendirme atlandi.');
             return false;
         }
-        console.log(`â° Otomatik yÃ¶nlendirme saati: ${currentTime}`);
+        console.log(`⏰ Otomatik yönlendirme saati: ${currentTime}`);
         
-        // Vardiya Ä°ÅŸlem Kaydetme modal'Ä± aÃ§Ä±k mÄ± kontrol et
+        // Vardiya İşlem Kaydetme modal'ı açık mı kontrol et
         const islemModal = document.querySelector('.islem-detaylari-modal');
         if (islemModal) {
-            console.log('ğŸ’¾ Vardiya Ä°ÅŸlem Kaydetme aÃ§Ä±k, kaydediliyor...');
-            // Modal'Ä± kapat ve kaydet
+            console.log('💾 Vardiya İşlem Kaydetme açık, kaydediliyor...');
+            // Modal'ı kapat ve kaydet
             islemModal.remove();
         }
         
-        // 2 saniye bekle ve yÃ¶nlendir
+        // 2 saniye bekle ve yönlendir
         setTimeout(() => {
             localStorage.removeItem('loggedInUser');
             window.location.href = 'index.html';
@@ -34,7 +34,7 @@ function checkAutoRedirect() {
     return false;
 }
 
-// Kimlik dogrulama kontrolÃ¼
+// Kimlik dogrulama kontrolü
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
@@ -46,7 +46,7 @@ function checkAuth() {
         const user = JSON.parse(loggedInUser);
         const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
         
-        // TÃ¼m userNameDisplay elementlerini gÃ¼ncelle
+        // Tüm userNameDisplay elementlerini güncelle
         const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
         
         allUserNameDisplays.forEach((element, index) => {
@@ -64,10 +64,10 @@ function checkAuth() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Ã–nce kimlik dogrulama kontrolÃ¼
+    // Önce kimlik dogrulama kontrolü
     checkAuth();
     
-    // â° Otomatik yÃ¶nlendirme kontrolÃ¼nÃ¼ baÅŸlat (her dakika kontrol et)
+    // ⏰ Otomatik yönlendirme kontrolünü başlat (her dakika kontrol et)
     checkAutoRedirect();
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
     
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
         bildirim: 'https://script.google.com/macros/s/AKfycbyjW5gbtw0BRHjDlmeLYmaio0UQWw8DG1B89X85BYwI-dw4YqaTuEPYilmv6B_xrXDmTA/exec'
     };
     
-    // Tarih seÃ§icisine otomatik bugÃ¼nÃ¼n tarihini atama
+    // Tarih seçicisine otomatik bugünün tarihini atama
     const tarihInput = document.getElementById('tarih');
     const vardiyaSelect = document.getElementById('vardiya');
     const personelSelect = document.getElementById('personel');
@@ -91,24 +91,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const vardiyaBitirBtn = document.getElementById('vardiyaBitirBtn');
     const devredenIslerInput = document.getElementById('devredenIsler');
     
-    // HaftalÄ±k vardiya kayÄ±tlarÄ± elementleri
+    // Haftalık vardiya kayıtları elementleri
     const baslangicTarihInput = document.getElementById('baslangicTarih');
     const bitisTarihInput = document.getElementById('bitisTarih');
     const tarihFiltreBtn = document.getElementById('tarihFiltreBtn');
     const tarihSifirlaBtn = document.getElementById('tarihSifirlaBtn');
     
-    // YardÄ±mcÄ± operatÃ¶r elementleri
+    // Yardımcı operatör elementleri
     const yardimciOperatorSection = document.getElementById('yardimciOperatorSection');
     const yardimciOperatorVar = document.getElementById('yardimciOperatorVar');
     const yardimciOperatorListesi = document.getElementById('yardimciOperatorListesi');
     const yardimciOperator = document.getElementById('yardimciOperator');
 
     
-    // BugÃ¼nÃ¼n tarihini al ve input'a ata (DD.MM.YYYY formatÄ±nda)
+    // Bugünün tarihini al ve input'a ata (DD.MM.YYYY formatında)
     const today = new Date();
     tarihInput.value = formatDateTR(today);
 
-    // Vardiya kayÄ±tlarÄ± iÃ§in varsayÄ±lan tarih aralÄ±ÄŸÄ± (son 30 gÃ¼n)
+    // Vardiya kayıtları için varsayılan tarih aralığı (son 30 gün)
     setDefaultDateRange();
 
     function formatDateTR(date) {
@@ -238,55 +238,55 @@ document.addEventListener('DOMContentLoaded', function() {
         return warnings;
     }
 
-    // Vardiya seÃ§icisine otomatik deÄŸeri ata (saate gÃ¶re)
+    // Vardiya seçicisine otomatik değeri ata (saate göre)
     function setVardiyaByHour() {
         const now = new Date();
         const currentHour = now.getHours();
         
-        console.log('Åu anki saat:', currentHour);
+        console.log('Şu anki saat:', currentHour);
         console.log('Vardiya select elementi:', vardiyaSelect);
         
-        // 08:00 - 16:00 arasÄ±: 08-16 vardiyasÄ±
-        // 16:00 - 24:00 arasÄ±: 16-24 vardiyasÄ±  
-        // 00:00 - 08:00 arasÄ±: 24-08 vardiyasÄ±
+        // 08:00 - 16:00 arası: 08-16 vardiyası
+        // 16:00 - 24:00 arası: 16-24 vardiyası  
+        // 00:00 - 08:00 arası: 24-08 vardiyası
         if (currentHour >= 8 && currentHour < 16) {
             vardiyaSelect.value = '08-16';
-            console.log('GÃ¼ndÃ¼z vardiyasÄ± seÃ§ildi: 08-16');
+            console.log('Gündüz vardiyası seçildi: 08-16');
         } else if (currentHour >= 16 && currentHour < 24) {
             vardiyaSelect.value = '16-24';
-            console.log('AkÅŸam vardiyasÄ± seÃ§ildi: 16-24');
+            console.log('Akşam vardiyası seçildi: 16-24');
         } else {
             vardiyaSelect.value = '24-08';
-            console.log('Gece vardiyasÄ± seÃ§ildi: 24-08');
+            console.log('Gece vardiyası seçildi: 24-08');
         }
         
-        console.log('Vardiya deÄŸeri:', vardiyaSelect.value);
+        console.log('Vardiya değeri:', vardiyaSelect.value);
         
-        // Vardiya deÄŸiÅŸtiÄŸinde yardÄ±mcÄ± operatÃ¶r bÃ¶lÃ¼mÃ¼nÃ¼ kontrol et
+        // Vardiya değiştiğinde yardımcı operatör bölümünü kontrol et
         yardimciOperatorKontrolu();
     }
-    setVardiyaByHour(); // Fonksiyonu sayfa yÃ¼klendikten sonra Ã§aÄŸÄ±r
+    setVardiyaByHour(); // Fonksiyonu sayfa yüklendikten sonra çağır
 
-    // Vardiya baÅŸlat - Google Sheets
+    // Vardiya başlat - Google Sheets
     kaydetBtn.addEventListener('click', async function() {
         const selectedPersonelId = personelSelect.value;
         const selectedVardiya = vardiyaSelect.value;
         const selectedTarih = tarihInput.value;
         
         if (!selectedPersonelId || !selectedVardiya || !selectedTarih) {
-            alert('LÃ¼tfen tÃ¼m alanlarÄ± doldurun!');
+            alert('Lütfen tüm alanları doldurun!');
             return;
         }
 
         if (!operatorYetkisiKontrolu()) {
-            alert('SeÃ§ilen personelin operatÃ¶r yetkisi yok!');
+            alert('Seçilen personelin operatör yetkisi yok!');
             return;
         }
 
         const selectedPersonel = personelListesi.find(p => p.id == selectedPersonelId);
         const vardiyaAdi = vardiyaSelect.options[vardiyaSelect.selectedIndex].text;
 
-        // YardÄ±mcÄ± operatÃ¶r bilgisi
+        // Yardımcı operatör bilgisi
         let yardimciOperatorBilgisi = '';
         const yardimciOperatorId = yardimciOperator.value;
         const yardimciOperatorVarMi = yardimciOperatorVar.checked;
@@ -297,14 +297,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Buton loading durumu
-        kaydetBtn.textContent = 'KAYDEDÄ°LÄ°YOR...';
+        kaydetBtn.textContent = 'KAYDEDİLİYOR...';
         kaydetBtn.disabled = true;
 
         try {
-            // Tarih formatÄ±nÄ± GG.AA.YYYY'den YYYY-AA-GG'ye Ã§evir
+            // Tarih formatını GG.AA.YYYY'den YYYY-AA-GG'ye çevir
             const formattedTarih = toIsoDateParam(selectedTarih);
 
-            // Mevcut kayÄ±t var mÄ± kontrol et
+            // Mevcut kayıt var mı kontrol et
             const checkUrl = new URL(VARDIYA_APPS_SCRIPT_URL);
             checkUrl.searchParams.append('action', 'getRecordByDateVardiya');
             checkUrl.searchParams.append('tarih', formattedTarih);
@@ -314,8 +314,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const checkResult = await checkResponse.json();
 
             if (checkResult.found && checkResult.data && checkResult.data.durum === 'Aktif') {
-                if (confirm('Bu tarih ve vardiya iÃ§in aktif kayÄ±t var. Devam edilsin mi?')) {
-                    // Mevcut kaydÄ± bitir
+                if (confirm('Bu tarih ve vardiya için aktif kayıt var. Devam edilsin mi?')) {
+                    // Mevcut kaydı bitir
                     const endUrl = new URL(VARDIYA_APPS_SCRIPT_URL);
                     endUrl.searchParams.append('action', 'endVardiya');
                     endUrl.searchParams.append('id', checkResult.data.id || '');
@@ -324,13 +324,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     await fetch(endUrl);
                 } else {
-                    kaydetBtn.textContent = 'VARDÄ°YA BAÅLAT';
+                    kaydetBtn.textContent = 'VARDİYA BAŞLAT';
                     kaydetBtn.disabled = false;
                     return;
                 }
             }
 
-            // Yeni kayÄ±t ekle
+            // Yeni kayıt ekle
             const url = new URL(VARDIYA_APPS_SCRIPT_URL);
             url.searchParams.append('action', 'addRecord');
             url.searchParams.append('tarih', formattedTarih);
@@ -363,16 +363,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('mevcutVardiya', JSON.stringify(vardiyaBilgisi));
                 window.SystemAuditLog?.write?.('Vardiya baslatildi', `${selectedVardiya} - ${selectedPersonel.adSoyad}`, 'ok');
                 mevcutVardiyaBilgisi();
-                alert('Vardiya baÅŸarÄ±yla baÅŸlatÄ±ldÄ±! (ID: ' + result.data.id + ')');
+                alert('Vardiya başarıyla başlatıldı! (ID: ' + result.data.id + ')');
                 haftalikVardiyaKayitlariniGoster();
             } else {
-                alert('Hata: ' + (result.error || 'Ä°ÅŸlem baÅŸarÄ±sÄ±z!'));
+                alert('Hata: ' + (result.error || 'İşlem başarısız!'));
             }
         } catch (error) {
-            console.error('Vardiya kayÄ±t hatasÄ±:', error);
-            alert('BaÄŸlantÄ± hatasÄ±!');
+            console.error('Vardiya kayıt hatası:', error);
+            alert('Bağlantı hatası!');
         } finally {
-            kaydetBtn.textContent = 'VARDÄ°YA BAÅLAT';
+            kaydetBtn.textContent = 'VARDİYA BAŞLAT';
             kaydetBtn.disabled = false;
         }
     });
@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (mevcutVardiya) {
                 const vardiya = JSON.parse(mevcutVardiya);
                 // Buton loading durumu
-                vardiyaBitirBtn.textContent = 'BÄ°TÄ°RÄ°LÄ°YOR...';
+                vardiyaBitirBtn.textContent = 'BİTİRİLİYOR...';
                 vardiyaBitirBtn.disabled = true;
                 
                 try {
@@ -397,10 +397,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
 
-                    // Tarih formatÄ±nÄ± Ã§evir
+                    // Tarih formatını çevir
                     const formattedTarih = toIsoDateParam(vardiya.tarih);
                     
-                    // Vardiya bitir API Ã§aÄŸrÄ±sÄ±
+                    // Vardiya bitir API çağrısı
                     const url = new URL(VARDIYA_APPS_SCRIPT_URL);
                     url.searchParams.append('action', 'endVardiya');
                     url.searchParams.append('id', vardiya.id || '');
@@ -416,11 +416,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('mevcutVardiya').style.display = 'none';
                         personelSelect.value = '';
                         if (devredenIslerInput) devredenIslerInput.value = '';
-                        operatorStatus.textContent = 'Personel seÃ§iniz.';
+                        operatorStatus.textContent = 'Personel seçiniz.';
                         operatorStatus.style.color = '#e74c3c';
                         window.SystemAuditLog?.write?.('Vardiya bitirildi', `${vardiya.vardiya || vardiyaSelect.value} - ${vardiya.personelAdSoyad || ''}`, 'ok');
                         
-                        alert('Vardiya baÅŸarÄ±yla bitirildi! (ID: ' + result.data.id + ')');
+                        alert('Vardiya başarıyla bitirildi! (ID: ' + result.data.id + ')');
                         haftalikVardiyaKayitlariniGoster();
                     } else {
                         if (String(result.error || '').includes('Aktif vardiya')) {
@@ -428,35 +428,35 @@ document.addEventListener('DOMContentLoaded', function() {
                             alert('Bu vardiya tarayicida aktif gorunuyordu ancak Google Sheets tarafinda aktif kayit bulunamadi. Eski yerel kayit temizlendi.');
                             haftalikVardiyaKayitlariniGoster();
                         } else {
-                            alert('Hata: ' + (result.error || 'Ä°ÅŸlem baÅŸarÄ±sÄ±z!'));
+                            alert('Hata: ' + (result.error || 'İşlem başarısız!'));
                         }
                     }
                 } catch (error) {
-                    console.error('Vardiya bitirme hatasÄ±:', error);
-                    alert('BaÄŸlantÄ± hatasÄ±!');
+                    console.error('Vardiya bitirme hatası:', error);
+                    alert('Bağlantı hatası!');
                 } finally {
-                    vardiyaBitirBtn.textContent = 'VARDÄ°YAYI BÄ°TÄ°R';
+                    vardiyaBitirBtn.textContent = 'VARDİYAYI BİTİR';
                     vardiyaBitirBtn.disabled = false;
                 }
             }
         }
     });
 
-    // Personel listesi (gerÃ§ek kullanÄ±cÄ± verileri)
+    // Personel listesi (gerçek kullanıcı verileri)
     const personelListesi = [
-        { id: 1771831539045, adSoyad: 'Ä°BRAHÄ°M OGÃœN ÅAHÄ°N', pozisyon: 'OperatÃ¶r', operator: true },
-        { id: 1771831665826, adSoyad: 'OGUZHAN YAYLALI', pozisyon: 'OperatÃ¶r', operator: true },
-        { id: 1771831695619, adSoyad: 'ALTAN HUNOÄLU', pozisyon: 'OperatÃ¶r', operator: true },
-        { id: 1771831749332, adSoyad: 'MURAT COÅKUN', pozisyon: 'Admin', operator: true },
-        { id: 1773382635961, adSoyad: 'KADÄ°R KORKMAZ', pozisyon: 'Admin', operator: true },
-        { id: 1774245338572, adSoyad: 'ADMÄ°N', pozisyon: 'Admin', operator: true },
-        { id: 9999999999, adSoyad: 'YAKUP CAN CÄ°N', pozisyon: 'OperatÃ¶r', operator: true }
+        { id: 1771831539045, adSoyad: 'İBRAHİM OGÜN ŞAHİN', pozisyon: 'Operatör', operator: true },
+        { id: 1771831665826, adSoyad: 'OGUZHAN YAYLALI', pozisyon: 'Operatör', operator: true },
+        { id: 1771831695619, adSoyad: 'ALTAN HUNOĞLU', pozisyon: 'Operatör', operator: true },
+        { id: 1771831749332, adSoyad: 'MURAT COŞKUN', pozisyon: 'Admin', operator: true },
+        { id: 1773382635961, adSoyad: 'KADİR KORKMAZ', pozisyon: 'Admin', operator: true },
+        { id: 1774245338572, adSoyad: 'ADMİN', pozisyon: 'Admin', operator: true },
+        { id: 9999999999, adSoyad: 'YAKUP CAN CİN', pozisyon: 'Operatör', operator: true }
     ];
 
-    // Personel listesini doldur (sadece operatÃ¶r rolÃ¼ndeki kullanÄ±cÄ±lar)
+    // Personel listesini doldur (sadece operatör rolündeki kullanıcılar)
     function personelListesiniDoldur() {
-        personelSelect.innerHTML = '<option value="">Personel seÃ§in...</option>';
-        const operatorler = personelListesi.filter(p => p.pozisyon === 'OperatÃ¶r');
+        personelSelect.innerHTML = '<option value="">Personel seçin...</option>';
+        const operatorler = personelListesi.filter(p => p.pozisyon === 'Operatör');
         operatorler.forEach(personel => {
             const option = document.createElement('option');
             option.value = personel.id;
@@ -466,21 +466,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     personelListesiniDoldur();
 
-    // YardÄ±mcÄ± operatÃ¶r listesini doldur (mevcut operatÃ¶rler, ana operatÃ¶r hariÃ§)
+    // Yardımcı operatör listesini doldur (mevcut operatörler, ana operatör hariç)
     function yardimciOperatorListesiniDoldur() {
-        yardimciOperator.innerHTML = '<option value="">YardÄ±mcÄ± operatÃ¶r seÃ§in...</option>';
+        yardimciOperator.innerHTML = '<option value="">Yardımcı operatör seçin...</option>';
         const anaOperatorId = personelSelect.value;
         
-        // Mevcut operatÃ¶rler (seÃ§ili olan hariÃ§)
+        // Mevcut operatörler (seçili olan hariç)
         const yardimciOperatorler = personelListesi.filter(p => 
-            p.operator === true && p.id != anaOperatorId && p.pozisyon === 'OperatÃ¶r'
+            p.operator === true && p.id != anaOperatorId && p.pozisyon === 'Operatör'
         );
         
         if (yardimciOperatorler.length === 0) {
-            // YardÄ±mcÄ± operatÃ¶r yok
+            // Yardımcı operatör yok
             const option = document.createElement('option');
             option.value = "";
-            option.textContent = "DiÄŸer operatÃ¶rler mevcut deÄŸil";
+            option.textContent = "Diğer operatörler mevcut değil";
             option.disabled = true;
             yardimciOperator.appendChild(option);
         } else {
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     yardimciOperatorListesiniDoldur();
 
-    // YardÄ±mcÄ± operatÃ¶r kontrolÃ¼ (sadece gÃ¼ndÃ¼z vardiyasÄ±nda gÃ¶ster)
+    // Yardımcı operatör kontrolü (sadece gündüz vardiyasında göster)
     function yardimciOperatorKontrolu() {
         const selectedVardiya = vardiyaSelect.value;
         
@@ -507,10 +507,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Vardiya deÄŸiÅŸtiÄŸinde yardÄ±mcÄ± operatÃ¶r kontrolÃ¼
+    // Vardiya değiştiğinde yardımcı operatör kontrolü
     vardiyaSelect.addEventListener('change', yardimciOperatorKontrolu);
 
-    // YardÄ±mcÄ± operatÃ¶r checkbox'Ä± deÄŸiÅŸtiÄŸinde
+    // Yardımcı operatör checkbox'ı değiştiğinde
     yardimciOperatorVar.addEventListener('change', function() {
         if (this.checked) {
             yardimciOperatorListesi.style.display = 'block';
@@ -520,64 +520,64 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Personel listesi tablosunu doldur (sadece operatÃ¶r rolÃ¼ndeki kullanÄ±cÄ±lar)
+    // Personel listesi tablosunu doldur (sadece operatör rolündeki kullanıcılar)
     function personelTablosunuDoldur() {
         const tbody = document.getElementById('personelTableBody');
         tbody.innerHTML = '';
         
-        const operatorler = personelListesi.filter(p => p.pozisyon === 'OperatÃ¶r');
+        const operatorler = personelListesi.filter(p => p.pozisyon === 'Operatör');
         operatorler.forEach(personel => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${personel.adSoyad}</td>
                 <td>${personel.pozisyon}</td>
-                <td>${personel.operator ? 'âœ… Evet' : 'âŒ HayÄ±r'}</td>
-                <td><span class="status-badge ${personel.operator ? 'operator' : 'non-operator'}">${personel.operator ? 'OperatÃ¶r' : 'OperatÃ¶r DeÄŸil'}</span></td>
+                <td>${personel.operator ? '✅ Evet' : '❌ Hayır'}</td>
+                <td><span class="status-badge ${personel.operator ? 'operator' : 'non-operator'}">${personel.operator ? 'Operatör' : 'Operatör Değil'}</span></td>
             `;
             tbody.appendChild(tr);
         });
     }
     personelTablosunuDoldur();
 
-    // OperatÃ¶r yetkisi kontrolÃ¼
+    // Operatör yetkisi kontrolü
     function operatorYetkisiKontrolu() {
         const selectedPersonelId = personelSelect.value;
         if (!selectedPersonelId) {
-            operatorStatus.textContent = 'Personel seÃ§iniz.';
+            operatorStatus.textContent = 'Personel seçiniz.';
             operatorStatus.style.color = '#e74c3c';
             return false;
         }
 
         const selectedPersonel = personelListesi.find(p => p.id == selectedPersonelId);
         if (selectedPersonel && selectedPersonel.operator) {
-            operatorStatus.textContent = 'âœ… OperatÃ¶r yetkisi var';
+            operatorStatus.textContent = '✅ Operatör yetkisi var';
             operatorStatus.style.color = '#28a745';
             return true;
         } else {
-            operatorStatus.textContent = 'âŒ OperatÃ¶r yetkisi yok';
+            operatorStatus.textContent = '❌ Operatör yetkisi yok';
             operatorStatus.style.color = '#dc3545';
             return false;
         }
     }
 
-    // Personel seÃ§imi deÄŸiÅŸtiÄŸinde yardÄ±mcÄ± operatÃ¶r listesini gÃ¼ncelle
+    // Personel seçimi değiştiğinde yardımcı operatör listesini güncelle
     personelSelect.addEventListener('change', function() {
         operatorYetkisiKontrolu();
         yardimciOperatorListesiniDoldur();
     });
 
-    // Vardiya seÃ§imi deÄŸiÅŸtiÄŸinde mevcut vardiya formunu gÃ¼ncelle
+    // Vardiya seçimi değiştiğinde mevcut vardiya formunu güncelle
     vardiyaSelect.addEventListener('change', function() {
         yardimciOperatorKontrolu();
     });
 
-    // BaÅŸlangÄ±Ã§ta yetki kontrolÃ¼ yap
+    // Başlangıçta yetki kontrolü yap
     operatorYetkisiKontrolu();
 
     // Mevcut vardiya bilgisi (Google Sheets ile dogrula)
     mevcutVardiyaBilgisiDogrula();
 
-    // HaftalÄ±k vardiya kayÄ±tlarÄ±nÄ± gÃ¶ster
+    // Haftalık vardiya kayıtlarını göster
     haftalikVardiyaKayitlariniGoster();
 
     // Tarih filtrele butonu
@@ -585,29 +585,29 @@ document.addEventListener('DOMContentLoaded', function() {
         haftalikVardiyaKayitlariniGoster();
     });
 
-    // Tarih sÄ±fÄ±rla butonu
+    // Tarih sıfırla butonu
     tarihSifirlaBtn.addEventListener('click', function() {
-        // Tarih alanlarÄ±nÄ± temizle
+        // Tarih alanlarını temizle
         setDefaultDateRange();
         
         haftalikVardiyaKayitlariniGoster();
     });
 
-    // Ä°ÅŸlem detaylarÄ±nÄ± gÃ¶ster
+    // İşlem detaylarını göster
     async function islemDetaylariniGoster() {
-        // Modal oluÅŸtur (loading ile)
+        // Modal oluştur (loading ile)
         const modal = document.createElement('div');
         modal.className = 'islem-detaylari-modal';
         modal.innerHTML = `
             <div class="modal-overlay"></div>
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>ğŸ“‹ Ä°ÅŸlem DetaylarÄ±</h2>
-                    <button class="modal-close">âœ•</button>
+                    <h2>📋 İşlem Detayları</h2>
+                    <button class="modal-close">✕</button>
                 </div>
                 <div class="modal-body">
                     <div style="text-align: center; padding: 20px; color: #6c757d;">
-                        Ä°ÅŸlemler yÃ¼kleniyor...
+                        İşlemler yükleniyor...
                     </div>
                 </div>
             </div>
@@ -628,28 +628,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         try {
-            console.log('ğŸ“Š Vardiya kayÄ±tlarÄ± ve iÅŸlemler tek seferde Ã§ekiliyor...');
-            // Google Sheets'ten vardiya kayÄ±tlarÄ±nÄ± ve iÅŸlemleri tek seferde Ã§ek
+            console.log('📊 Vardiya kayıtları ve işlemler tek seferde çekiliyor...');
+            // Google Sheets'ten vardiya kayıtlarını ve işlemleri tek seferde çek
             const url = new URL(VARDIYA_APPS_SCRIPT_URL);
             url.searchParams.append('action', 'getLastRecordsWithIslemler');
-            url.searchParams.append('count', '270'); // Son 90 gÃ¼n
+            url.searchParams.append('count', '270'); // Son 90 gün
             
             const response = await fetch(url);
             const result = await response.json();
             
-            console.log('ğŸ“Š SonuÃ§:', result);
+            console.log('📊 Sonuç:', result);
             
             if (!result.success) {
-                throw new Error(result.error || 'Ä°ÅŸlemler yÃ¼klenemedi');
+                throw new Error(result.error || 'İşlemler yüklenemedi');
             }
             
             const tumVardiyaKayitlari = result.data || [];
             const mevcutVardiya = localStorage.getItem('mevcutVardiya');
             
-            console.log('ğŸ“Š Toplam vardiya sayÄ±sÄ±:', tumVardiyaKayitlari.length);
+            console.log('📊 Toplam vardiya sayısı:', tumVardiyaKayitlari.length);
             
-            // Ä°ÅŸlemler her vardiya kaydÄ±nÄ±n iÃ§inde (islemler) olarak geliyor
-            // Map oluÅŸturmaya gerek yok, direkt kullanabiliriz
+            // İşlemler her vardiya kaydının içinde (islemler) olarak geliyor
+            // Map oluşturmaya gerek yok, direkt kullanabiliriz
             const vardiyaIslemleriMap = new Map();
             tumVardiyaKayitlari.forEach(vardiya => {
                 if (vardiya.id) {
@@ -657,33 +657,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            console.log('ğŸ“Š Ä°ÅŸlemler yÃ¼klendi');
+            console.log('📊 İşlemler yüklendi');
             
-            // Modal iÃ§eriÄŸini gÃ¼ncelle
+            // Modal içeriğini güncelle
             const modalBody = modal.querySelector('.modal-body');
             modalBody.innerHTML = islemDetaylariHTML(tumVardiyaKayitlari, mevcutVardiya, vardiyaIslemleriMap);
             
         } catch (error) {
-            console.error('âŒ Ä°ÅŸlem detaylarÄ± yÃ¼kleme hatasÄ±:', error);
+            console.error('❌ İşlem detayları yükleme hatası:', error);
             const modalBody = modal.querySelector('.modal-body');
             modalBody.innerHTML = `
                 <div style="text-align: center; padding: 20px; color: #e74c3c;">
-                    Ä°ÅŸlemler yÃ¼klenemedi: ${error.message}
+                    İşlemler yüklenemedi: ${error.message}
                 </div>
             `;
         }
     }
 
-    // Ä°ÅŸlem detaylarÄ± HTML'i oluÅŸtur
+    // İşlem detayları HTML'i oluştur
     function islemDetaylariHTML(tumVardiyaKayitlari, mevcutVardiya, vardiyaIslemleriMap) {
         let html = '';
         
-        // Mevcut vardiya iÅŸlemleri (localStorage'dan)
+        // Mevcut vardiya işlemleri (localStorage'dan)
         if (mevcutVardiya) {
             const vardiya = JSON.parse(mevcutVardiya);
             html += `
                 <div class="islem-grubu">
-                    <h3>ğŸ”„ Mevcut Vardiya Ä°ÅŸlemleri</h3>
+                    <h3>🔄 Mevcut Vardiya İşlemleri</h3>
                     <div class="islem-listesi">
                         ${vardiya.islemler && vardiya.islemler.length > 0 ? 
                             vardiya.islemler.map(islem => `
@@ -693,16 +693,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div class="islem-kaydeden">Kaydeden: ${islem.kaydeden}</div>
                                 </div>
                             `).join('') : 
-                            '<div class="bos-mesaj">HenÃ¼z iÅŸlem kaydedilmemiÅŸ.</div>'
+                            '<div class="bos-mesaj">Henüz işlem kaydedilmemiş.</div>'
                         }
                     </div>
                 </div>
             `;
         }
         
-        // ArÅŸivlenmiÅŸ vardiya iÅŸlemleri (Google Sheets'ten)
+        // Arşivlenmiş vardiya işlemleri (Google Sheets'ten)
         if (tumVardiyaKayitlari.length > 0) {
-            // Ä°ÅŸlemi olan vardiyalarÄ± filtrele
+            // İşlemi olan vardiyaları filtrele
             const islemliVardiyalar = tumVardiyaKayitlari.filter(vardiya => {
                 const islemler = vardiyaIslemleriMap.get(vardiya.id);
                 return (islemler && islemler.length > 0) || !!vardiya.devredenIsler;
@@ -711,7 +711,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (islemliVardiyalar.length > 0) {
                 html += `
                     <div class="islem-grubu">
-                        <h3>ğŸ“ ArÅŸivlenmiÅŸ Vardiya Ä°ÅŸlemleri</h3>
+                        <h3>📁 Arşivlenmiş Vardiya İşlemleri</h3>
                         <div class="islem-listesi">
                             ${islemliVardiyalar.map(vardiya => {
                                 const islemler = vardiyaIslemleriMap.get(vardiya.id) || [];
@@ -724,7 +724,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return `
                                     <div class="vardiya-grubu">
                                         <div class="vardiya-baslik">
-                                            ğŸ“… ${vardiya.tarih} - ${vardiyaAdiMap[vardiya.vardiya] || vardiya.vardiya}
+                                            📅 ${vardiya.tarih} - ${vardiyaAdiMap[vardiya.vardiya] || vardiya.vardiya}
                                             <span class="personel-info">${vardiya.personel || '-'}</span>
                                         </div>
                                         <div class="vardiya-islemleri">
@@ -736,7 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                         <div class="islem-kaydeden">Kaydeden: ${islem.kaydeden}</div>
                                                     </div>
                                                 `).join('') : 
-                                                '<div class="bos-mesaj">Bu vardiya iÃ§in iÅŸlem kaydedilmemiÅŸ.</div>'
+                                                '<div class="bos-mesaj">Bu vardiya için işlem kaydedilmemiş.</div>'
                                             }
                                             ${vardiya.devredenIsler ? `
                                                 <div class="islem-item">
@@ -754,9 +754,9 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 html += `
                     <div class="islem-grubu">
-                        <h3>ğŸ“ ArÅŸivlenmiÅŸ Vardiya Ä°ÅŸlemleri</h3>
+                        <h3>📁 Arşivlenmiş Vardiya İşlemleri</h3>
                         <div class="islem-listesi">
-                            <div class="bos-mesaj">ArÅŸivde iÅŸlem kaydÄ± bulunamadÄ±.</div>
+                            <div class="bos-mesaj">Arşivde işlem kaydı bulunamadı.</div>
                         </div>
                     </div>
                 `;
@@ -764,13 +764,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (!mevcutVardiya && tumVardiyaKayitlari.length === 0) {
-            html = '<div class="bos-mesaj">HenÃ¼z hiÃ§ vardiya kaydÄ± bulunamadÄ±.</div>';
+            html = '<div class="bos-mesaj">Henüz hiç vardiya kaydı bulunamadı.</div>';
         }
         
         return html;
     }
 
-    // Ä°ÅŸlem detaylarÄ± linkine event listener ekle
+    // İşlem detayları linkine event listener ekle
     const islemDetayLink = document.getElementById('islemDetayLink');
     if (islemDetayLink) {
         islemDetayLink.addEventListener('click', function(e) {
@@ -791,7 +791,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('mevcutPersonel').textContent = vardiya.personelAdSoyad;
             document.getElementById('mevcutBaslangic').textContent = vardiya.baslangicZamani;
             
-            // YardÄ±mcÄ± operatÃ¶r bilgisini gÃ¶ster
+            // Yardımcı operatör bilgisini göster
             const yardimciOperatorInfo = document.getElementById('mevcutYardimciOperator');
             if (yardimciOperatorInfo) {
                 if (vardiya.yardimciOperator) {
@@ -808,7 +808,7 @@ document.addEventListener('DOMContentLoaded', function() {
             vardiyaSelect.value = vardiya.vardiya;
             personelSelect.value = vardiya.personelId;
             
-            // YardÄ±mcÄ± operatÃ¶r bilgisi
+            // Yardımcı operatör bilgisi
             if (vardiya.yardimciOperator) {
                 yardimciOperatorVar.checked = true;
                 yardimciOperatorListesi.style.display = 'block';
@@ -822,7 +822,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     }
 
-    // Ä°ÅŸlem kaydetme - Google Sheets
+    // İşlem kaydetme - Google Sheets
     async function mevcutVardiyaBilgisiDogrula() {
         const mevcutVardiya = localStorage.getItem('mevcutVardiya');
         if (!mevcutVardiya) return false;
@@ -860,21 +860,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const devredenIsler = devredenIslerInput?.value.trim() || '';
         
         if (!aciklama && !devredenIsler) {
-            alert('LÃ¼tfen iÅŸlem aÃ§Ä±klamasÄ±nÄ± girin!');
+            alert('Lütfen işlem açıklamasını girin!');
             return;
         }
 
-        // Mevcut vardiya varsa iÅŸlemi kaydet
+        // Mevcut vardiya varsa işlemi kaydet
         const mevcutVardiya = localStorage.getItem('mevcutVardiya');
         if (!mevcutVardiya) {
-            alert('Aktif vardiya bulunamadÄ±!');
+            alert('Aktif vardiya bulunamadı!');
             return;
         }
 
         const vardiya = JSON.parse(mevcutVardiya);
         
         // Buton loading durumu
-        islemKaydetmeBtn.textContent = 'KAYDEDÄ°LÄ°YOR...';
+        islemKaydetmeBtn.textContent = 'KAYDEDİLİYOR...';
         islemKaydetmeBtn.disabled = true;
         
         try {
@@ -901,13 +901,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Google Sheets'e iÅŸlem kaydet
+            // Google Sheets'e işlem kaydet
             const url = new URL(VARDIYA_APPS_SCRIPT_URL);
             url.searchParams.append('action', 'addIslem');
             url.searchParams.append('vardiyaId', vardiya.id);
             url.searchParams.append('islem', aciklama);
             url.searchParams.append('zaman', new Date().toLocaleString('tr-TR'));
-            url.searchParams.append('kaydeden', vardiya.personelAdSoyad || 'OperatÃ¶r');
+            url.searchParams.append('kaydeden', vardiya.personelAdSoyad || 'Operatör');
             
             const response = await fetch(url);
             const result = await response.json();
@@ -929,10 +929,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const yeniIslem = {
                     islem: aciklama,
                     zaman: new Date().toLocaleString('tr-TR'),
-                    kaydeden: vardiya.personelAdSoyad || 'OperatÃ¶r'
+                    kaydeden: vardiya.personelAdSoyad || 'Operatör'
                 };
 
-                // Vardiya iÅŸlemlerini gÃ¼ncelle (localStorage)
+                // Vardiya işlemlerini güncelle (localStorage)
                 if (!vardiya.islemler) {
                     vardiya.islemler = [];
                 }
@@ -943,41 +943,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('mevcutVardiya', JSON.stringify(vardiya));
                 window.SystemAuditLog?.write?.('Vardiya islemi/devreden isi kaydedildi', (aciklama || devredenIsler).slice(0, 80), 'ok');
                 
-                // AlanÄ± temizle
+                // Alanı temizle
                 islemAciklama.value = '';
                 haftalikVardiyaKayitlariniGoster();
                 
-                alert('Ä°ÅŸlem baÅŸarÄ±yla kaydedildi! (ID: ' + result.data.id + ')');
+                alert('İşlem başarıyla kaydedildi! (ID: ' + result.data.id + ')');
             } else {
-                alert('Hata: ' + (result.error || 'Ä°ÅŸlem baÅŸarÄ±sÄ±z!'));
+                alert('Hata: ' + (result.error || 'İşlem başarısız!'));
             }
         } catch (error) {
-            console.error('Ä°ÅŸlem kayÄ±t hatasÄ±:', error);
-            alert('BaÄŸlantÄ± hatasÄ±!');
+            console.error('İşlem kayıt hatası:', error);
+            alert('Bağlantı hatası!');
         } finally {
-            islemKaydetmeBtn.textContent = 'Ä°ÅLEMÄ° KAYDET';
+            islemKaydetmeBtn.textContent = 'İŞLEMİ KAYDET';
             islemKaydetmeBtn.disabled = false;
         }
     });
 
-    // HaftalÄ±k vardiya kayÄ±tlarÄ±nÄ± gÃ¶ster - Google Sheets
+    // Haftalık vardiya kayıtlarını göster - Google Sheets
     async function haftalikVardiyaKayitlariniGoster() {
         const haftalikVardiyaTableBody = document.getElementById('haftalikVardiyaTableBody');
         
-        // Loading mesajÄ± gÃ¶ster
+        // Loading mesajı göster
         haftalikVardiyaTableBody.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
-                    KayÄ±tlar yÃ¼kleniyor...
+                    Kayıtlar yükleniyor...
                 </td>
             </tr>
         `;
         
         try {
-            // Google Sheets'ten son kayÄ±tlarÄ± ve iÅŸlemleri tek seferde Ã§ek (son 90 gÃ¼n iÃ§in yeterli)
+            // Google Sheets'ten son kayıtları ve işlemleri tek seferde çek (son 90 gün için yeterli)
             const url = new URL(VARDIYA_APPS_SCRIPT_URL);
             url.searchParams.append('action', 'getLastRecordsWithIslemler');
-            url.searchParams.append('count', '270'); // 90 gÃ¼n * 3 vardiya
+            url.searchParams.append('count', '270'); // 90 gün * 3 vardiya
             
             const response = await fetch(url);
             const result = await response.json();
@@ -986,7 +986,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
                         <td colspan="8" style="text-align: center; color: #e74c3c; padding: 20px;">
-                            KayÄ±tlar yÃ¼klenemedi: ${result.error || 'Bilinmeyen hata'}
+                            Kayıtlar yüklenemedi: ${result.error || 'Bilinmeyen hata'}
                         </td>
                     </tr>
                 `;
@@ -996,20 +996,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const tumIslemler = result.data || [];
             haftalikVardiyaTableBody.innerHTML = '';
             
-            console.log('Google Sheets vardiya kayÄ±tlarÄ±:', tumIslemler);
+            console.log('Google Sheets vardiya kayıtları:', tumIslemler);
             
             if (tumIslemler.length === 0) {
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
                         <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
-                            Vardiya kaydÄ± bulunamadÄ±.
+                            Vardiya kaydı bulunamadı.
                         </td>
                     </tr>
                 `;
                 return;
             }
             
-            // Ä°ÅŸlemler her vardiya kaydÄ±nÄ±n iÃ§inde (islemler) olarak geliyor
+            // İşlemler her vardiya kaydının içinde (islemler) olarak geliyor
             const vardiyaIslemleriMap = new Map();
             tumIslemler.forEach(vardiya => {
                 if (vardiya.id) {
@@ -1017,14 +1017,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            // Tarih aralÄ±ÄŸÄ±na gÃ¶re filtrele
+            // Tarih aralığına göre filtrele
             const baslangicTarihInput = document.getElementById('baslangicTarih').value;
             const bitisTarihInput = document.getElementById('bitisTarih').value;
             
             let filtrelenmisKayitlar = tumIslemler;
             
             if (baslangicTarihInput && bitisTarihInput) {
-                // KullanÄ±cÄ± tarih seÃ§tiyse o aralÄ±ktaki kayÄ±tlarÄ± gÃ¶ster
+                // Kullanıcı tarih seçtiyse o aralıktaki kayıtları göster
                 const baslangicDate = parseDateValue(baslangicTarihInput);
                 const bitisDate = parseDateValue(bitisTarihInput);
 
@@ -1044,11 +1044,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     return vardiyaTarihi && vardiyaTarihi >= baslangicDate && vardiyaTarihi <= bitisDate;
                 });
             } else {
-                // Tarih girilmediyse kayÄ±tlarÄ± gÃ¶sterme
+                // Tarih girilmediyse kayıtları gösterme
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
                         <td colspan="8" style="text-align: center; color: #6c757d; padding: 20px;">
-                            Tarih aralÄ±ÄŸÄ± seÃ§in.
+                            Tarih aralığı seçin.
                         </td>
                     </tr>
                 `;
@@ -1057,8 +1057,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (filtrelenmisKayitlar.length === 0) {
                 const mesaj = baslangicTarihInput && bitisTarihInput 
-                    ? 'SeÃ§ilen tarih aralÄ±ÄŸÄ±nda vardiya kaydÄ± bulunamadÄ±.' 
-                    : 'Tarih aralÄ±ÄŸÄ± seÃ§in veya kayÄ±t bulunamadÄ±.';
+                    ? 'Seçilen tarih aralığında vardiya kaydı bulunamadı.' 
+                    : 'Tarih aralığı seçin veya kayıt bulunamadı.';
                     
                 haftalikVardiyaTableBody.innerHTML = `
                     <tr>
@@ -1078,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '24-08': '24:00 - 08:00'
                 };
                 
-                // Ä°ÅŸlem detaylarÄ±nÄ± formatla (VardiyaIslemleri sheet'inden)
+                // İşlem detaylarını formatla (VardiyaIslemleri sheet'inden)
                 let islemDetaylariText = '-';
                 const islemler = vardiyaIslemleriMap.get(vardiya.id) || [];
                 const detaylar = [];
@@ -1105,18 +1105,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 haftalikVardiyaTableBody.appendChild(tr);
             });
         } catch (error) {
-            console.error('Vardiya kayÄ±tlarÄ± yÃ¼kleme hatasÄ±:', error);
+            console.error('Vardiya kayıtları yükleme hatası:', error);
             haftalikVardiyaTableBody.innerHTML = `
                 <tr>
                     <td colspan="8" style="text-align: center; color: #e74c3c; padding: 20px;">
-                        BaÄŸlantÄ± hatasÄ±! KayÄ±tlar yÃ¼klenemedi.
+                        Bağlantı hatası! Kayıtlar yüklenemedi.
                     </td>
                 </tr>
             `;
         }
     }
 
-    // Ã‡Ä±kÄ±ÅŸ yap butonlarÄ±
+    // Çıkış yap butonları
     const sidebarLogout = document.getElementById('sidebarLogout');
     const headerLogout = document.getElementById('headerLogout');
     
@@ -1124,21 +1124,21 @@ document.addEventListener('DOMContentLoaded', function() {
     headerLogout.addEventListener('click', handleLogout);
     
     function handleLogout() {
-        if (confirm('Ã‡Ä±kÄ±ÅŸ yapmak istediÄŸinizden emin misiniz?')) {
+        if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
             localStorage.removeItem('rememberedEmail');
             window.location.href = 'anasayfa.html';
         }
     }
 
-    // Sayfa deÄŸiÅŸtiÄŸinde vardiyanÄ±n otomatik bitirilmesini engelle
+    // Sayfa değiştiğinde vardiyanın otomatik bitirilmesini engelle
     window.addEventListener('beforeunload', function(e) {
-        // Vardiya bitirme mesajÄ±nÄ± engelle
+        // Vardiya bitirme mesajını engelle
         return null;
     });
 
-    // Sayfa kapatÄ±ldÄ±ÄŸÄ±nda vardiyanÄ±n kalmasÄ±nÄ± saÄŸla
+    // Sayfa kapatıldığında vardiyanın kalmasını sağla
     window.addEventListener('unload', function() {
-        // Vardiya bilgilerini koru, bitirme iÅŸlemi yapma
+        // Vardiya bilgilerini koru, bitirme işlemi yapma
         return;
     });
 });
