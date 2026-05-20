@@ -819,7 +819,14 @@ function getDashboardDailyProductionMwh(tarih) {
 }
 
 function getDashboardMotorKey(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  var text = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+  var gmMatch = text.match(/GM-?(?:GM-?)?(\d+)$/);
+  if (gmMatch) return 'gm' + gmMatch[1];
+
+  var numericMatch = text.match(/(\d+)$/);
+  if (numericMatch) return 'gm' + numericMatch[1];
+
+  return text.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 function normalizeDashboardText(value) {
@@ -910,7 +917,7 @@ function getDashboardMaintenanceSummary(records) {
 
 function fetchDashboardExternalData() {
   var urls = {
-    motor: 'https://script.google.com/macros/s/AKfycbzqMKhkZXsKyywOZ3D-Ks3xzLz4HxBeR6vkLUdD57nfgcgf5NJleuAt24uv1-1Av7-jHQ/exec?action=getLastRecords&count=100',
+    motor: 'https://script.google.com/macros/s/AKfycbztrKVv4ioi72xRo7g7_YcaA9zAxq12wdvQk7o2yLMjV5FozhVnquc970_iuuhulrGySw/exec?action=getLastRecords&count=100',
     buhar: 'https://script.google.com/macros/s/AKfycbwAI0OS8V5naHu1-k0c57QwZTJgt2WeVX8pmmeT45d56wZqiFyCHv8jMLu-1StLSfwy1Q/exec?action=getLastRecords&count=1',
     announcements: 'https://script.google.com/macros/s/AKfycbyjW5gbtw0BRHjDlmeLYmaio0UQWw8DG1B89X85BYwI-dw4YqaTuEPYilmv6B_xrXDmTA/exec?action=getAnnouncements&active=true'
   };

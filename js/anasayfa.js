@@ -411,7 +411,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getMotorKey(value) {
-        return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const text = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+        const gmMatch = text.match(/GM-?(?:GM-?)?(\d+)$/);
+        if (gmMatch) return `gm${gmMatch[1]}`;
+
+        const numericMatch = text.match(/(\d+)$/);
+        if (numericMatch) return `gm${numericMatch[1]}`;
+
+        return text.toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
     function isStoppedMotorStatus(value) {
