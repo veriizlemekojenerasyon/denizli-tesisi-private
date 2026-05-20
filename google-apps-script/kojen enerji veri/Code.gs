@@ -1488,7 +1488,7 @@ function renderYearlyEnergyDayBlock(sheet, model, dayIndex) {
 function updateYearlyEnergySummarySheet(year) {
   try {
     var targetYear = parseInt(year, 10) || new Date().getFullYear();
-    var model = buildYearlyEnergySummaryModel(targetYear);
+    var model = buildYearlyEnergySummaryModelFromYearlySheets(targetYear);
     var sheet = getOrCreateYearlyEnergySummarySheet(targetYear);
     renderYearlyEnergySummarySheet(sheet, model);
 
@@ -1502,6 +1502,112 @@ function updateYearlyEnergySummarySheet(year) {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+function buildYearlyEnergySummaryModelFromYearlySheets(year) {
+  var targetYear = parseInt(year, 10) || new Date().getFullYear();
+  var motors = ['GM-1', 'GM-2', 'GM-3'];
+  var dayCount = Math.round((new Date(targetYear + 1, 0, 1) - new Date(targetYear, 0, 1)) / 86400000);
+  var motorMetrics = {};
+  var days = [];
+
+  for (var i = 0; i < motors.length; i++) {
+    motorMetrics[motors[i]] = readYearlyEnergyMotorDailyMetricsFromSheet(motors[i], targetYear, dayCount);
+  }
+
+  for (var dayIndex = 0; dayIndex < dayCount; dayIndex++) {
+    var currentDate = new Date(targetYear, 0, dayIndex + 1);
+    var gm1 = motorMetrics['GM-1'][dayIndex] || createEmptyYearlyEnergyDailyMetric();
+    var gm2 = motorMetrics['GM-2'][dayIndex] || createEmptyYearlyEnergyDailyMetric();
+    var gm3 = motorMetrics['GM-3'][dayIndex] || createEmptyYearlyEnergyDailyMetric();
+    var totalProductionMwh = gm1.productionMwh + gm2.productionMwh + gm3.productionMwh;
+    var totalHours = gm1.hours + gm2.hours + gm3.hours;
+
+    days.push({
+      dateKey: formatEnerjiDateTR(currentDate),
+      headerText: formatEnerjiHeaderDate(currentDate),
+      gm1: gm1,
+      gm2: gm2,
+      gm3: gm3,
+      total: {
+        productionMwh: totalProductionMwh,
+        hours: totalHours,
+        averageMw: totalHours > 0 ? totalProductionMwh / totalHours : 0
+      }
+    });
+  }
+
+  return {
+    year: targetYear,
+    days: days
+  };
+}
+
+function readYearlyEnergyMotorDailyMetricsFromSheet(motor, year, dayCount) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = 'YillikEnerji-' + normalizeEnerjiMotorLabel(motor) + '-' + String(year || '').trim();
+  var sheet = spreadsheet.getSheetByName(sheetName);
+  var metrics = [];
+  var slotCount = getYearlyEnergyHourSlots().length;
+
+  for (var emptyIndex = 0; emptyIndex < dayCount; emptyIndex++) {
+    metrics.push(createEmptyYearlyEnergyDailyMetric());
+  }
+
+  if (!sheet || sheet.getLastRow() < 3) {
+    return metrics;
+  }
+
+  var rowCount = Math.min(slotCount, sheet.getLastRow() - 2);
+  var lastColumn = sheet.getLastColumn();
+
+  for (var dayIndex = 0; dayIndex < dayCount; dayIndex++) {
+    var startCol = 2 + (dayIndex * 3);
+    if (startCol + 2 > lastColumn) {
+      break;
+    }
+
+    var values = sheet.getRange(3, startCol, rowCount, 3).getDisplayValues();
+    var firstHours = null;
+    var lastHours = null;
+    var previousHours = null;
+    var productionMwh = 0;
+
+    for (var rowIndex = 0; rowIndex < values.length; rowIndex++) {
+      var hours = values[rowIndex][0] === '' ? null : parseEnerjiNumber(values[rowIndex][0]);
+      var totalEnergy = values[rowIndex][1] === '' ? null : parseEnerjiNumber(values[rowIndex][1]);
+      var hourlyProduction = parseEnerjiNumber(values[rowIndex][2]);
+      var hasValidCounter = (hours !== null && hours > 0) || (totalEnergy !== null && totalEnergy > 0);
+
+      productionMwh += Math.max(0, hourlyProduction);
+
+      if (!hasValidCounter) continue;
+      if (previousHours !== null && hours !== null && hours < previousHours) continue;
+
+      if (firstHours === null && hours !== null) firstHours = hours;
+      if (hours !== null) {
+        lastHours = hours;
+        previousHours = hours;
+      }
+    }
+
+    var hoursDiff = firstHours === null || lastHours === null ? 0 : Math.max(0, lastHours - firstHours);
+    metrics[dayIndex] = {
+      productionMwh: productionMwh,
+      hours: hoursDiff,
+      averageMw: hoursDiff > 0 ? productionMwh / hoursDiff : 0
+    };
+  }
+
+  return metrics;
+}
+
+function createEmptyYearlyEnergyDailyMetric() {
+  return {
+    productionMwh: 0,
+    hours: 0,
+    averageMw: 0
+  };
 }
 
 function updateYearlyEnergySummaryDayBlocks(year, dates) {
