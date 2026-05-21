@@ -502,6 +502,65 @@ document.addEventListener('DOMContentLoaded', function() {
         return text.toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
+    function formatDashboardDateTR(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `${day}.${month}.${date.getFullYear()}`;
+    }
+
+    function normalizeDashboardDate(value) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+
+        if (text.includes('-')) {
+            const parts = text.split('-');
+            if (parts.length === 3) {
+                return `${parts[2].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[0]}`;
+            }
+        }
+
+        const parts = text.split('.');
+        if (parts.length === 3) {
+            return `${parts[0].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[2]}`;
+        }
+
+        return text;
+    }
+
+    function normalizeDashboardHour(value) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+
+        const parts = text.split(':');
+        const hour = parseInt(parts[0], 10);
+        if (!Number.isFinite(hour)) return text;
+
+        return `${String(hour).padStart(2, '0')}:00`;
+    }
+
+    function findMotorRecordByDateHour(records, tarih, saat) {
+        return (records || []).find(record => {
+            return normalizeDashboardDate(record.tarih) === tarih &&
+                normalizeDashboardHour(record.saat) === saat;
+        }) || null;
+    }
+
+    function findLatestMotorRecordForDate(records, tarih) {
+        return (records || []).find(record => normalizeDashboardDate(record.tarih) === tarih) || null;
+    }
+
+    function calculateDailyMotorHours(records, tarih) {
+        const firstRecord = findMotorRecordByDateHour(records, tarih, '00:00');
+        const lastRecord = findMotorRecordByDateHour(records, tarih, '23:00') ||
+            findLatestMotorRecordForDate(records, tarih);
+
+        if (!firstRecord || !lastRecord) return null;
+
+        const firstHours = parseDashboardNumber(firstRecord.calismaSaati);
+        const lastHours = parseDashboardNumber(lastRecord.calismaSaati);
+        return Math.max(0, lastHours - firstHours);
+    }
+
     function isStoppedMotorStatus(value) {
         const status = normalizeText(value);
         const originalStatus = String(value || '').toLowerCase();
@@ -521,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const url = new URL(KOJEN_ENERJI_APPS_SCRIPT_URL);
             url.searchParams.append('action', 'getLastRecords');
-            url.searchParams.append('count', '100');
+            url.searchParams.append('count', '200');
 
             const response = await fetch(url, { method: 'GET', mode: 'cors' });
             const result = await response.json();
@@ -541,17 +600,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!latestByMotor[key]) latestByMotor[key] = record;
             });
 
+            const today = formatDashboardDateTR(new Date());
+
             Object.entries(latestByMotor).forEach(([key, record]) => {
                 const totalEnergyKwh = parseDashboardNumber(record.toplamAktifEnerji);
                 const totalHours = parseDashboardNumber(record.calismaSaati);
                 const previousRecord = recordsByMotor[key] && recordsByMotor[key][1] ? recordsByMotor[key][1] : null;
                 const previousEnergyKwh = previousRecord ? parseDashboardNumber(previousRecord.toplamAktifEnerji) : totalEnergyKwh;
-                const previousHours = previousRecord ? parseDashboardNumber(previousRecord.calismaSaati) : totalHours;
+                const dailyHours = calculateDailyMotorHours(recordsByMotor[key], today);
 
                 motorData[key].totalProduction = totalEnergyKwh / 1000;
                 motorData[key].hourlyProduction = Math.max(0, (totalEnergyKwh - previousEnergyKwh) / 1000);
                 motorData[key].totalHours = totalHours;
-                motorData[key].hourlyHours = Math.max(0, totalHours - previousHours);
+                motorData[key].hourlyHours = dailyHours === null ? 0 : dailyHours;
 
                 if (isStoppedMotorStatus(record.durum)) {
                     motorData[key].status = 'stopped';
