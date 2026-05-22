@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takip Sistemi - Giriş</title>
+    <link rel="stylesheet" href="css/giris.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo-section">
+                <img src="images/koruma_logo_1.png" alt="Logo" class="logo">
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <h2>Takip Sistemi</h2>
+                <p class="subtitle">Hesabınıza giriş yapın</p>
+                
+                <div class="form-group">
+                    <label for="email">E-posta</label>
+                    <input type="email" id="email" name="email" required placeholder="ornek@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Şifre</label>
+                    <div class="password-input">
+                        <input type="password" id="password" name="password" required placeholder="Şifrenizi girin">
+                        <button type="button" id="togglePassword" class="toggle-password">
+                            <span class="eye-icon">👁️</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input type="checkbox" id="rememberMe" name="rememberMe">
+                        <span class="checkmark"></span>
+                        Beni hatırla
+                    </label>
+                    <a href="#" id="forgotPassword" class="forgot-link">Şifremi unuttum</a>
+                </div>
+                
+                <button type="submit" class="login-btn">Giriş Yap</button>
+                
+                <div class="form-footer">
+                    <a href="#" id="changePassword" class="change-password-link">Şifremi değiştir</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Şifremi Unuttum Modal - Adım 1: Email -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Şifremi Unuttum</h3>
+            <p id="resetStep1Text">E-posta adresinizi girin, şifre sıfırlama kodu gönderelim.</p>
+            <form id="forgotPasswordForm">
+                <div class="form-group">
+                    <label for="resetEmail">E-posta</label>
+                    <input type="email" id="resetEmail" required placeholder="ornek@email.com">
+                </div>
+                <button type="submit" class="submit-btn" id="sendCodeBtn">Kod Gönder</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Şifremi Unuttum Modal - Adım 2: Kod ve Yeni Şifre -->
+    <div id="verifyCodeModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Şifre Sıfırlama</h3>
+            <p>E-postanıza gelen 6 haneli kodu ve yeni şifrenizi girin.</p>
+            <form id="verifyCodeForm">
+                <div class="form-group">
+                    <label for="resetCode">Sıfırlama Kodu</label>
+                    <input type="text" id="resetCode" required placeholder="123456" maxlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="newResetPassword">Yeni Şifre</label>
+                    <input type="password" id="newResetPassword" required placeholder="Yeni şifreniz" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmResetPassword">Yeni Şifre (Tekrar)</label>
+                    <input type="password" id="confirmResetPassword" required placeholder="Yeni şifrenizi tekrar girin" minlength="6">
+                </div>
+                <button type="submit" class="submit-btn">Şifreyi Sıfırla</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Şifre Değiştir Modal - 3 Adım -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Şifre Değiştir</h3>
+            
+            <!-- Adım 1: Email -->
+            <form id="changePasswordStep1Form">
+                <div class="form-group">
+                    <label for="changePassEmail">E-posta Adresiniz</label>
+                    <input type="email" id="changePassEmail" required placeholder="E-posta adresinizi girin">
+                </div>
+                <button type="submit" class="submit-btn">Kod Gönder</button>
+            </form>
+            
+            <!-- Adım 2: Kod Doğrulama -->
+            <form id="changePasswordStep2Form" style="display: none;">
+                <p class="info-text">E-posta adresinize 6 haneli doğrulama kodu gönderildi.</p>
+                <div class="form-group">
+                    <label for="changePassCode">Doğrulama Kodu</label>
+                    <input type="text" id="changePassCode" required placeholder="6 haneli kod" maxlength="6">
+                </div>
+                <button type="submit" class="submit-btn">Kodu Doğrula</button>
+                <button type="button" id="resendChangePassCode" class="link-btn">Kodu Tekrar Gönder</button>
+            </form>
+            
+            <!-- Adım 3: Yeni Şifre -->
+            <form id="changePasswordStep3Form" style="display: none;">
+                <div class="form-group">
+                    <label for="changePassNewPassword">Yeni Şifre</label>
+                    <input type="password" id="changePassNewPassword" required placeholder="Yeni şifreniz (en az 6 karakter)" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="changePassConfirmPassword">Yeni Şifre (Tekrar)</label>
+                    <input type="password" id="changePassConfirmPassword" required placeholder="Yeni şifrenizi tekrar girin">
+                </div>
+                <button type="submit" class="submit-btn">Şifreyi Değiştir</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/giris.js"></script>
+    <script src="js/auto-refresh.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saatlik Veri Girişi - Kojenerasyon</title>
+    <link rel="stylesheet" href="css/saatlik-veri-giris.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sol Navigasyon Menüsü -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="anasayfa.html" class="menu-link">
+                        <span class="menu-icon">🏠</span>
+                        <span class="menu-text">Ana Sayfa</span>
+                    </a>
+                </li>
+                <li class="menu-item active">
+                    <a href="saatlik-veri-giris.html" class="menu-link">
+                        <span class="menu-icon">📊</span>
+                        <span class="menu-text">Saatlik Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="gunluk-veri-giris.html" class="menu-link">
+                        <span class="menu-icon">📆</span>
+                        <span class="menu-text">Günlük Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="buhar-verisi.html" class="menu-link">
+                        <span class="menu-icon">💨</span>
+                        <span class="menu-text">Buhar Verisi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="vardiya.html" class="menu-link">
+                        <span class="menu-icon">👥</span>
+                        <span class="menu-text">Vardiya Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="motor-takip.html" class="menu-link">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Motor Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kojen-motor-veri.html" class="menu-link">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Kojen Motor Veri</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kojen-enerji-veri.html" class="menu-link">
+                        <span class="menu-icon">⚡</span>
+                        <span class="menu-text">Kojen Enerji Veri</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="bakim-takibi.html" class="menu-link">
+                        <span class="menu-icon">🔧</span>
+                        <span class="menu-text">Bakım Takibi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="stok-takip.html" class="menu-link">
+                        <span class="menu-icon">📦</span>
+                        <span class="menu-text">Stok Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-kontrol.html" class="menu-link">
+                        <span class="menu-icon">&#9881;</span>
+                        <span class="menu-text">Merkezi Kontrol</span>
+                    </a>
+                </li>
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-bildirim.html" class="menu-link">
+                        <span class="menu-icon">&#128226;</span>
+                        <span class="menu-text">Bildirim Y&#246;netimi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kullanici-yonetimi.html" class="menu-link">
+                        <span class="menu-icon">👤</span>
+                        <span class="menu-text">Kullanıcı Yönetimi</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="user-info" style="padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
+                    <span id="userNameDisplay" style="color: white; font-size: 13px; font-weight: 500;">Yükleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout">Çıkış Yap</button>
+            </div>
+        </nav>
+
+        <!-- Ana İçerik Alanı -->
+        <div class="main-content">
+            <!-- Üst Header -->
+            <header class="header">
+                <div class="header-top">
+                    <div class="company-info">
+                        <h1>KORUMA KLOR ALKALİ ŞİRKETLER GRUBU</h1>
+                        <h2>KOJENERASYON BÖLÜMÜ</h2>
+                    </div>
+                    <div class="user-info">
+                        <span class="welcome-text">Hoşgeldin, <span id="userNameDisplay">Yükleniyor...</span></span>
+                        <button class="logout-btn" id="headerLogout">Çıkış Yap</button>
+                    </div>
+                </div>
+                <div class="header-bottom">
+                    <h3>Saatlik Veri Girişi</h3>
+                </div>
+            </header>
+
+            <!-- Form İçeriği -->
+            <main class="dashboard-content">
+                <section class="data-entry-section">
+                    <h2 class="section-title">Saatlik Veri Giriş Formu</h2>
+                    
+
+                    <div class="mobile-quick-panel" aria-label="Mobil hızlı giriş paneli">
+                        <div class="quick-panel-header">
+                            <div>
+                                <span class="quick-eyebrow">Mobil hızlı giriş</span>
+                                <h3>Eksik saatler ve tek dokunuş</h3>
+                            </div>
+                            <button type="button" class="quick-refresh-btn" id="refreshMissingHoursBtn">Yenile</button>
+                        </div>
+                        <div class="quick-actions">
+                            <button type="button" class="quick-action-btn primary" id="quickCurrentHourBtn">Şimdiki Saati Hazırla</button>
+                            <button type="button" class="quick-action-btn" id="quickPreviousHourBtn">Önceki Saati Hazırla</button>
+                            <button type="button" class="quick-action-btn danger" id="quickZeroRecordBtn">Sıfır Kayıt Hazırla</button>
+                        </div>
+                        <div class="missing-hours-box">
+                            <div class="missing-hours-title">Eksik kalan saatler</div>
+                            <div class="missing-hours-list" id="missingHoursList">
+                                <button type="button" class="missing-hour-chip loading">Yükleniyor...</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="saatlikVeriForm" class="data-form">
+                        <!-- Tarih ve Saat Bilgileri -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="tarih">Tarih</label>
+                                <input type="date" id="tarih" name="tarih" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="saat">Saat</label>
+                                <input type="text" id="saat" name="saat" readonly required>
+                            </div>
+                            <div class="form-group">
+                                <label for="vardiya">Vardiya</label>
+                                <select id="vardiya" name="vardiya" required>
+                                    <option value="08-16">08:00 - 16:00</option>
+                                    <option value="16-24">16:00 - 24:00</option>
+                                    <option value="24-08">24:00 - 08:00</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Aktif ve Reaktif Değerler -->
+                        <div class="form-section">
+                            <h3>Enerji Değerleri</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="aktifMwh">Aktif Enerji (MWh)</label>
+                                    <input type="number" id="aktifMwh" name="aktifMwh" step="0.001" placeholder="0.000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reaktifMwh">Reaktif Enerji (kVArh)</label>
+                                    <input type="number" id="reaktifMwh" name="reaktifMwh" step="0.001" placeholder="0.000" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notlar -->
+                        <div class="form-section">
+                            <h3>Notlar</h3>
+                            <div class="form-group full-width">
+                                <label for="notlar">Ek Notlar</label>
+                                <textarea id="notlar" name="notlar" rows="4" placeholder="Varsa ek notları buraya yazın..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Butonlar -->
+                        <div class="form-actions">
+                            <button type="reset" class="reset-btn">Temizle</button>
+                            <button type="submit" class="submit-btn" id="submitBtn">Kaydet</button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Son 48 Kayıt Tablosu -->
+                <section class="records-section">
+                    <h2 class="section-title">Son 48 Saatlik Kayıt</h2>
+                    <div class="table-container">
+                        <table class="records-table" id="recordsTable">
+                            <thead>
+                                <tr>
+                                    <th class="col-num">#</th>
+                                    <th class="col-date">Tarih</th>
+                                    <th class="col-time">Saat</th>
+                                    <th class="col-shift">Vardiya</th>
+                                    <th class="col-active">Aktif Enerji (MWh)</th>
+                                    <th class="col-reactive">Reaktif Enerji (kVArh)</th>
+                                    <th class="col-notes">Notlar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recordsTableBody">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">
+                                        Kayıtlar yükleniyor...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/saatlik-veri-giris.js"></script>
+    <script>
+        (function displayUserName() {
+            const logged = localStorage.getItem('loggedInUser');
+            const display = document.getElementById('userNameDisplay');
+            if (display && logged) {
+                try {
+                    const user = JSON.parse(logged);
+                    const firstName = user.firstName || user.ad || user['Ad'] || '';
+                    const lastName = user.lastName || user.soyad || user['Soyad'] || '';
+                    display.textContent = (firstName + ' ' + lastName).trim() || user.email || 'Kullanıcı';
+                } catch (e) { display.textContent = 'Kullanıcı'; }
+            } else if (display) { display.textContent = 'Misafir'; }
+        })();
+    </script>
+    <script src="js/global-duyurular.js"></script>
+    <script src="js/auto-refresh.js"></script>
+    <script src="js/admin-menu-visibility.js"></script>
+    <script src="js/logout-system.js"></script>
+</body>
+</html>
+

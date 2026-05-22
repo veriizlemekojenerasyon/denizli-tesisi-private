@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vardiya Yönetimi - Kojenerasyon</title>
+    <link rel="stylesheet" href="css/vardiya.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sol Navigasyon Menüsü -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="anasayfa.html" class="menu-link">
+                        <span class="menu-icon">🏠</span>
+                        <span class="menu-text">Ana Sayfa</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="saatlik-veri-giris.html" class="menu-link">
+                        <span class="menu-icon">📊</span>
+                        <span class="menu-text">Saatlik Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="gunluk-veri-giris.html" class="menu-link">
+                        <span class="menu-icon">📆</span>
+                        <span class="menu-text">Günlük Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="buhar-verisi.html" class="menu-link">
+                        <span class="menu-icon">💨</span>
+                        <span class="menu-text">Buhar Verisi</span>
+                    </a>
+                </li>
+                <li class="menu-item active">
+                    <a href="vardiya.html" class="menu-link">
+                        <span class="menu-icon">👥</span>
+                        <span class="menu-text">Vardiya Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="motor-takip.html" class="menu-link">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Motor Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kojen-motor-veri.html" class="menu-link">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Kojen Motor Veri</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kojen-enerji-veri.html" class="menu-link">
+                        <span class="menu-icon">⚡</span>
+                        <span class="menu-text">Kojen Enerji Veri</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="bakim-takibi.html" class="menu-link">
+                        <span class="menu-icon">🔧</span>
+                        <span class="menu-text">Bakım Takibi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="stok-takip.html" class="menu-link">
+                        <span class="menu-icon">📦</span>
+                        <span class="menu-text">Stok Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-kontrol.html" class="menu-link">
+                        <span class="menu-icon">&#9881;</span>
+                        <span class="menu-text">Merkezi Kontrol</span>
+                    </a>
+                </li>
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-bildirim.html" class="menu-link">
+                        <span class="menu-icon">&#128226;</span>
+                        <span class="menu-text">Bildirim Y&#246;netimi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kullanici-yonetimi.html" class="menu-link">
+                        <span class="menu-icon">👤</span>
+                        <span class="menu-text">Kullanıcı Yönetimi</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="user-info" style="padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
+                    <span id="userNameDisplay" style="color: white; font-size: 13px; font-weight: 500;">Yükleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout">Çıkış Yap</button>
+            </div>
+        </nav>
+
+        <!-- Ana İçerik Alanı -->
+        <div class="main-content">
+            <!-- Üst Header -->
+            <header class="header">
+                <div class="header-top">
+                    <div class="company-info">
+                        <h1>KORUMA KLOR ALKALİ ŞİRKETLER GRUBU</h1>
+                        <h2>KOJENERASYON BÖLÜMÜ</h2>
+                    </div>
+                    <div class="user-info">
+                        <span class="welcome-text">Hoşgeldin, <span id="userNameDisplay">Admin</span></span>
+                        <button class="logout-btn" id="headerLogout">Çıkış Yap</button>
+                    </div>
+                </div>
+                <div class="header-bottom">
+                    <h3>Vardiya Yönetimi</h3>
+                </div>
+            </header>
+
+            <!-- Ana İçerik -->
+            <main class="content">
+                <section class="vardiya-section">
+                    <h2 class="section-title">Vardiya Bilgileri</h2>
+                    
+                    <!-- Vardiya Seçimi -->
+                    <div class="vardiya-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="tarih">Tarih</label>
+                                <input type="text" id="tarih" name="tarih" placeholder="GG.AA.YYYY" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="vardiya">Vardiya</label>
+                                <select id="vardiya" name="vardiya" required>
+                                    <option value="">Seçin...</option>
+                                    <option value="08-16">08:00 - 16:00</option>
+                                    <option value="16-24">16:00 - 24:00</option>
+                                    <option value="24-08">24:00 - 08:00</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="personel">Personel</label>
+                                <select id="personel" name="personel" required>
+                                    <option value="">Personel seçin...</option>
+                                    <!-- Personel listesi JavaScript ile doldurulacak -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="operatör">Operatör</label>
+                                <div class="operator-info">
+                                    <span id="operatorStatus">Yetki kontrol ediliyor...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Yardımcı Operatör Seçimi -->
+                        <div class="yardimci-operator-section" id="yardimciOperatorSection" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="yardimciOperatorVar" name="yardimciOperatorVar">
+                                        <span class="checkmark"></span>
+                                        İkinci Operatör var mı?
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-row" id="yardimciOperatorListesi" style="display: none;">
+                                <div class="form-group">
+                                    <label for="yardimciOperator">İkinci Operatör</label>
+                                    <select id="yardimciOperator" name="yardimciOperator">
+                                        <option value="">İkinci operatör seçin...</option>
+                                        <!-- Yardımcı operatör listesi JavaScript ile doldurulacak -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="reset-btn" id="temizleBtn">TEMİZLE</button>
+                            <button type="button" class="submit-btn" id="kaydetBtn">VARDİYA BAŞLAT</button>
+                        </div>
+                    </div>
+
+                    <!-- Mevcut Vardiya Bilgisi -->
+                    <div class="mevcut-vardiya" id="mevcutVardiya" style="display: none;">
+                        <h3 class="subsection-title">Mevcut Vardiya</h3>
+                        <div class="vardiya-info">
+                            <div class="info-item">
+                                <span class="label">Vardiya:</span>
+                                <span class="value" id="mevcutVardiyaAdi">-</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Tarih:</span>
+                                <span class="value" id="mevcutTarih">-</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Personel:</span>
+                                <span class="value" id="mevcutPersonel">-</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">İkinci Operatör:</span>
+                                <span class="value" id="mevcutYardimciOperator">-</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Başlangıç:</span>
+                                <span class="value" id="mevcutBaslangic">-</span>
+                            </div>
+                        </div>
+                        <!-- İşlem Kaydetme -->
+                    <div class="islem-kaydetme">
+                        <h3 class="subsection-title">Vardiya İşlem Kaydetme</h3>
+                        <div class="form-group full-width">
+                            <label for="islemAciklama">İşlem Açıklaması</label>
+                            <textarea id="islemAciklama" name="islemAciklama" rows="4" placeholder="Yapılan işlemi buraya yazın..."></textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="devredenIsler">Devreden İşler</label>
+                            <textarea id="devredenIsler" name="devredenIsler" rows="3" placeholder="Bir sonraki vardiyaya kalan işleri yazın..."></textarea>
+                        </div>
+                        <div class="vardiya-actions">
+                            <button type="button" class="action-btn" id="islemKaydetBtn">İŞLEM KAYDET</button>
+                            <button type="button" class="action-btn secondary" id="vardiyaBitirBtn">VARDİYA BİTİR</button>
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- Operatör Kullanıcılar -->
+                    <div class="personel-listesi">
+                        <h3 class="subsection-title">Operatör Kullanıcılar</h3>
+                        <div class="table-container">
+                            <table class="personel-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ad Soyad</th>
+                                        <th>Pozisyon</th>
+                                        <th>Operatör</th>
+                                        <th>Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="personelTableBody">
+                                    <!-- Personel listesi JavaScript ile doldurulacak -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Haftalık Vardiya Kayıtları -->
+                    <div class="haftalik-vardiya-kayitlari">
+                        <h3 class="subsection-title">Haftalık Vardiya Kayıtları</h3>
+                        
+                        <!-- Tarih Aralığı Seçici -->
+                        <div class="form-row" style="margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label for="baslangicTarih">Başlangıç Tarihi</label>
+                                <input type="date" id="baslangicTarih" name="baslangicTarih">
+                            </div>
+                            <div class="form-group">
+                                <label for="bitisTarih">Bitiş Tarihi</label>
+                                <input type="date" id="bitisTarih" name="bitisTarih">
+                            </div>
+                            <div class="form-group" style="display: flex; align-items: flex-end;">
+                                <button type="button" class="submit-btn" id="tarihFiltreBtn" style="width: 100%;">FİLTRELE</button>
+                            </div>
+                            <div class="form-group" style="display: flex; align-items: flex-end;">
+                                <button type="button" class="reset-btn" id="tarihSifirlaBtn" style="width: 100%;">SIFIRLA</button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="vardiya-kayitlari-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Vardiya</th>
+                                        <th>Personel</th>
+                                        <th>İkinci Operatör</th>
+                                        <th>Başlangıç</th>
+                                        <th>Bitiş</th>
+                                        <th>İşlem Detayları</th>
+                                        <th>Devreden Isler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="haftalikVardiyaTableBody">
+                                    <!-- Haftalık vardiya kayıtları JavaScript ile doldurulacak -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="islem-detaylari-link">
+                            <a href="#" id="islemDetayLink" class="detay-link">
+                                <span class="link-icon">📋</span>
+                                Tüm İşlem Detaylarını Görüntüle
+                            </a>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/audit-log.js"></script>
+    <script src="js/vardiya.js"></script>
+    
+    <script src="js/global-duyurular.js"></script>
+    <script src="js/admin-menu-visibility.js"></script>
+    <script src="js/logout-system.js"></script>
+</body>
+</html>

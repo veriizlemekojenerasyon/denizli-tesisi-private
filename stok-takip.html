@@ -1,0 +1,402 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kojenerasyon Kontrol Paneli - Stok Takip</title>
+    <link rel="stylesheet" href="css/stok-takip.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sol Navigasyon Menüsü -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="anasayfa.html" class="menu-link">
+                        <span class="menu-icon">🏠</span>
+                        <span class="menu-text">Ana Sayfa</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="saatlik-veri-giris.html" class="menu-link">
+                        <span class="menu-icon">📊</span>
+                        <span class="menu-text">Saatlik Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="gunluk-veri-giris.html" class="menu-link">
+                        <span class="menu-icon">📆</span>
+                        <span class="menu-text">Günlük Veri Girişi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="buhar-verisi.html" class="menu-link">
+                        <span class="menu-icon">💨</span>
+                        <span class="menu-text">Buhar Verisi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="vardiya.html" class="menu-link">
+                        <span class="menu-icon">👥</span>
+                        <span class="menu-text">Vardiya Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="motor-takip.html" class="menu-link">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Motor Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kojen-motor-veri.html" class="menu-link">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Kojen Motor Veri</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kojen-enerji-veri.html" class="menu-link">
+                        <span class="menu-icon">⚡</span>
+                        <span class="menu-text">Kojen Enerji Veri</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="bakim-takibi.html" class="menu-link">
+                        <span class="menu-icon">🔧</span>
+                        <span class="menu-text">Bakım Takibi</span>
+                    </a>
+                </li>
+                <li class="menu-item active">
+                    <a href="stok-takip.html" class="menu-link">
+                        <span class="menu-icon">📦</span>
+                        <span class="menu-text">Stok Takip</span>
+                    </a>
+                </li>
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-kontrol.html" class="menu-link">
+                        <span class="menu-icon">&#9881;</span>
+                        <span class="menu-text">Merkezi Kontrol</span>
+                    </a>
+                </li>
+                <li class="menu-item admin-menu-item">
+                    <a href="admin-bildirim.html" class="menu-link">
+                        <span class="menu-icon">&#128226;</span>
+                        <span class="menu-text">Bildirim Y&#246;netimi</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="kullanici-yonetimi.html" class="menu-link">
+                        <span class="menu-icon">👤</span>
+                        <span class="menu-text">Kullanıcı Yönetimi</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <button class="logout-btn" id="sidebarLogout">Çıkış Yap</button>
+            </div>
+        </nav>
+
+        <!-- Ana İçerik Alanı -->
+        <div class="main-content">
+            <!-- Üst Header -->
+            <header class="header">
+                <div class="header-top">
+                    <div class="company-info">
+                        <h1>KORUMA KLOR ALKALİ ŞİRKETLER GRUBU</h1>
+                        <h2>KOJENERASYON BÖLÜMÜ</h2>
+                    </div>
+                    <div class="user-info">
+                        <span class="welcome-text">Hoşgeldin, <span id="userNameDisplay">Yükleniyor...</span></span>
+                        <button class="logout-btn" id="headerLogout">Çıkış Yap</button>
+                    </div>
+                </div>
+                <div class="header-bottom">
+                    <h3>Stok Takip ve Malzeme Yönetimi</h3>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Stok Takip Başlık -->
+                <div class="page-header">
+                    <h2><i class="fas fa-boxes"></i> Malzeme Girdisi ve Stok Takibi</h2>
+                    <p>Malzeme giriş-çıkış işlemleri ve stok yönetimi</p>
+                </div>
+
+                <!-- Stok Özet Kartları -->
+                <div class="stock-summary">
+                    <div class="summary-card">
+                        <div class="card-icon">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <div class="card-info">
+                            <h3>Toplam Malzeme</h3>
+                            <span class="card-value" id="total-materials">0</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-icon low-stock">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="card-info">
+                            <h3>Kritik Stok</h3>
+                            <span class="card-value" id="low-stock-count">0</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="card-info">
+                            <h3>Bu Ay Giriş</h3>
+                            <span class="card-value" id="monthly-in">0</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="card-info">
+                            <h3>Bu Ay Çıkış</h3>
+                            <span class="card-value" id="monthly-out">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Malzeme Ekleme Formu -->
+                <div class="stock-form-container">
+                    <h3><i class="fas fa-plus-circle"></i> Yeni Malzeme Ekle</h3>
+                    <form id="stock-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="material-code">Malzeme Kodu</label>
+                                <input type="text" id="material-code" name="material-code" placeholder="Örn: MLZ-001" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="material-name">Malzeme Adı</label>
+                                <input type="text" id="material-name" name="material-name" placeholder="Malzeme adı girin" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="material-category">Kategori</label>
+                                <select id="material-category" name="material-category" required>
+                                    <option value="">Kategori seçin</option>
+                                    <option value="yag">Yağ</option>
+                                    <option value="filtre">Filtre</option>
+                                    <option value="yedek-parca">Yedek Parça</option>
+                                    <option value="kimyasal">Kimyasal</option>
+                                    <option value="elektrik">Elektrik Malzemesi</option>
+                                    <option value="sarf-malzeme">Sarf Malzeme</option>
+                                    <option value="diger">Diğer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="material-quantity">Miktar</label>
+                                <input type="number" id="material-quantity" name="material-quantity" min="0" step="0.01" placeholder="0.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="material-unit">Birim</label>
+                                <select id="material-unit" name="material-unit" required>
+                                    <option value="">Birim seçin</option>
+                                    <option value="adet">Adet</option>
+                                    <option value="lt">Litre</option>
+                                    <option value="kg">Kilogram</option>
+                                    <option value="mt">Metre</option>
+                                    <option value="takim">Takım</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="min-stock">Minimum Stok</label>
+                                <input type="number" id="min-stock" name="min-stock" min="0" step="0.01" placeholder="Kritik seviye" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label for="material-description">Açıklama</label>
+                                <textarea id="material-description" name="material-description" rows="3" placeholder="Malzeme hakkında ek bilgiler..."></textarea>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save"></i> Malzeme Ekle
+                            </button>
+                            <button type="reset" class="btn-secondary">
+                                <i class="fas fa-eraser"></i> Temizle
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Stok Giriş/Çıkış İşlemleri -->
+                <div class="stock-transaction-container">
+                    <h3><i class="fas fa-exchange-alt"></i> Stok Giriş/Çıkış</h3>
+                    <form id="transaction-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="transaction-material">Malzeme</label>
+                                <select id="transaction-material" name="transaction-material" required>
+                                    <option value="">Malzeme seçin</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="transaction-type">İşlem Tipi</label>
+                                <select id="transaction-type" name="transaction-type" required>
+                                    <option value="">İşlem seçin</option>
+                                    <option value="in">Stok Giriş (+)</option>
+                                    <option value="out">Stok Çıkış (-)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="transaction-quantity">Miktar</label>
+                                <input type="number" id="transaction-quantity" name="transaction-quantity" min="0.01" step="0.01" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="transaction-date">Tarih</label>
+                                <input type="date" id="transaction-date" name="transaction-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="transaction-person">İşlemi Yapan</label>
+                                <select id="transaction-person" name="transaction-person" required>
+                                    <option value="">Personel seçin</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="transaction-reason">İşlem Nedeni</label>
+                                <select id="transaction-reason" name="transaction-reason" required>
+                                    <option value="">Neden seçin</option>
+                                    <option value=" satin-alma">Satın Alma</option>
+                                    <option value="kullanim">Kullanım</option>
+                                    <option value="bakim">Bakım</option>
+                                    <option value="degisim">Değişim</option>
+                                    <option value="diger">Diğer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-check-circle"></i> İşlem Kaydet
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Stok Listesi -->
+                <div class="stock-list-container">
+                    <div class="list-header">
+                        <h3><i class="fas fa-list"></i> Mevcut Stok Listesi</h3>
+                        <div class="search-filter">
+                            <input type="text" id="stock-search" placeholder="Malzeme ara...">
+                            <select id="category-filter">
+                                <option value="">Tüm Kategoriler</option>
+                                <option value="yag">Yağ</option>
+                                <option value="filtre">Filtre</option>
+                                <option value="yedek-parca">Yedek Parça</option>
+                                <option value="kimyasal">Kimyasal</option>
+                                <option value="elektrik">Elektrik Malzemesi</option>
+                                <option value="sarf-malzeme">Sarf Malzeme</option>
+                                <option value="diger">Diğer</option>
+                            </select>
+                            <button class="btn-export" id="export-stock">
+                                <i class="fas fa-file-excel"></i> Excel'e Aktar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="stock-table-wrapper">
+                        <table class="stock-table" id="stock-table">
+                            <thead>
+                                <tr>
+                                    <th>Kod</th>
+                                    <th>Malzeme Adı</th>
+                                    <th>Kategori</th>
+                                    <th>Miktar</th>
+                                    <th>Birim</th>
+                                    <th>Min. Stok</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-tbody">
+                                <!-- Stoklar JavaScript ile doldurulacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Son İşlemler -->
+                <div class="recent-transactions">
+                    <h3><i class="fas fa-history"></i> Son İşlemler</h3>
+                    <div class="transactions-table-wrapper">
+                        <table class="transactions-table" id="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Malzeme</th>
+                                    <th>İşlem</th>
+                                    <th>Miktar</th>
+                                    <th>Personel</th>
+                                    <th>Neden</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-tbody">
+                                <!-- İşlemler JavaScript ile doldurulacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bildirim Modal -->
+    <div id="notification-modal" class="notification-modal">
+        <div class="notification-content">
+            <div class="notification-header">
+                <h3 id="notification-title">Bildirim</h3>
+                <button class="notification-close" onclick="closeNotification()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="notification-body">
+                <p id="notification-message"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Admin kontrolü
+        (function checkAdmin() {
+            const logged = localStorage.getItem('loggedInUser');
+            if (!logged) {
+                window.location.href = 'anasayfa.html';
+                return;
+            }
+            try {
+                const user = JSON.parse(logged);
+                if (user.role !== 'admin') {
+                    document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial;"><div style="text-align:center;"><h2>🚫 Yetkisiz Erişim</h2><p>Bu sayfa sadece admin kullanıcılar içindir.</p><p><a href="anasayfa.html">Ana Sayfaya Git</a></p></div></div>';
+                    return;
+                }
+            } catch (e) {
+                window.location.href = 'anasayfa.html';
+            }
+        })();
+    </script>
+    <script src="js/stok-takip.js"></script>
+    <script src="js/global-duyurular.js"></script>
+    <script src="js/auto-refresh.js"></script>
+    <script src="js/admin-menu-visibility.js"></script>
+    <script src="js/logout-system.js"></script>
+</body>
+</html>
+

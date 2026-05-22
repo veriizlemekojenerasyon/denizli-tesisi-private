@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merkezi Kontrol - Kojenerasyon</title>
+    <link rel="stylesheet" href="css/admin-kontrol.css">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body>
+    <div class="admin-shell">
+        <header class="admin-header">
+            <div>
+                <p class="eyebrow">Admin Paneli</p>
+                <h1>Merkezi Kontrol</h1>
+                <p>Eksik kayıtlar, aktif vardiya, duyurular ve sistem logları tek ekranda.</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn secondary" id="refreshDashboardBtn">Yenile</button>
+                <a href="anasayfa.html" class="btn ghost">Ana Sayfa</a>
+                <span class="current-user" id="adminUserName">Admin</span>
+            </div>
+        </header>
+
+        <main>
+            <section class="status-grid" id="statusGrid">
+                <article class="status-card loading">
+                    <span class="card-label">Saatlik Veri</span>
+                    <strong>Kontrol ediliyor</strong>
+                    <p>Son kayıtlar okunuyor.</p>
+                </article>
+            </section>
+
+            <section class="panel-grid">
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Eksik Kayıt Kontrolü</h2>
+                            <p>Bugünün kritik kayıt durumları.</p>
+                        </div>
+                    </div>
+                    <div class="check-list" id="missingCheckList"></div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Hızlı Geçiş</h2>
+                            <p>Adminin en sık açacağı ekranlar.</p>
+                        </div>
+                    </div>
+                    <div class="quick-links">
+                        <a href="admin-bildirim.html">Bildirim Yönetimi</a>
+                        <a href="vardiya.html">Vardiya Takip</a>
+                        <a href="saatlik-veri-giris.html">Saatlik Veri</a>
+                        <a href="kojen-motor-veri.html">Kojen Motor</a>
+                        <a href="kojen-enerji-veri.html">Kojen Enerji</a>
+                        <a href="bakim-takibi.html">Bakim Takip</a>
+                        <a href="kullanici-yonetimi.html">Kullanıcı Yönetimi</a>
+                    </div>
+                </article>
+            </section>
+
+            <section class="panel-grid control-grid">
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Tetikleyici Sağlığı</h2>
+                            <p>Otomatik eksik kayıt kontrollerinin kurulu olup olmadığını gösterir.</p>
+                        </div>
+                        <button type="button" class="btn ghost" id="installTriggersBtn">Tetikleyicileri Kur</button>
+                    </div>
+                    <div class="health-grid" id="triggerHealthList"></div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Admin Testleri</h2>
+                            <p>Eksik kayıt kontrolünü ve mail akışını manuel dene.</p>
+                        </div>
+                    </div>
+                    <div class="test-actions">
+                        <button type="button" class="btn secondary" data-test-module="saatlik">Saatlik Test</button>
+                        <button type="button" class="btn secondary" data-test-module="motor">Motor Test</button>
+                        <button type="button" class="btn secondary" data-test-module="enerji">Enerji Test</button>
+                        <button type="button" class="btn secondary" data-test-module="bakim">Bakim Test</button>
+                        <button type="button" class="btn ghost" id="testMailBtn">Test Maili</button>
+                    </div>
+                    <div class="test-result" id="testResultBox">Test sonucu burada görünecek.</div>
+                </article>
+            </section>
+
+            <section class="panel-grid control-grid">
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Vardiya Kapanış Ön Kontrolü</h2>
+                            <p>Vardiya bitmeden önce eksik kayıt ve kritik duyuru durumunu özetler.</p>
+                        </div>
+                    </div>
+                    <div class="check-list" id="shiftCloseChecklist"></div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Mobil Operatör Özeti</h2>
+                            <p>Telefon/tablet ekranı için hızlı aksiyon listesi.</p>
+                        </div>
+                    </div>
+                    <div class="operator-mobile-list" id="operatorMobileList"></div>
+                </article>
+            </section>
+
+            <section class="panel-grid control-grid wide-left">
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Detaylı Kalite Kontrolü</h2>
+                            <p>Limit dışı, tekrar eden veya mantıksız kayıtları ayrıntılı listeler.</p>
+                        </div>
+                    </div>
+                    <div class="quality-list" id="qualityDetailList"></div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Kullanıcı İşlem Özeti</h2>
+                            <p>Bu tarayıcıda tutulan son işlem geçmişi.</p>
+                        </div>
+                    </div>
+                    <div class="user-activity-list" id="userActivityList"></div>
+                </article>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Veri Yedeği</h2>
+                        <p>Saatlik, motor, enerji, vardiya ve bildirim kayıtlarını JSON, Excel veya PDF olarak alır.</p>
+                    </div>
+                    <div class="backup-actions">
+                        <select id="backupFormatSelect" class="backup-format" aria-label="Yedek formatı">
+                            <option value="json">JSON</option>
+                            <option value="excel">Excel</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                        <button type="button" class="btn secondary" id="backupAllBtn">Tüm Yedeği Al</button>
+                    </div>
+                </div>
+                <div class="backup-grid">
+                    <button type="button" class="btn ghost" data-backup-module="saatlik">Saatlik</button>
+                    <button type="button" class="btn ghost" data-backup-module="motor">Motor</button>
+                    <button type="button" class="btn ghost" data-backup-module="enerji">Enerji</button>
+                    <button type="button" class="btn ghost" data-backup-module="vardiya">Vardiya</button>
+                    <button type="button" class="btn ghost" data-backup-module="bildirim">Bildirim</button>
+                    <button type="button" class="btn ghost" data-backup-module="loglar">Loglar</button>
+                </div>
+                <div class="backup-result" id="backupResultBox">Yedek sonucu burada görünecek.</div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Sistem Logları</h2>
+                        <p>Admin işlemleri ve kontrol ekranı sonuçları bu tarayıcıda tutulur.</p>
+                    </div>
+                    <button type="button" class="btn danger" id="clearLogsBtn">Logları Temizle</button>
+                </div>
+                <div class="log-table-wrap">
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>Zaman</th>
+                                <th>Modul</th>
+                                <th>Tarih / Saat</th>
+                                <th>Eksik Kayit</th>
+                                <th>Detay</th>
+                                <th>Sonuc</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/audit-log.js"></script>
+    <script src="js/bildirim-sheets.js"></script>
+    <script src="js/admin-kontrol.js"></script>
+    <script src="js/logout-system.js"></script>
+</body>
+</html>
