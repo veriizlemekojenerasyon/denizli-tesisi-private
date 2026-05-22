@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const DAILY_PRODUCTION_CACHE_KEY = 'dashboardDailyProduction';
     const DAILY_STEAM_CACHE_KEY = 'dashboardDailySteam';
     const SUMMARY_CACHE_DATE_KEY = 'dashboardSummaryCacheDate';
+    const ANNOUNCEMENT_MODAL_PENDING_KEY = 'showHomeAnnouncementModal';
     const ANNOUNCEMENT_MODAL_SHOWN_KEY = 'homeAnnouncementModalShown';
     const defaultAnnouncements = [
         {
@@ -83,6 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sayfa yuklendiginde verileri bekletmeden goster
     loadDashboardData();
+    setTimeout(openLoginAnnouncementModalIfPending, 250);
     setInterval(loadDashboardData, 5 * 60 * 1000);
     setTimeout(ensureAdminTriggersAfterLogin, 1800);
 
@@ -142,9 +144,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showAnnouncementsOnLogin(announcements) {
-        if (sessionStorage.getItem(ANNOUNCEMENT_MODAL_SHOWN_KEY) === '1') return;
+        if (sessionStorage.getItem(ANNOUNCEMENT_MODAL_PENDING_KEY) !== '1') return;
+        sessionStorage.removeItem(ANNOUNCEMENT_MODAL_PENDING_KEY);
         sessionStorage.setItem(ANNOUNCEMENT_MODAL_SHOWN_KEY, '1');
         openAnnouncementModal(Array.isArray(announcements) ? announcements : []);
+    }
+
+    async function openLoginAnnouncementModalIfPending() {
+        if (sessionStorage.getItem(ANNOUNCEMENT_MODAL_PENDING_KEY) !== '1') return;
+        const announcements = await getTodayAnnouncements();
+        showAnnouncementsOnLogin(announcements);
     }
 
     function createTickerItem(text, priority = 'normal', category = 'general') {

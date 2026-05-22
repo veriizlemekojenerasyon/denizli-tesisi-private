@@ -187,6 +187,19 @@ body {
     box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
 }
 
+.login-btn:disabled,
+.login-btn.is-loading {
+    cursor: wait;
+    opacity: 0.78;
+    transform: none;
+}
+
+.login-btn:disabled:hover,
+.login-btn.is-loading:hover {
+    box-shadow: none;
+    transform: none;
+}
+
 .login-btn:active {
     transform: translateY(0);
 }

@@ -3,6 +3,8 @@ const USER_URL = 'https://script.google.com/macros/s/AKfycbzt8MaQa9ikOO8gS0WbLhK
 
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
+    const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+    const loginSubmitText = loginSubmitBtn ? loginSubmitBtn.querySelector('.login-btn-text') : null;
     const togglePassword = document.getElementById('togglePassword');
     const passwordInput = document.getElementById('password');
     const forgotPasswordLink = document.getElementById('forgotPassword');
@@ -193,6 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function performLogin(email, password, rememberMe) {
+        setLoginLoading(true);
         try {
             const res = await fetch(USER_URL, {
                 method: 'POST',
@@ -203,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (!result.success) {
                 showError(result.error || 'Giriş başarısız!');
+                setLoginLoading(false);
                 return;
             }
             
@@ -221,6 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             localStorage.setItem('loggedInUser', JSON.stringify(userData));
             localStorage.setItem('currentUser', JSON.stringify(userData));
+            sessionStorage.setItem('showHomeAnnouncementModal', '1');
+            sessionStorage.removeItem('homeAnnouncementModalShown');
             if (userData.role === 'admin') {
                 sessionStorage.setItem('adminTriggerCheckPending', '1');
             } else {
@@ -234,6 +240,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1500);
         } catch (e) {
             showError('Sunucu hatası: ' + e.message);
+            setLoginLoading(false);
+        }
+    }
+
+    function setLoginLoading(isLoading) {
+        if (!loginSubmitBtn) return;
+        loginSubmitBtn.disabled = isLoading;
+        loginSubmitBtn.classList.toggle('is-loading', isLoading);
+        if (loginSubmitText) {
+            loginSubmitText.textContent = isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap';
         }
     }
 
