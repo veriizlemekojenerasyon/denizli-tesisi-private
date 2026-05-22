@@ -59,14 +59,7 @@ const SaatlikApp = {
         if (quickZeroRecordBtn) quickZeroRecordBtn.addEventListener('click', () => this.prepareZeroRecord());
         if (refreshMissingHoursBtn) refreshMissingHoursBtn.addEventListener('click', () => this.loadLastRecords());
         
-        const tarihInput = document.getElementById('tarih');
-        
-        if (tarihInput) {
-            tarihInput.addEventListener('change', () => {
-                this.manualSlotSelected = true;
-                this.checkExistingRecord();
-            });
-        }
+        this.lockDateInputToToday();
         
         const sidebarLogout = document.getElementById('sidebarLogout');
         const headerLogout = document.getElementById('headerLogout');
@@ -77,6 +70,25 @@ const SaatlikApp = {
     
     setInitialValues: function() {
         this.syncCurrentDateTime();
+    },
+
+    getTodayISO: function() {
+        return this.formatDateISO(new Date());
+    },
+
+    getTodayTR: function() {
+        return this.formatDateTR(new Date());
+    },
+
+    lockDateInputToToday: function() {
+        const tarihInput = document.getElementById('tarih');
+        if (!tarihInput) return;
+
+        tarihInput.value = this.getTodayTR();
+        tarihInput.readOnly = true;
+        tarihInput.setAttribute('aria-readonly', 'true');
+        tarihInput.setAttribute('tabindex', '-1');
+        tarihInput.onfocus = () => tarihInput.blur();
     },
 
     syncCurrentDateTime: function() {
@@ -90,7 +102,7 @@ const SaatlikApp = {
         const day = String(today.getDate()).padStart(2, '0');
         const currentHour = String(today.getHours()).padStart(2, '0') + ':00';
         
-        if (tarihInput) tarihInput.value = `${year}-${month}-${day}`;
+        if (tarihInput) tarihInput.value = `${day}.${month}.${year}`;
         
         if (saatInput) {
             saatInput.value = currentHour;
@@ -124,7 +136,7 @@ const SaatlikApp = {
         const tarihInput = document.getElementById('tarih');
         const saatInput = document.getElementById('saat');
         const vardiyaSelect = document.getElementById('vardiya');
-        if (tarihInput) tarihInput.value = this.formatDateISO(date);
+        if (tarihInput) tarihInput.value = this.getTodayTR();
         if (saatInput) saatInput.value = this.formatHour(date);
         if (vardiyaSelect) vardiyaSelect.value = this.getVardiyaByHour(date.getHours());
         this.manualSlotSelected = true;
@@ -132,9 +144,8 @@ const SaatlikApp = {
     },
 
     getSelectedSlotDate: function() {
-        const tarihInput = document.getElementById('tarih');
         const saatInput = document.getElementById('saat');
-        const value = tarihInput?.value || this.formatDateISO(new Date());
+        const value = this.getTodayISO();
         const hour = parseInt((saatInput?.value || this.getCurrentHourRounded()).split(':')[0], 10) || 0;
         const date = new Date(value + 'T00:00:00');
         date.setHours(hour, 0, 0, 0);
@@ -170,6 +181,7 @@ const SaatlikApp = {
     
     handleFormSubmit: async function(e) {
         e.preventDefault();
+        this.lockDateInputToToday();
         if (!this.manualSlotSelected) {
             this.syncCurrentDateTime();
         }
@@ -183,7 +195,7 @@ const SaatlikApp = {
         }
         
         const formData = {
-            tarih: document.getElementById('tarih').value,
+            tarih: this.getTodayISO(),
             saat: document.getElementById('saat').value,
             vardiya: document.getElementById('vardiya').value,
             aktifMwh: document.getElementById('aktifMwh').value,
@@ -507,7 +519,7 @@ const SaatlikApp = {
     
     // Form inputlarını kilitle/aç
     lockForm: function(locked) {
-        const inputs = document.querySelectorAll('#saatlikVeriForm input:not([type="date"]):not(#saat), #saatlikVeriForm select:not(#tarih):not(#saat), #saatlikVeriForm textarea');
+        const inputs = document.querySelectorAll('#saatlikVeriForm input:not(#tarih):not(#saat), #saatlikVeriForm select, #saatlikVeriForm textarea');
         
         inputs.forEach(input => {
             input.readOnly = locked;
