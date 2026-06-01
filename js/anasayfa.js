@@ -39,10 +39,10 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Buhar verisi config
-    const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSmfP2MQ5hz3rlWUXcr46zFLc8zZx9gQ8Onh0xZCSVWfkXbDFrh3ufPuMzk2WHoF7P/exec';
-    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwEtjk6bxReb_9caPGcIYBSs2Qqqt2J1ZWGc6VvnWyk12DnuSUbh90zxZewvBeImRgP/exec';
+    const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfyTZBsaswmpE2n-pWQScgnQW3EIqy8oteTXurwK5umzyvGR9YGN30w-XQYqzgyKAG/exec';
+    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywcjpCfFK88lUT9tqZUMum3wCw9gSH1LbDDekKvjFyHL16qy_QSV5Zv6bHhSlgWcGR/exec';
     const KOJEN_MOTOR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0hVgnAIHSlaXAoFBc0-96SsMjb9R_GD3ptKlBBK7L_hjGFQBWqezV9w55X4MyZu3U/exec';
-    const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoEBErZhDlyKoh-zK3MlNh-9jUF_vtqGyp-3sYZes1Fdzf8gCMJKYE1OFQwSbWy2Wa/exec';
+    const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWkOZ3Z4TTuj7frYqjgYnsUZwKxNsO38hZv_q92aTeIHW6Zv1aBFNsmcwA-wxCR9NX/exec';
     const SAATLIK_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzpkF4RJJ46d9A9518oxSwGaeuSgw-VHodQ5hjCApqb1H0FuIEnYNsqGOSdWXf9Yc/exec';
     const GUNLUK_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxWz5Ea81m_kJ8TybTaowHlNqdAZeK2dQ70pJWPDTVm_ooAwnnO6nOlN5ZBIPnZLRmK/exec';
     const ADMIN_TRIGGER_MODULES = [

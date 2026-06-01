@@ -40,6 +40,13 @@ function handleRequest(e) {
       case 'checkHourlyMissingRecords':
         result = checkHourlyMissingRecords();
         break;
+      case 'fillMissingBuharDates':
+      case 'fillMissingDateGaps':
+        result = fillMissingBuharDates(params.startDate || params.baslangicTarihi, params.endDate || params.bitisTarihi, params.sendMail === 'true');
+        break;
+      case 'sortBuharRecords':
+        result = sortBuharRecords();
+        break;
       case 'installHourlyMissingRecordTrigger':
         result = installHourlyMissingRecordTrigger();
         break;
@@ -65,7 +72,15 @@ function handleRequest(e) {
 }
 
 function isWriteAction(action) {
-  return ['addRecord', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
+  return [
+    'addRecord',
+    'sendEmail',
+    'checkHourlyMissingRecords',
+    'fillMissingBuharDates',
+    'fillMissingDateGaps',
+    'sortBuharRecords',
+    'installHourlyMissingRecordTrigger'
+  ].indexOf(action) !== -1;
 }
 
 function getBuharSheet(createIfMissing) {
@@ -99,6 +114,31 @@ function normalizeDateTR(value) {
     return parts[2] + '.' + parts[1] + '.' + parts[0];
   }
   return text;
+}
+
+function parseDateTR(value) {
+  var text = normalizeDateTR(value);
+  if (!text) return null;
+  var parts = text.split('.');
+  if (parts.length !== 3) return null;
+
+  var day = parseInt(parts[0], 10);
+  var month = parseInt(parts[1], 10);
+  var year = parseInt(parts[2], 10);
+  if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+
+  return new Date(year, month - 1, day);
+}
+
+function formatDateTR(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+}
+
+function getDefaultBuharEndDate() {
+  var now = new Date();
+  var target = new Date(now);
+  target.setDate(target.getDate() - 1);
+  return target;
 }
 
 function addRecord(data) {
@@ -283,6 +323,193 @@ function checkHourlyMissingRecords() {
     });
     return { success: false, error: error.toString() };
   }
+}
+
+function fillMissingBuharDates(startDate, endDate, sendMail) {
+  try {
+    var sheet = getBuharSheet(true);
+    var lastRow = sheet.getLastRow();
+    var existingDates = {};
+    var existingDateObjects = [];
+
+    if (lastRow > 1) {
+      var dateValues = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
+      for (var i = 0; i < dateValues.length; i++) {
+        var normalized = normalizeDateTR(dateValues[i][0]);
+        var parsed = parseDateTR(normalized);
+        if (!parsed) continue;
+        existingDates[normalized] = true;
+        existingDateObjects.push(parsed);
+      }
+    }
+
+    var rangeStart = parseDateTR(startDate);
+    var rangeEnd = parseDateTR(endDate);
+
+    if (!rangeStart && existingDateObjects.length) {
+      rangeStart = existingDateObjects[0];
+      for (var s = 1; s < existingDateObjects.length; s++) {
+        if (existingDateObjects[s].getTime() < rangeStart.getTime()) {
+          rangeStart = existingDateObjects[s];
+        }
+      }
+    }
+
+    if (!rangeEnd) {
+      rangeEnd = getDefaultBuharEndDate();
+    }
+
+    if (!rangeStart || !rangeEnd) {
+      return {
+        success: false,
+        error: 'Baslangic tarihi bulunamadi. startDate parametresi verin. Ornek: startDate=13.05.2026'
+      };
+    }
+
+    rangeStart = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+    rangeEnd = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate());
+
+    if (rangeEnd.getTime() < rangeStart.getTime()) {
+      return { success: false, error: 'Bitis tarihi baslangic tarihinden once olamaz' };
+    }
+
+    var rowsToAdd = [];
+    var missingDates = [];
+    var scannedDates = [];
+    var kayitTarihi = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss');
+    var cursor = new Date(rangeStart.getTime());
+
+    while (cursor.getTime() <= rangeEnd.getTime()) {
+      var dateText = formatDateTR(cursor);
+      scannedDates.push(dateText);
+      if (!existingDates[dateText]) {
+        missingDates.push(dateText);
+        rowsToAdd.push([
+          dateText,
+          0,
+          'OTOMATIK SISTEM',
+          kayitTarihi
+        ]);
+        existingDates[dateText] = true;
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    if (rowsToAdd.length) {
+      var appendRow = sheet.getLastRow() + 1;
+      sheet.getRange(appendRow, 1, rowsToAdd.length, 4).setValues(rowsToAdd);
+      var addedRange = sheet.getRange(appendRow, 1, rowsToAdd.length, 4);
+      addedRange.setHorizontalAlignment('center');
+      addedRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+      sheet.getRange(appendRow, 1, rowsToAdd.length, 1).setNumberFormat('@');
+      sheet.getRange(appendRow, 2, rowsToAdd.length, 1).setNumberFormat('0.00');
+      sheet.getRange(appendRow, 3, rowsToAdd.length, 2).setNumberFormat('@');
+    }
+
+    var sortResult = sortBuharRecords();
+    var mailResult = { success: true, skipped: true };
+    if (sendMail && missingDates.length) {
+      mailResult = sendMissingBuharDatesMail(missingDates, rangeStart, rangeEnd);
+    }
+
+    addSystemLog({
+      tarih: formatDateTR(rangeEnd),
+      modul: 'Buhar',
+      eksikKayit: missingDates.length ? missingDates.join(', ') : 'Yok',
+      otomatikKayitSonucu: missingDates.length + ' eksik tarih dolduruldu',
+      mailSonucu: sendMail ? (mailResult.success ? 'Basarili' : 'Basarisiz') : 'Gonderilmedi',
+      hataMesaji: mailResult.success ? '' : mailResult.error,
+      detay: 'Buhar eksik tarih tarama'
+    });
+
+    return {
+      success: true,
+      scannedDateCount: scannedDates.length,
+      addedCount: missingDates.length,
+      startDate: formatDateTR(rangeStart),
+      endDate: formatDateTR(rangeEnd),
+      addedDates: missingDates,
+      skippedCount: scannedDates.length - missingDates.length,
+      sort: sortResult,
+      mail: mailResult
+    };
+  } catch (error) {
+    addSystemLog({
+      modul: 'Buhar',
+      otomatikKayitSonucu: 'Hata',
+      mailSonucu: 'Bilinmiyor',
+      hataMesaji: error.toString(),
+      detay: 'fillMissingBuharDates'
+    });
+    return { success: false, error: error.toString() };
+  }
+}
+
+function sortBuharRecords() {
+  try {
+    var sheet = getBuharSheet(false);
+    if (!sheet || sheet.getLastRow() < 3) {
+      return { success: true, skipped: true, rowCount: sheet ? Math.max(0, sheet.getLastRow() - 1) : 0 };
+    }
+
+    var rowCount = sheet.getLastRow() - 1;
+    var range = sheet.getRange(2, 1, rowCount, 4);
+    var values = range.getValues();
+    var displayValues = range.getDisplayValues();
+    var backgrounds = range.getBackgrounds();
+    var fontColors = range.getFontColors();
+    var rows = [];
+
+    for (var i = 0; i < values.length; i++) {
+      var date = parseDateTR(displayValues[i][0] || values[i][0]);
+      rows.push({
+        values: values[i],
+        backgrounds: backgrounds[i],
+        fontColors: fontColors[i],
+        timestamp: date ? date.getTime() : Number.MAX_SAFE_INTEGER,
+        originalIndex: i
+      });
+    }
+
+    rows.sort(function(a, b) {
+      if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+      return a.originalIndex - b.originalIndex;
+    });
+
+    var sortedValues = [];
+    var sortedBackgrounds = [];
+    var sortedFontColors = [];
+    for (var r = 0; r < rows.length; r++) {
+      sortedValues.push(rows[r].values);
+      sortedBackgrounds.push(rows[r].backgrounds);
+      sortedFontColors.push(rows[r].fontColors);
+    }
+
+    range.setValues(sortedValues);
+    range.setBackgrounds(sortedBackgrounds);
+    range.setFontColors(sortedFontColors);
+    range.setHorizontalAlignment('center');
+    range.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+    sheet.getRange(2, 1, rowCount, 1).setNumberFormat('@');
+    sheet.getRange(2, 2, rowCount, 1).setNumberFormat('0.00');
+    sheet.getRange(2, 3, rowCount, 2).setNumberFormat('@');
+
+    return { success: true, rowCount: rowCount };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+function sendMissingBuharDatesMail(missingDates, startDate, endDate) {
+  var subject = 'Buhar Verisi Eksik Tarihler Dolduruldu - ' + formatDateTR(startDate) + ' / ' + formatDateTR(endDate);
+  var body = 'Buhar Verisi Eksik Tarih Taramasi\n\n' +
+    'Baslangic: ' + formatDateTR(startDate) + '\n' +
+    'Bitis: ' + formatDateTR(endDate) + '\n' +
+    'Eklenen kayit sayisi: ' + missingDates.length + '\n\n' +
+    '0 ton olarak otomatik eklenen tarihler:\n' +
+    missingDates.join('\n');
+
+  return sendEmailAlert({ subject: subject, body: body });
 }
 
 function getOrCreateSystemLogsSheet() {

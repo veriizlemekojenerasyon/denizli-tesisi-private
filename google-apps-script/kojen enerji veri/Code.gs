@@ -981,7 +981,7 @@ function getDashboardMaintenanceSummary(records) {
 function fetchDashboardExternalData() {
   var urls = {
     motor: 'https://script.google.com/macros/s/AKfycbx0hVgnAIHSlaXAoFBc0-96SsMjb9R_GD3ptKlBBK7L_hjGFQBWqezV9w55X4MyZu3U/exec?action=getLastRecords&count=100',
-    buhar: 'https://script.google.com/macros/s/AKfycbwSmfP2MQ5hz3rlWUXcr46zFLc8zZx9gQ8Onh0xZCSVWfkXbDFrh3ufPuMzk2WHoF7P/exec?action=getLastRecords&count=1',
+    buhar: 'https://script.google.com/macros/s/AKfycbzfyTZBsaswmpE2n-pWQScgnQW3EIqy8oteTXurwK5umzyvGR9YGN30w-XQYqzgyKAG/exec?action=getLastRecords&count=1',
     announcements: 'https://script.google.com/macros/s/AKfycbz9uR24xQeuV85ygxfFiakRRJz601KgaKCgOlHcsuYDjUl5xkR4o3HbIVn-tgVdSnTF/exec?action=getAnnouncements&active=true'
   };
 

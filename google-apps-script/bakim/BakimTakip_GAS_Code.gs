@@ -3,7 +3,7 @@
 
 const SPREADSHEET_NAME = 'Bakim Takip Sistemi';
 const SPREADSHEET_ID = '1ep4yY5U_QRghohq6DtkbG68KT8MMFLVMXe6S7atd2AQ';
-const KOJEN_ENERJI_API_URL = 'https://script.google.com/macros/s/AKfycbwEtjk6bxReb_9caPGcIYBSs2Qqqt2J1ZWGc6VvnWyk12DnuSUbh90zxZewvBeImRgP/exec';
+const KOJEN_ENERJI_API_URL = 'https://script.google.com/macros/s/AKfycbywcjpCfFK88lUT9tqZUMum3wCw9gSH1LbDDekKvjFyHL16qy_QSV5Zv6bHhSlgWcGR/exec';
 
 const DRIVE_FOLDERS = {
   PERIODIC: '1TGrKfYHrayZmiGW1J8GQd70jPtByBKY9',
