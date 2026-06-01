@@ -124,6 +124,7 @@
             item.active !== false &&
             matchesDateRange(item, today) &&
             matchesTarget(item, user) &&
+            matchesShift(item) &&
             matchesPageTarget(item)
         );
     }
@@ -140,6 +141,23 @@
         const target = item.target || 'all';
         if (target === 'all') return true;
         return user?.role === target;
+    }
+
+    function matchesShift(item) {
+        const shift = String(item.shift || '').trim();
+        if (!shift) return true;
+        return normalizeShift(shift) === getCurrentShift();
+    }
+
+    function getCurrentShift() {
+        const hour = new Date().getHours();
+        if (hour >= 8 && hour < 16) return '08-16';
+        if (hour >= 16 && hour < 24) return '16-24';
+        return '24-08';
+    }
+
+    function normalizeShift(value) {
+        return String(value || '').trim().replace('/', '-');
     }
 
     function matchesPageTarget(item) {

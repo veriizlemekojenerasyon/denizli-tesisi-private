@@ -8,7 +8,7 @@
 // ============================================
 const GUNLUK_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwNka_9UemxV0HPBVA02qUE2ayzICY4OH0Ms3uBx4VupMB-4UZlnvNhCoeV6SRzkAFy/exec',
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxWz5Ea81m_kJ8TybTaowHlNqdAZeK2dQ70pJWPDTVm_ooAwnnO6nOlN5ZBIPnZLRmK/exec',
     
     // Sayfa başlığı
     PAGE_NAME: 'Günlük Veri Girişi',
@@ -20,8 +20,7 @@ const GUNLUK_CONFIG = {
     EMAIL_ENABLED: true,
     EMAIL_TO: 'mrtcsk0320@gmail.com',
     EMAIL_SUBJECT: 'Günlük Veri Girişi Uyarısı - Kayıt Girilmedi',
-    AUTO_CHECK_HOUR: 23,
-    AUTO_CHECK_MINUTE: 59
+    AUTO_CHECK_INTERVAL_MS: 300000
 };
 
 // ============================================
@@ -324,47 +323,35 @@ const GunlukApp = {
         console.log('Günlük otomatik kayıt kontrolü başlatılıyor...');
 
         setInterval(() => {
-            this.checkAndSendMissingRecordMail();
-        }, 60000);
+            this.checkAndRunMissingRecordAutomation();
+        }, GUNLUK_CONFIG.AUTO_CHECK_INTERVAL_MS);
 
         setTimeout(() => {
-            this.checkAndSendMissingRecordMail();
+            this.checkAndRunMissingRecordAutomation();
         }, 5000);
     },
 
-    checkAndSendMissingRecordMail: async function() {
-        const now = new Date();
+    checkAndRunMissingRecordAutomation: async function() {
+        try {
+            const url = new URL(GUNLUK_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'checkHourlyMissingRecords');
 
-        if (now.getHours() !== GUNLUK_CONFIG.AUTO_CHECK_HOUR || now.getMinutes() !== GUNLUK_CONFIG.AUTO_CHECK_MINUTE) {
-            return;
-        }
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result = await response.json();
 
-        const todayStr = this.formatDateInput(now);
-        const sentKey = `gunlukMissingMailSent:${todayStr}`;
-
-        if (localStorage.getItem(sentKey)) {
-            return;
-        }
-
-        const hasRecord = await this.isExistingRecord(todayStr);
-        if (hasRecord) {
-            return;
-        }
-
-        const formattedToday = this.formatDateTR(todayStr);
-        const subject = `${GUNLUK_CONFIG.EMAIL_SUBJECT} - ${formattedToday}`;
-        const body = `Günlük Veri Girişi Uyarısı\n\nTarih: ${formattedToday}\n\nBugün için günlük veri kaydı girilmedi.\n\nLütfen ilgili personeli bilgilendirin.`;
-
-        const result = await this.sendEmailAlert(subject, body);
-        if (result.success) {
-            localStorage.setItem(sentKey, new Date().toISOString());
-            this.showNotification('Uyarı Maili', 'Günlük veri girilmediği için mail gönderildi.', 'warning');
-        } else {
-            console.error('Günlük veri uyarı maili gönderilemedi:', result.error);
+            if (result.success && result.missing && result.notification && result.notification.success) {
+                const todayStr = this.formatDateInput(new Date());
+                const noticeKey = `gunlukShiftNotificationShown:${todayStr}`;
+                if (!localStorage.getItem(noticeKey)) {
+                    localStorage.setItem(noticeKey, new Date().toISOString());
+                    this.showNotification('Bildirim Olusturuldu', '08-16 vardiyasinda kayit girilmedi. 16-24 vardiyasina otomatik bildirim olusturuldu.', 'warning');
+                }
+            }
+        } catch (error) {
+            console.error('Gunluk otomatik bildirim kontrolu yapilamadi:', error);
         }
     },
-    
-    // Düzenleme açıklaması oluştur
+
     generateEditDescription: function(oldRecord, newData) {
         if (!oldRecord) return 'Kayıt güncellendi';
         

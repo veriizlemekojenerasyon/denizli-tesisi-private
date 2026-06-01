@@ -40,11 +40,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Buhar verisi config
     const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSmfP2MQ5hz3rlWUXcr46zFLc8zZx9gQ8Onh0xZCSVWfkXbDFrh3ufPuMzk2WHoF7P/exec';
-    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwlotG6AdPrPbf69w8X8JoS6kg1hoR17RurW3UG0R9P0DYJ1y8Dgxwtjxe3kpc0FNFT/exec';
+    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwEtjk6bxReb_9caPGcIYBSs2Qqqt2J1ZWGc6VvnWyk12DnuSUbh90zxZewvBeImRgP/exec';
     const KOJEN_MOTOR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0hVgnAIHSlaXAoFBc0-96SsMjb9R_GD3ptKlBBK7L_hjGFQBWqezV9w55X4MyZu3U/exec';
-    const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzB09G_LlUn_XL_oQEV6uoYIPfJH-Pa1UW5utsvuZpqBFoiSEFOwkuyU2IzV4xYGgjE/exec';
+    const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoEBErZhDlyKoh-zK3MlNh-9jUF_vtqGyp-3sYZes1Fdzf8gCMJKYE1OFQwSbWy2Wa/exec';
     const SAATLIK_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzpkF4RJJ46d9A9518oxSwGaeuSgw-VHodQ5hjCApqb1H0FuIEnYNsqGOSdWXf9Yc/exec';
-    const GUNLUK_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwNka_9UemxV0HPBVA02qUE2ayzICY4OH0Ms3uBx4VupMB-4UZlnvNhCoeV6SRzkAFy/exec';
+    const GUNLUK_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxWz5Ea81m_kJ8TybTaowHlNqdAZeK2dQ70pJWPDTVm_ooAwnnO6nOlN5ZBIPnZLRmK/exec';
     const ADMIN_TRIGGER_MODULES = [
         { key: 'saatlik', label: 'Saatlik Veri', url: SAATLIK_APPS_SCRIPT_URL },
         { key: 'motor', label: 'Kojen Motor', url: KOJEN_MOTOR_APPS_SCRIPT_URL },
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const user = getLoggedInUser();
         const activeItems = items.filter(item => {
             const isActive = item.active !== false;
-            return isActive && matchesDateRange(item, today) && matchesTarget(item, user);
+            return isActive && matchesDateRange(item, today) && matchesTarget(item, user) && matchesShift(item);
         });
 
         return activeItems.length > 0 ? activeItems : defaultAnnouncements;
@@ -329,6 +329,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const target = item.target || 'all';
         if (target === 'all') return true;
         return user?.role === target;
+    }
+
+    function matchesShift(item) {
+        const shift = String(item.shift || '').trim();
+        if (!shift) return true;
+        return normalizeShift(shift) === getCurrentShift();
+    }
+
+    function getCurrentShift() {
+        const hour = new Date().getHours();
+        if (hour >= 8 && hour < 16) return '08-16';
+        if (hour >= 16 && hour < 24) return '16-24';
+        return '24-08';
+    }
+
+    function normalizeShift(value) {
+        return String(value || '').trim().replace('/', '-');
     }
 
     function toIsoDate(value) {
