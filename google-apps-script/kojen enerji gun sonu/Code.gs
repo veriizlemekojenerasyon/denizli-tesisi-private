@@ -491,6 +491,16 @@ function formatAndWriteYearlyEnergyEndOfDayRange(sheet, row, startCol, metricVal
   range.setHorizontalAlignment('center');
   range.setBackground('#d9ead3');
   range.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange(row, startCol + columns.saatlikUretim)
+    .setBackground(getYearlyEnergyProductionCellBackground(metricValues.saatlikUretim, '#d9ead3'));
+}
+
+function getYearlyEnergyProductionCellBackground(value, defaultColor) {
+  var production = parseEnerjiNumber(value);
+  if (production === 0) return '#d9d9d9';
+  if (production < 2.5) return '#fff2cc';
+  if (production > 3) return '#f4cccc';
+  return defaultColor || '#ffffff';
 }
 
 function buildYearlyEnergyMetricRowValues(columns, metricValues) {

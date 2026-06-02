@@ -1320,11 +1320,7 @@ function renderYearlyEnergySheet(sheet, model) {
       values[targetRow][startCol + 1] = item.toplamAktifEnerji === null ? '' : item.toplamAktifEnerji;
       values[targetRow][startCol + 2] = item.saatlikUretim;
 
-      if (item.saatlikUretim === 0) {
-        backgrounds[targetRow][startCol + 2] = '#d9d9d9';
-      } else if (item.saatlikUretim < 1) {
-        backgrounds[targetRow][startCol + 2] = '#fff2cc';
-      }
+      backgrounds[targetRow][startCol + 2] = getYearlyEnergyProductionCellBackground(item.saatlikUretim, '#ffffff');
     }
 
     values[totalRow - 1][startCol] = getYearlyEnergyCounterDiffFromRows(day.rows, 'calismaSaati');
@@ -1574,12 +1570,7 @@ function renderYearlyEnergyDayBlock(sheet, model, dayIndex) {
       item.saatlikUretim
     ]);
 
-    var rowBackgrounds = ['#ffffff', '#ffffff', '#ffffff'];
-    if (item.saatlikUretim === 0) {
-      rowBackgrounds[2] = '#d9d9d9';
-    } else if (item.saatlikUretim < 1) {
-      rowBackgrounds[2] = '#fff2cc';
-    }
+    var rowBackgrounds = ['#ffffff', '#ffffff', getYearlyEnergyProductionCellBackground(item.saatlikUretim, '#ffffff')];
     backgrounds.push(rowBackgrounds);
   }
 
@@ -1611,6 +1602,14 @@ function renderYearlyEnergyDayBlock(sheet, model, dayIndex) {
   sheet.getRange(3, startCol + 2, model.slots.length, 1).setNumberFormat('0.###');
 
   return { date: day.dateKey, startColumn: startCol };
+}
+
+function getYearlyEnergyProductionCellBackground(value, defaultColor) {
+  var production = parseEnerjiNumber(value);
+  if (production === 0) return '#d9d9d9';
+  if (production < 2.5) return '#fff2cc';
+  if (production > 3) return '#f4cccc';
+  return defaultColor || '#ffffff';
 }
 
 function updateYearlyEnergySummarySheet(year) {

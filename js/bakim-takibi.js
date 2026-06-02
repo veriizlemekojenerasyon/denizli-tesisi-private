@@ -1,5 +1,5 @@
 // Bakım Takibi JavaScript - ÇALIŞAN VERSİYON
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNqyG9EnpQazWlRffBAXqq3hhF3vLJFZRnWVoc1Im2F9-KxIJS-kqCHTsAbnntVk6a/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnMoF--PQi39CBpiIOqsOfcNTlHmRfhSUCvE51vdl_SLPbUYVgwJ_o3bUdAjvw5OG5/exec";
 const selectedMaintenanceFiles = { periodic: [], normal: [], fault: [] };
 
 function isOperatorHistoryOnlyView() {
