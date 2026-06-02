@@ -91,6 +91,7 @@ async function saveMotorToSheets(data) {
     }
 }
 
+
 /**
  * Kayıt kontrolü - Belirli tarih, saat ve motor için kayıt var mı?
  * @param {string} motor - Motor adı (GM-1, GM-2, GM-3)
