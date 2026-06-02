@@ -116,7 +116,7 @@ function getEndOfDayWindowState(now = new Date()) {
     return {
         active,
         tarih: formatDateTRFromDate(targetDate),
-        windowText: `${formatDateTRFromDate(targetDate)} 23:50 - ${formatDateTRFromDate(nextDate)} 00:30`
+        windowText: `${formatDateTRFromDate(targetDate)} 23:50 - ${formatDateTRFromDate(nextDate)} 00:10`
     };
 }
 
