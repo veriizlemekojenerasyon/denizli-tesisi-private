@@ -221,6 +221,31 @@
                         <button type="button" class="btn-secondary" id="temizleBtn">🔄 TEMİZLE</button>
                         <button type="button" class="btn-danger" id="motorCalismiyorKaydetBtn">⚠️ MOTOR ÇALIŞMIYOR KAYDET</button>
                     </div>
+
+                    <div class="end-of-day-section">
+                        <div class="end-of-day-header">
+                            <div>
+                                <h3>23:59 Gün Sonu Değerleri</h3>
+                                <span id="gunSonuEnerjiMeta">Seçili motor için ayrı Google Sheets sayfasına kaydedilir</span>
+                            </div>
+                            <span class="end-of-day-time">23:59</span>
+                        </div>
+                        <div class="end-of-day-form energy-end-of-day-form">
+                            <div class="end-of-day-field">
+                                <label for="gunSonuToplamAktifEnerji">Toplam Aktif Enerji</label>
+                                <input type="text" id="gunSonuToplamAktifEnerji" class="end-of-day-input" placeholder="0.00" inputmode="decimal">
+                            </div>
+                            <div class="end-of-day-field">
+                                <label for="gunSonuCalismaSaati">Çalışma Saati</label>
+                                <input type="text" id="gunSonuCalismaSaati" class="end-of-day-input" placeholder="0.00" inputmode="decimal">
+                            </div>
+                            <div class="end-of-day-field">
+                                <label for="gunSonuKalkisSayisi">Kalkış Sayısı</label>
+                                <input type="text" id="gunSonuKalkisSayisi" class="end-of-day-input" placeholder="0" inputmode="decimal">
+                            </div>
+                            <button type="button" class="btn-primary" id="gunSonuEnerjiKaydetBtn">KAYDET</button>
+                        </div>
+                    </div>
                     
                     <!-- Vardiya Verileri Görüntüleme Bölümü -->
                     <div class="vardiya-verileri-section" id="vardiyaVerileriSection">

@@ -4,7 +4,8 @@
  */
 
 const KojenEnerjiSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbywcjpCfFK88lUT9tqZUMum3wCw9gSH1LbDDekKvjFyHL16qy_QSV5Zv6bHhSlgWcGR/exec',
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzPudSuHPk9TYQuqs2xZa6d6rny0Sm2PNESXqELbQBYFBmGX9f6NQ9kbEi4m5yztZOm/exec',
+    END_OF_DAY_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzUIiq6CocWOi587kcZN_x1ZsBYVpUurckqPw_Wc-9wXjPlMI-vakjLOXtmXma7v5pU/exec',
     EMAIL_ENABLED: true,
     EMAIL_TO: 'mrtcsk0320@gmail.com',
     EMAIL_SUBJECT: 'Kojen Enerji Veri Uyarısı - Kayıt Girilmedi'
@@ -82,6 +83,80 @@ async function saveEnerjiToSheets(data) {
         
     } catch (error) {
         console.error('Sheets kayıt hatası:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+async function saveEnerjiEndOfDayValues(data) {
+    try {
+        const url = KojenEnerjiSheetsConfig.END_OF_DAY_WEB_APP_URL;
+        if (!url) {
+            return {
+                success: false,
+                error: 'Gün sonu Google Sheets URL eksik. Ayrı Apps Script deploy URLini END_OF_DAY_WEB_APP_URL alanına ekleyin.'
+            };
+        }
+
+        let formattedTarih = data.tarih;
+        if (formattedTarih && formattedTarih.includes('.')) {
+            const parts = formattedTarih.split('.');
+            formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+
+        const params = new URLSearchParams({
+            action: 'addEndOfDayValues',
+            tarih: formattedTarih || '',
+            motor: data.motor || '',
+            toplamAktifEnerji: data.toplamAktifEnerji || '',
+            calismaSaati: data.calismaSaati || '',
+            kalkisSayisi: data.kalkisSayisi || '',
+            kaydeden: data.kaydeden || 'Admin'
+        });
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: params.toString()
+        });
+
+        return await response.json();
+    } catch (error) {
+        console.error('Enerji gün sonu değerleri kayıt hatası:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+async function getEnerjiEndOfDayValues(motor, tarih) {
+    try {
+        const url = KojenEnerjiSheetsConfig.END_OF_DAY_WEB_APP_URL;
+        if (!url) {
+            return {
+                success: false,
+                error: 'Gun sonu Google Sheets URL eksik.'
+            };
+        }
+
+        let formattedTarih = tarih || '';
+        if (formattedTarih && formattedTarih.includes('.')) {
+            const parts = formattedTarih.split('.');
+            formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+
+        const params = new URLSearchParams({
+            action: 'getEndOfDayValues',
+            motor: motor || '',
+            tarih: formattedTarih
+        });
+
+        const response = await fetch(`${url}?${params.toString()}`, {
+            method: 'GET'
+        });
+
+        return await response.json();
+    } catch (error) {
+        console.error('Enerji gun sonu degerleri okuma hatasi:', error);
         return { success: false, error: error.message };
     }
 }
@@ -305,6 +380,8 @@ async function addMultipleEnerjiRecords(records) {
 // Global scope'a ekle (HTML dosyasından erişim için)
 window.KojenEnerjiSheetsConfig = KojenEnerjiSheetsConfig;
 window.saveEnerjiToSheets = saveEnerjiToSheets;
+window.saveEnerjiEndOfDayValues = saveEnerjiEndOfDayValues;
+window.getEnerjiEndOfDayValues = getEnerjiEndOfDayValues;
 window.checkExistingEnerjiRecord = checkExistingEnerjiRecord;
 window.checkMultipleEnerjiRecords = checkMultipleEnerjiRecords;
 window.getEnerjiRecordsByMotorAndDate = getEnerjiRecordsByMotorAndDate;

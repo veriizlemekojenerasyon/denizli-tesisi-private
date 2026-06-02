@@ -74,6 +74,79 @@ let recordMap = new Map();
 let cacheTimestamp = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 dakika
 
+function formatDateTRFromDate(date) {
+    return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+}
+
+function parseDateTRToDate(value) {
+    const text = String(value || '').trim();
+    if (!text) return null;
+
+    if (text.includes('-')) {
+        const parts = text.split('-');
+        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    }
+
+    const parts = text.split('.');
+    if (parts.length !== 3) return null;
+    return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+}
+
+function addDaysToDateTR(value, dayCount) {
+    const date = parseDateTRToDate(value);
+    if (!date || isNaN(date.getTime())) return '';
+    date.setDate(date.getDate() + dayCount);
+    return formatDateTRFromDate(date);
+}
+
+function getEndOfDayWindowState(now = new Date()) {
+    const minutes = (now.getHours() * 60) + now.getMinutes();
+    const lateStart = (23 * 60) + 50;
+    const earlyEnd = 30;
+    const active = minutes >= lateStart || minutes <= earlyEnd;
+    const targetDate = new Date(now);
+
+    if (minutes <= earlyEnd) {
+        targetDate.setDate(targetDate.getDate() - 1);
+    }
+
+    const nextDate = new Date(targetDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+
+    return {
+        active,
+        tarih: formatDateTRFromDate(targetDate),
+        windowText: `${formatDateTRFromDate(targetDate)} 23:50 - ${formatDateTRFromDate(nextDate)} 00:30`
+    };
+}
+
+async function validateMidnightEndOfDayRequirement(motor, tarih, saat) {
+    if (String(saat || '').trim() !== '00:00') {
+        return { success: true };
+    }
+
+    if (typeof getEnerjiEndOfDayValues !== 'function') {
+        return { success: false, error: '00:00 kaydi icin gun sonu kontrol baglantisi yuklenemedi.' };
+    }
+
+    const previousDate = addDaysToDateTR(tarih, -1);
+    if (!previousDate) {
+        return { success: false, error: '00:00 kaydi icin tarih okunamadi.' };
+    }
+
+    const result = await getEnerjiEndOfDayValues(motor, previousDate);
+    if (!result.success) {
+        return { success: false, error: 'Gun sonu kaydi kontrol edilemedi: ' + (result.error || 'Bilinmeyen hata') };
+    }
+
+    const exists = Array.isArray(result.data) && result.data.some(record => String(record.saat || '').trim() === '23:59');
+    if (!exists) {
+        return { success: false, error: `00:00 kaydi icin once ${previousDate} 23:59 gun sonu degerlerini girin.` };
+    }
+
+    return { success: true };
+}
+
 // 👤 Giriş yapan kullanıcının adını al
 function getCurrentUserName() {
     try {
@@ -457,6 +530,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     const kaydetBtn = document.getElementById('kaydetBtn');
     const temizleBtn = document.getElementById('temizleBtn');
     const motorCalismiyorKaydetBtn = document.getElementById('motorCalismiyorKaydetBtn');
+    const gunSonuToplamAktifEnerji = document.getElementById('gunSonuToplamAktifEnerji');
+    const gunSonuCalismaSaati = document.getElementById('gunSonuCalismaSaati');
+    const gunSonuKalkisSayisi = document.getElementById('gunSonuKalkisSayisi');
+    const gunSonuEnerjiKaydetBtn = document.getElementById('gunSonuEnerjiKaydetBtn');
+    const gunSonuEnerjiMeta = document.getElementById('gunSonuEnerjiMeta');
     const sidebarLogout = document.getElementById('sidebarLogout');
     const headerLogout = document.getElementById('headerLogout');
 
@@ -706,6 +784,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     headerLogout?.addEventListener('click', () => confirm('Çıkış yapmak istediğinizden emin misiniz?') && (window.location.href = 'index.html'));
 
     // Input değerlerini al
+    function updateGunSonuEnerjiMeta() {
+        const state = getEndOfDayWindowState();
+        const fields = [gunSonuToplamAktifEnerji, gunSonuCalismaSaati, gunSonuKalkisSayisi, gunSonuEnerjiKaydetBtn];
+
+        fields.forEach(field => {
+            if (!field) return;
+            field.disabled = !state.active;
+            field.style.opacity = state.active ? '1' : '0.55';
+            field.style.cursor = state.active ? '' : 'not-allowed';
+        });
+
+        if (gunSonuEnerjiMeta) {
+            gunSonuEnerjiMeta.textContent = state.active
+                ? `${selectedMotor || 'GM-1'} - ${state.tarih} - 23:59`
+                : `Aktif zaman: ${state.windowText}`;
+        }
+    }
+
     function getAllInputValues() {
         const inputs = document.querySelectorAll('.kojen-input');
         
@@ -796,6 +892,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (isLocked) { showMessage('Bu kayıt zaten mevcut!', 'error'); return; }
         const data = getAllInputValues();
         const saat = `${String(new Date().getHours()).padStart(2, '0')}:00`;
+
+        const endOfDayCheck = await validateMidnightEndOfDayRequirement(selectedMotor, tarihSecimi.value, saat);
+        if (!endOfDayCheck.success) {
+            showMessage(endOfDayCheck.error, 'error');
+            return;
+        }
         
         // 🔒 ÇİFT KAYIT KONTROLÜ
         const existingRecord = await checkExistingRecord(selectedMotor, tarihSecimi.value, saat);
@@ -851,6 +953,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     motorCalismiyorKaydetBtn?.addEventListener('click', async function() {
         if (isLocked) { showMessage('Bu kayıt zaten mevcut!', 'error'); return; }
         const saat = `${String(new Date().getHours()).padStart(2, '0')}:00`;
+
+        const endOfDayCheck = await validateMidnightEndOfDayRequirement(selectedMotor, tarihSecimi.value, saat);
+        if (!endOfDayCheck.success) {
+            showMessage(endOfDayCheck.error, 'error');
+            return;
+        }
         
         // 🔒 ÇİFT KAYIT KONTROLÜ
         const existingRecord = await checkExistingRecord(selectedMotor, tarihSecimi.value, saat);
@@ -933,6 +1041,64 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     // Vardiya fonksiyonları
+    gunSonuEnerjiKaydetBtn?.addEventListener('click', async function() {
+        const windowState = getEndOfDayWindowState();
+        const tarih = windowState.tarih;
+        const toplamAktifEnerji = gunSonuToplamAktifEnerji?.value || '';
+        const calismaSaati = gunSonuCalismaSaati?.value || '';
+        const kalkisSayisi = gunSonuKalkisSayisi?.value || '';
+
+        if (!windowState.active) {
+            showMessage(`Gun sonu degerleri sadece ${windowState.windowText} arasinda girilebilir.`, 'error');
+            updateGunSonuEnerjiMeta();
+            return;
+        }
+
+        if (!selectedMotor || !tarih) {
+            showMessage('Gün sonu kaydı için motor ve tarih seçin.', 'error');
+            return;
+        }
+
+        if (!toplamAktifEnerji || !calismaSaati || !kalkisSayisi) {
+            showMessage('Toplam aktif enerji, çalışma saati ve kalkış sayısını girin.', 'error');
+            return;
+        }
+
+        if (typeof saveEnerjiEndOfDayValues !== 'function') {
+            showMessage('Gün sonu kayıt bağlantısı yüklenemedi.', 'error');
+            return;
+        }
+
+        const originalText = gunSonuEnerjiKaydetBtn.textContent;
+        gunSonuEnerjiKaydetBtn.disabled = true;
+        gunSonuEnerjiKaydetBtn.textContent = 'KAYDEDİLİYOR...';
+
+        try {
+            const result = await saveEnerjiEndOfDayValues({
+                motor: selectedMotor,
+                tarih: tarih,
+                toplamAktifEnerji: toplamAktifEnerji,
+                calismaSaati: calismaSaati,
+                kalkisSayisi: kalkisSayisi,
+                kaydeden: getCurrentUserName()
+            });
+
+            if (result.success) {
+                showMessage(`${selectedMotor} için 23:59 gün sonu değerleri kaydedildi.`, 'success');
+                if (gunSonuToplamAktifEnerji) gunSonuToplamAktifEnerji.value = '';
+                if (gunSonuCalismaSaati) gunSonuCalismaSaati.value = '';
+                if (gunSonuKalkisSayisi) gunSonuKalkisSayisi.value = '';
+            } else {
+                showMessage('Gün sonu kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
+            }
+        } catch (error) {
+            showMessage('Gün sonu bağlantı hatası: ' + error.message, 'error');
+        } finally {
+            gunSonuEnerjiKaydetBtn.textContent = originalText;
+            updateGunSonuEnerjiMeta();
+        }
+    });
+
     function getSaatDegeri(saatStr) { return saatStr ? parseInt(saatStr.split(':')[0]) : null; }
     function kayitVardiyaAraligindaMi(saatStr, vardiya) {
         const saat = getSaatDegeri(saatStr);
@@ -1021,6 +1187,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         motorButtons.forEach(btn => btn.classList.remove('active'));
         this.classList.add('active');
         selectedMotor = this.dataset.motor;
+        updateGunSonuEnerjiMeta();
         showMessage(`${selectedMotor} motoru seçildi!`, 'info');
         // Inputları temizle
         document.querySelectorAll('.kojen-input').forEach(input => {
@@ -1037,6 +1204,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (value.length >= 2) value = value.slice(0, 2) + '.' + value.slice(2);
         if (value.length >= 5) value = value.slice(0, 5) + '.' + value.slice(5);
         this.value = value.slice(0, 10);
+        updateGunSonuEnerjiMeta();
     });
 
     vardiyaSecimi?.addEventListener('change', async () => { guncelleVardiyaBilgisi(); await loadVardiyaData(); await checkAndUpdateFormStatus(); });
@@ -1049,6 +1217,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const hour = today.getHours();
         vardiyaSecimi.value = hour >= 8 && hour < 16 ? '08-16' : hour >= 16 && hour < 24 ? '16-24' : '24-08';
         if (currentHourElement) currentHourElement.textContent = `${String(hour).padStart(2,'0')}:00`;
+        updateGunSonuEnerjiMeta();
         guncelleVardiyaBilgisi();
         await loadVardiyaData();
         await checkAndUpdateFormStatus();
@@ -1057,6 +1226,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await otomatikAyarlar();
     setInterval(async () => {
         const hours = String(new Date().getHours()).padStart(2, '0');
+        updateGunSonuEnerjiMeta();
         if (currentHourElement && currentHourElement.textContent !== `${hours}:00`) {
             currentHourElement.textContent = `${hours}:00`;
             await checkAndUpdateFormStatus();
@@ -1515,6 +1685,17 @@ async function handleModalKaydet() {
     for (const motor of selectedMotors) {
         for (const saat of selectedSaatler) {
             kontrolListesi.push({ motor, tarih: modalTarih, saat });
+        }
+    }
+
+    const midnightItems = kontrolListesi.filter(item => item.saat === '00:00');
+    for (const item of midnightItems) {
+        const endOfDayCheck = await validateMidnightEndOfDayRequirement(item.motor, item.tarih, item.saat);
+        if (!endOfDayCheck.success) {
+            showMessage(endOfDayCheck.error, 'error');
+            kaydetBtn.disabled = false;
+            kaydetBtn.textContent = originalText;
+            return;
         }
     }
     
