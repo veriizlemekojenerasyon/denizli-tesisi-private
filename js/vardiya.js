@@ -75,8 +75,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbygGjbmXyFU7jzsWpZS8DlyB6JDFTB8KG89wqNoh6Ha5g4bLun5krcgYGkaAEJq2IBV/exec';
     const VARDIYA_CONTROL_URLS = {
         saatlik: 'https://script.google.com/macros/s/AKfycbzzpkF4RJJ46d9A9518oxSwGaeuSgw-VHodQ5hjCApqb1H0FuIEnYNsqGOSdWXf9Yc/exec',
-        motor: 'https://script.google.com/macros/s/AKfycbx0hVgnAIHSlaXAoFBc0-96SsMjb9R_GD3ptKlBBK7L_hjGFQBWqezV9w55X4MyZu3U/exec',
-        enerji: 'https://script.google.com/macros/s/AKfycbwbhC8Y0LNA5qowiZ7Ke5QEHM7SQCX7Sv-GLsB9T-fTnWHkG2InuT4ez2JMmU3MeoRO/exec',
+        motor: 'https://script.google.com/macros/s/AKfycbzWnHTk--4bdTxPPTsRco5edkSH0jqnoLEHjhh8zH2TjIQU2YHU--81AGEZnbwnPhcV/exec',
+        enerji: 'https://script.google.com/macros/s/AKfycbwGuDzkg9lZm_YD3dsYq0P9r-CvB-hrOYZta0WWF_8UwFEJphBboJ-OvnAWkHQP1qux/exec',
         bildirim: 'https://script.google.com/macros/s/AKfycbz9uR24xQeuV85ygxfFiakRRJz601KgaKCgOlHcsuYDjUl5xkR4o3HbIVn-tgVdSnTF/exec'
     };
     const VARDIYA_RECORD_FETCH_COUNT = '1500';
