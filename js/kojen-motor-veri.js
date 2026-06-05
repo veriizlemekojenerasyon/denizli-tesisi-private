@@ -41,6 +41,25 @@ function showMessage(message, type) {
     }, 3000);
 }
 
+// Kayit surelerini Console'da takip eder.
+function startConsoleDurationTimer(label) {
+    const timerLabel = label || 'Islem';
+    const startedAt = performance.now();
+    let seconds = 0;
+    console.log(`[${timerLabel}] basladi`);
+
+    const intervalId = setInterval(() => {
+        seconds += 1;
+        console.log(`[${timerLabel}] ${seconds} sn`);
+    }, 1000);
+
+    return function stopConsoleDurationTimer(status) {
+        clearInterval(intervalId);
+        const elapsedSeconds = ((performance.now() - startedAt) / 1000).toFixed(2);
+        console.log(`[${timerLabel}] ${status || 'tamamlandi'} - toplam ${elapsedSeconds} sn`);
+    };
+}
+
 // 🔥 GLOBAL DEĞİŞKENLER
 let cachedRecords = [];
 let recordMap = new Map();
@@ -143,7 +162,7 @@ async function checkExistingRecord(motor, tarih, saat) {
         // 🔥 ULTRA HIZLI KONTROL - Map'den ara (O(1) complexity)
         const now = Date.now();
         if (now - cacheTimestamp < CACHE_DURATION) {
-            const mapKey = `${motor}|${tarih}|${saat}`;
+            const mapKey = `${motor}|${normalizeMotorDateForCache(tarih)}|${normalizeMotorSaatForCache(saat)}`;
             const cached = recordMap.get(mapKey);
             if (cached) {
                 console.log('⚡ Ultra hızlı Map hit!');
@@ -155,9 +174,7 @@ async function checkExistingRecord(motor, tarih, saat) {
         const result = await checkExistingMotorRecord(motor, tarih, saat);
         if (result.success && result.exists) {
             // Cache'e ve Map'e ekle
-            cachedRecords.push(result.record);
-            const mapKey = `${result.record.motor}|${result.record.tarih}|${result.record.saat}`;
-            recordMap.set(mapKey, result.record);
+            rememberMotorRecord(result.record);
             return result.record;
         }
         return null;
@@ -168,6 +185,53 @@ async function checkExistingRecord(motor, tarih, saat) {
 }
 
 // � GLOBAL loadVardiyaData FONKSİYONU
+function normalizeMotorDateForCache(value) {
+    const text = String(value || '').trim();
+    if (text.includes('-')) {
+        const parts = text.split('-');
+        if (parts.length === 3) return `${parts[2]}.${parts[1]}.${parts[0]}`;
+    }
+    return text;
+}
+
+function normalizeMotorSaatForCache(value) {
+    const text = String(value || '').trim();
+    if (!text) return '00:00';
+    const parts = text.split(':');
+    const hour = String(parseInt(parts[0] || '0', 10) || 0).padStart(2, '0');
+    const minute = String(parseInt(parts[1] || '0', 10) || 0).padStart(2, '0');
+    return `${hour}:${minute}`;
+}
+
+function getCachedMotorRecord(motor, tarih, saat) {
+    const mapKey = `${motor}|${normalizeMotorDateForCache(tarih)}|${normalizeMotorSaatForCache(saat)}`;
+    return recordMap.get(mapKey) || null;
+}
+
+function rememberMotorRecord(record) {
+    if (!record) return;
+
+    const normalizedRecord = {
+        ...record,
+        motor: record.motor || selectedMotor,
+        tarih: normalizeMotorDateForCache(record.tarih),
+        saat: normalizeMotorSaatForCache(record.saat)
+    };
+    const mapKey = `${normalizedRecord.motor}|${normalizedRecord.tarih}|${normalizedRecord.saat}`;
+    const existingIndex = cachedRecords.findIndex(item =>
+        `${item.motor}|${normalizeMotorDateForCache(item.tarih)}|${normalizeMotorSaatForCache(item.saat)}` === mapKey
+    );
+
+    if (existingIndex >= 0) {
+        cachedRecords[existingIndex] = normalizedRecord;
+    } else {
+        cachedRecords.unshift(normalizedRecord);
+    }
+
+    recordMap.set(mapKey, normalizedRecord);
+    cacheTimestamp = Date.now();
+}
+
 async function loadVardiyaData() {
     const vardiya = vardiyaSecimi.value;
     const tarih = tarihSecimi.value;
@@ -180,7 +244,7 @@ async function loadVardiyaData() {
         console.log(`🔍 Parametreler: motor=${motor}, tarih=${tarih}, vardiya=${vardiya}`);
         
         // 🔥 ENERJİ VERİLERİNDEKİ GİBİ TÜM KAYITLARI ÇEK
-        const result = await getAllMotorRecords();
+        const result = await getMotorRecordsByMotorAndDate(motor, tarih);
         console.log(`📊 API sonucu:`, result);
         
         if (!result.success) {
@@ -189,7 +253,7 @@ async function loadVardiyaData() {
             return;
         }
         
-        const allRecords = result.data;
+        const allRecords = result.data || [];
         console.log(`📊 Toplam kayıt sayısı: ${allRecords ? allRecords.length : 0}`);
         
         // 🔥 TARİH VE VARDİYA FİLTRELEME (ENERJİ VERİLERİNDEKİ GİBİ)
@@ -595,12 +659,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ⚡ SUPER HIZLI Local cache için kayıt verileri
-    let cachedRecords = [];
-    let cacheTimestamp = 0;
-    const CACHE_DURATION = 300000; // 5 dakika cache (daha uzun)
+    // Global cache degiskenleri kullanilir.
     
     // 🔥 Memory Map için ultra hızlı arama
-    let recordMap = new Map(); // motor|tarih|saat -> record
+    // recordMap global olarak tanimlidir.
     
     // ⚡ Background cache yenileme timer
     let cacheRefreshTimer = null;
@@ -609,14 +671,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cache'i yenile - ⚡ Optimize edilmiş
     async function refreshCache() {
         try {
-            const result = await getAllMotorRecords();
+            const result = await getLastMotorRecords(150);
             if (result.success) {
-                cachedRecords = result.data;
+                cachedRecords = result.data || [];
                 recordMap.clear(); // Map'i temizle
                 
                 // 🔥 Map'i hızlıca doldur
-                result.data.forEach(record => {
-                    const mapKey = `${record.motor}|${record.tarih}|${record.saat}`;
+                cachedRecords.forEach(record => {
+                    const mapKey = `${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`;
                     recordMap.set(mapKey, record);
                 });
                 
@@ -640,13 +702,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // 4 dakikada bir sessizce yenile
         cacheRefreshTimer = setInterval(async () => {
             try {
-                const result = await getAllMotorRecords();
+                const result = await getLastMotorRecords(150);
                 if (result.success) {
-                    cachedRecords = result.data;
+                    cachedRecords = result.data || [];
                     recordMap.clear();
                     
-                    result.data.forEach(record => {
-                        const mapKey = `${record.motor}|${record.tarih}|${record.saat}`;
+                    cachedRecords.forEach(record => {
+                        const mapKey = `${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`;
                         recordMap.set(mapKey, record);
                     });
                     
@@ -873,8 +935,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.style.cursor = 'not-allowed';
             }
         });
-        motorCalismiyorKaydetBtn.style.opacity = '0.5';
-        motorCalismiyorKaydetBtn.style.cursor = 'not-allowed';
+        if (motorCalismiyorKaydetBtn) {
+            motorCalismiyorKaydetBtn.style.opacity = '0.5';
+            motorCalismiyorKaydetBtn.style.cursor = 'not-allowed';
+        }
         
         // 🔥 MOTOR SEÇİM BUTONLARINI HER ZAMAN AKTIF TUT
         motorButtons.forEach(btn => {
@@ -1108,9 +1172,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        let stopKaydetTimer = null;
+        let kaydetTimerStatus = 'tamamlandi';
+
         try {
             // 🔒 ÇİFT KAYIT KONTROLÜ - Butonu kilitlemeden önce yap
-            const existingRecord = await checkExistingRecord(data.motor, data.tarih, data.saat);
+            const existingRecord = getCachedMotorRecord(data.motor, data.tarih, data.saat);
             if (existingRecord) {
                 showMessage(`Bu tarih, saat ve motor (${data.motor}) için kayıt zaten var!\nMevcut kayıt: ${existingRecord.durum || 'NORMAL'}`, 'error');
                 return;
@@ -1118,6 +1185,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Kaydet butonunu devre dışı bırak
             kaydetBtn.disabled = true;
+            stopKaydetTimer = startConsoleDurationTimer(`Kojen motor kaydet ${data.motor} ${data.tarih} ${data.saat}`);
             kaydetBtn.textContent = '💾 KAYDEDİLİYOR...';
             
             // Google Sheets'e kaydet
@@ -1131,13 +1199,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 durum: 'NORMAL'
             };
             
+            const apiStartedAt = performance.now();
             const result = await saveMotorToSheets(sheetsData);
+            const clientDuration = ((performance.now() - apiStartedAt) / 1000).toFixed(2);
+            const serverDuration = typeof result.durationMs === 'number'
+                ? `, sunucu ${(result.durationMs / 1000).toFixed(2)} sn`
+                : '';
+            console.log(`[Kojen motor addRecord] ${clientDuration} sn${serverDuration}`);
             
             if (result.success) {
+                kaydetTimerStatus = 'basarili';
                 console.log('Google Sheets kaydı:', result);
+                rememberMotorRecord(result.record || sheetsData);
                 
-                // 🔥 CACHE'I GÜNCELLE - Yeni kayıt eklendi
-                refreshCache();
+                // Kayıt tamamlandıktan sonra kullanıcıyı bekletmeden arka planda yenile.
+                setTimeout(() => refreshCache(), 800);
                 
                 // Pozitif değer kaydetme kontrolü
                 const pozitifMesajlar = [];
@@ -1160,14 +1236,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 🔥 OTOMATİK SONRAKİ MOTORA GEÇİŞ
                 setTimeout(() => {
                     moveToNextMotor(data.motor);
-                }, 1500);
+                }, 250);
             } else {
+                kaydetTimerStatus = `hata: ${result.error || 'Bilinmeyen hata'}`;
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
             }
         } catch (error) {
+            kaydetTimerStatus = `hata: ${error.message || error}`;
             console.error('Kayıt hatası:', error);
             showMessage('Bağlantı hatası: ' + error.message, 'error');
         } finally {
+            if (stopKaydetTimer) {
+                stopKaydetTimer(kaydetTimerStatus);
+            }
             // Kaydet butonunu geri aktif et
             if (!isLocked) {
                 kaydetBtn.disabled = false;
@@ -1237,12 +1318,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage(`Otomatik geçiş: ${nextMotor} motoru seçildi!`, 'info');
                 
                 // Vardiya verilerini güncelle
-                setTimeout(async () => {
-                    await loadVardiyaData();
+                setTimeout(() => {
+                    loadVardiyaData();
                     
                     // 🔥 FORM DURUMUNU KONTROL ET AMA BUTONLARI AKTIF TUT
-                    setTimeout(async () => {
-                        await checkAndUpdateFormStatus();
+                    setTimeout(() => {
+                        checkAndUpdateFormStatus();
                         
                         // 🔥 KONTROL SONRASI BUTONLARI TEKRAR AKTIF ET
                         motorButtons.forEach(btn => {
@@ -1296,9 +1377,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        let stopKaydetTimer = null;
+        let kaydetTimerStatus = 'tamamlandi';
+
         try {
             // 🔒 ÇİFT KAYIT KONTROLÜ - Butonu kilitlemeden önce yap
-            const existingRecord = await checkExistingRecord(data.motor, data.tarih, data.saat);
+            const existingRecord = getCachedMotorRecord(data.motor, data.tarih, data.saat);
             if (existingRecord) {
                 showMessage(`Bu tarih, saat ve motor (${data.motor}) için kayıt zaten var!\nMevcut kayıt: ${existingRecord.durum || 'NORMAL'}`, 'error');
                 return;
@@ -1307,6 +1391,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Butonu devre dışı bırak
             motorCalismiyorKaydetBtn.disabled = true;
             motorCalismiyorKaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
+            stopKaydetTimer = startConsoleDurationTimer(`Kojen motor calismiyor kaydet ${data.motor} ${data.tarih} ${data.saat}`);
             
             // Google Sheets'e kaydet
             const sheetsData = {
@@ -1318,13 +1403,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 durum: 'MOTOR ÇALIŞMIYOR'
             };
             
+            const apiStartedAt = performance.now();
             const result = await saveMotorToSheets(sheetsData);
+            const clientDuration = ((performance.now() - apiStartedAt) / 1000).toFixed(2);
+            const serverDuration = typeof result.durationMs === 'number'
+                ? `, sunucu ${(result.durationMs / 1000).toFixed(2)} sn`
+                : '';
+            console.log(`[Kojen motor addRecord calismiyor] ${clientDuration} sn${serverDuration}`);
             
             if (result.success) {
+                kaydetTimerStatus = 'basarili';
                 console.log('Motor çalışmıyor kaydı:', result);
+                rememberMotorRecord(result.record || sheetsData);
                 
-                // 🔥 CACHE'I GÜNCELLE - Yeni kayıt eklendi
-                refreshCache();
+                // Kayıt tamamlandıktan sonra kullanıcıyı bekletmeden arka planda yenile.
+                setTimeout(() => refreshCache(), 800);
                 
                 showMessage(`${data.motor} motoru için "ÇALIŞMIYOR" durumu kaydedildi!`, 'warning');
                 
@@ -1342,14 +1435,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 🔥 OTOMATİK SONRAKİ MOTORA GEÇİŞ
                 setTimeout(() => {
                     moveToNextMotor(data.motor);
-                }, 1500);
+                }, 250);
             } else {
+                kaydetTimerStatus = `hata: ${result.error || 'Bilinmeyen hata'}`;
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
             }
         } catch (error) {
+            kaydetTimerStatus = `hata: ${error.message || error}`;
             console.error('Kayıt hatası:', error);
             showMessage('Bağlantı hatası: ' + error.message, 'error');
         } finally {
+            if (stopKaydetTimer) {
+                stopKaydetTimer(kaydetTimerStatus);
+            }
             // Butonu geri aktif et
             if (!isLocked) {
                 motorCalismiyorKaydetBtn.disabled = false;
@@ -1567,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         setTimeout(() => {
             checkAndSendMissingMotorMail();
-        }, 5000);
+        }, 45000);
     }
     
         
@@ -1714,6 +1812,8 @@ function filterSaatByVardiya(vardiya) {
 async function handleModalKaydet() {
     const kaydetBtn = document.getElementById('modalKaydetBtn');
     const originalText = kaydetBtn.textContent;
+    let stopKaydetTimer = null;
+    let kaydetTimerStatus = 'tamamlandi';
     
     try {
         // Seçili motorları al
@@ -1745,6 +1845,7 @@ async function handleModalKaydet() {
         // Butonu devre dışı bırak
         kaydetBtn.disabled = true;
         kaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
+        stopKaydetTimer = startConsoleDurationTimer(`Kojen motor toplu kaydet ${selectedMotors.length} motor ${selectedSaatler.length} saat`);
         
         // 🔥 TARİH FORMAT DÖNÜŞTÜRME - HTML yyyy-MM-dd -> DD.MM.YYYY
         const modalTarihInput = document.getElementById('modalTarih');
@@ -1789,7 +1890,9 @@ async function handleModalKaydet() {
         
         // 🚀 SÜPER HIZLI TOPLU KAYIT KONTROLÜ (TEK API ÇAĞRISI)
         console.log('🔍 Tüm motor kayıtları tek seferde kontrol ediliyor...');
+        const kontrolStartedAt = performance.now();
         const bulkKontrolResult = await checkMultipleMotorRecords(kontrolListesi);
+        console.log(`[Kojen motor checkMultipleRecords] ${((performance.now() - kontrolStartedAt) / 1000).toFixed(2)} sn`);
         
         // 🚀 KAYIT EDİLECEKLERİ FİLTRELE
         const kayitEdilecekler = [];
@@ -1834,6 +1937,7 @@ async function handleModalKaydet() {
         
         if (kayitEdilecekler.length === 0) {
             console.log('⏭️ Kayıt yapılacak şey yok, işlem tamamlandı');
+            kaydetTimerStatus = 'kayit yok';
             showMessage('Tüm seçili saatler için zaten kayıt mevcut! Modal kapatılıyor...', 'info');
             kaydetBtn.disabled = false;
             kaydetBtn.textContent = originalText;
@@ -1846,51 +1950,31 @@ async function handleModalKaydet() {
             return;
         }
         
-        // 🚀 SON KAYIT DEĞERLERİNİ TOPLU AL (PARALEL)
-        console.log('📊 Son motor kayıt değerleri toplanıyor...');
-        const motorlar = [...new Set(kayitEdilecekler.map(k => k.motor))];
-        const sonKayitSonuclari = await Promise.allSettled(
-            motorlar.map(motor => getLastRecordForMotor(motor))
-        );
-        
-        const sonKayitlar = {};
-        sonKayitSonuclari.forEach((sonuc, index) => {
-            const motor = motorlar[index];
-            if (sonuc.status === 'fulfilled') {
-                sonKayitlar[motor] = sonuc.value || {};
-            } else {
-                sonKayitlar[motor] = {};
-                console.log(`❌ ${motor} son motor kayıt hatası:`, sonuc.reason);
-            }
-        });
-        
         // 🚀 HIZLI ÇOKLU KAYIT SİSTEMİ - Tüm verileri tek seferde gönder
         console.log('🚀 Çoklu kayıt sistemi başlatılıyor...');
         
         // Kayıt verilerini hazırla
         const recordsToSave = kayitEdilecekler.map(({ motor, saat }) => {
-            const sonKayit = sonKayitlar[motor] || {};
-            
             return {
                 motor: motor,
                 tarih: modalTarih,
                 vardiya: modalVardiya,
                 saat: saat,
-                jenYatakSicaklikDE: sonKayit.jenYatakSicaklikDE || '0,00',
-                jenYatakSicaklikNDE: sonKayit.jenYatakSicaklikNDE || '0,00',
-                sogutmaSuyuSicaklik: sonKayit.sogutmaSuyuSicaklik || '0,00',
-                sogutmaSuyuBasinc: sonKayit.sogutmaSuyuBasinc || '0,00',
-                yagSicaklik: sonKayit.yagSicaklik || '0,00',
-                yagBasinc: sonKayit.yagBasinc || '0,00',
-                sarjSicaklik: sonKayit.sarjSicaklik || '0,00',
-                sarjBasinc: sonKayit.sarjBasinc || '0,00',
-                gazRegulatoru: sonKayit.gazRegulatoru || '0,00',
-                makineDairesiSicaklik: sonKayit.makineDairesiSicaklik || '0,00',
-                karterBasinc: sonKayit.karterBasinc || '0,00',
-                onKamaraFarkBasinc: sonKayit.onKamaraFarkBasinc || '0,00',
-                sargiSicaklik1: sonKayit.sargiSicaklik1 || '0,00',
-                sargiSicaklik2: sonKayit.sargiSicaklik2 || '0,00',
-                sargiSicaklik3: sonKayit.sargiSicaklik3 || '0,00',
+                jenYatakSicaklikDE: '0',
+                jenYatakSicaklikNDE: '0',
+                sogutmaSuyuSicaklik: '0',
+                sogutmaSuyuBasinc: '0',
+                yagSicaklik: '0',
+                yagBasinc: '0',
+                sarjSicaklik: '0',
+                sarjBasinc: '0',
+                gazRegulatoru: '0',
+                makineDairesiSicaklik: '0',
+                karterBasinc: '0',
+                onKamaraFarkBasinc: '0',
+                sargiSicaklik1: '0',
+                sargiSicaklik2: '0',
+                sargiSicaklik3: '0',
                 durum: 'MOTOR ÇALIŞMIYOR',
                 not: modalNot || '',
                 kullanici: getCurrentUserName()
@@ -1899,25 +1983,38 @@ async function handleModalKaydet() {
         
         try {
             // Çoklu kayıt gönder
+            const apiStartedAt = performance.now();
             const bulkResult = await addMultipleMotorRecords(recordsToSave);
+            const clientDuration = ((performance.now() - apiStartedAt) / 1000).toFixed(2);
+            const serverDuration = typeof bulkResult.durationMs === 'number'
+                ? `, sunucu ${(bulkResult.durationMs / 1000).toFixed(2)} sn`
+                : '';
+            console.log(`[Kojen motor addMultipleRecords] ${clientDuration} sn${serverDuration}`);
             
             if (bulkResult.success) {
+                kaydetTimerStatus = `basarili (${bulkResult.addedCount}/${bulkResult.totalCount})`;
                 console.log(`✅ ${bulkResult.addedCount}/${bulkResult.totalCount} kayıt başarıyla eklendi`);
                 showMessage(`${bulkResult.addedCount} kayıt başarıyla eklendi!`, 'success');
                 
-                // Cache'i temizle
-                recordMap.clear();
-                cachedRecords = [];
+                const addedKeys = new Set((bulkResult.addedRecords || []).map(record =>
+                    `${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`
+                ));
+                const savedRecords = addedKeys.size
+                    ? recordsToSave.filter(record => addedKeys.has(`${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`))
+                    : recordsToSave;
+                savedRecords.forEach(record => rememberMotorRecord(record));
                 
                 // Formu kapat
                 closeMotorCalismiyorModal();
                 
             } else {
+                kaydetTimerStatus = `hata: ${bulkResult.error || 'Bilinmeyen hata'}`;
                 console.error('❌ Çoklu kayıt hatası:', bulkResult.error);
                 showMessage('Kayıt hatası: ' + bulkResult.error, 'error');
             }
             
         } catch (error) {
+            kaydetTimerStatus = `hata: ${error.message || error}`;
             console.error('❌ Çoklu kayıt gönderme hatası:', error);
             showMessage('Kayıt gönderilemedi: ' + error.message, 'error');
         }
@@ -1947,8 +2044,12 @@ async function handleModalKaydet() {
         }, 2000); // Her 2 saniyede bir durum göster
         
     } catch (error) {
+        kaydetTimerStatus = `hata: ${error.message || error}`;
         showMessage('İşlem hatası: ' + error.message, 'error');
     } finally {
+        if (stopKaydetTimer) {
+            stopKaydetTimer(kaydetTimerStatus);
+        }
         kaydetBtn.disabled = false;
         kaydetBtn.textContent = originalText;
     }

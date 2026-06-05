@@ -4,7 +4,9 @@
  */
 
 var GUNLUK_EMAIL_TO = 'mrtcsk0320@gmail.com';
-var BILDIRIM_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz9uR24xQeuV85ygxfFiakRRJz601KgaKCgOlHcsuYDjUl5xkR4o3HbIVn-tgVdSnTF/exec';
+var GUNLUK_SHIFT_NOTIFICATION_HOUR = 15;
+var GUNLUK_SHIFT_NOTIFICATION_MINUTE = 50;
+var GUNLUK_BILDIRIM_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwyDx3x8B28pDAd9ala4WfC40DlNPyqTmc9wUfV8Dxd_Ux7Pvq_PZmE1hTkdUSqR5P-/exec';
 var ANNOUNCEMENTS_SHEET_NAME = 'VardiyaBildirimleri';
 var ANNOUNCEMENT_HEADERS = [
   'ID', 'Baslangic Tarihi', 'Bitis Tarihi', 'Vardiya', 'Metin', 'Kategori',
@@ -51,7 +53,7 @@ function handleRequest(e) {
         result = sendEmailAlert(params);
         break;
       case 'checkHourlyMissingRecords':
-        result = checkHourlyMissingRecords();
+        result = checkHourlyMissingRecords(params);
         break;
       case 'installHourlyMissingRecordTrigger':
         result = installHourlyMissingRecordTrigger();
@@ -316,26 +318,35 @@ function findRecordByDate(tarih) {
 
 function getDailyCheckTarget(date) {
   var now = new Date(date);
+  var hour = now.getHours();
+  var minute = now.getMinutes();
+  var shiftNotificationReady =
+    hour > GUNLUK_SHIFT_NOTIFICATION_HOUR ||
+    (hour === GUNLUK_SHIFT_NOTIFICATION_HOUR && minute >= GUNLUK_SHIFT_NOTIFICATION_MINUTE);
+
   return {
     tarih: Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd.MM.yyyy'),
     isoTarih: Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
-    shiftNotificationReady: now.getHours() >= 16,
-    finalMailReady: now.getHours() > 23 || (now.getHours() === 23 && now.getMinutes() >= 55)
+    shiftNotificationReady: shiftNotificationReady,
+    shiftNotificationCheckTime: '15:50',
+    finalMailReady: hour > 23 || (hour === 23 && minute >= 55)
   };
 }
 
-function checkHourlyMissingRecords() {
+function checkHourlyMissingRecords(params) {
   try {
+    var force = String((params && params.force) || '').toLowerCase() === 'true' ||
+      String((params && params.force) || '') === '1';
     var target = getDailyCheckTarget(new Date());
     var shiftNotificationKey = 'gunlukShiftNotification:' + target.tarih;
     var finalMailKey = 'gunlukDailyCheck:' + target.tarih;
     var props = PropertiesService.getScriptProperties();
 
-    if (!target.shiftNotificationReady && !target.finalMailReady) {
+    if (!force && !target.shiftNotificationReady && !target.finalMailReady) {
       return { success: true, skipped: true, message: 'Gunluk kontrol saati henuz gelmedi' };
     }
 
-    if (props.getProperty(shiftNotificationKey) && (!target.finalMailReady || props.getProperty(finalMailKey))) {
+    if (!force && props.getProperty(shiftNotificationKey) && (!target.finalMailReady || props.getProperty(finalMailKey))) {
       return { success: true, skipped: true, message: 'Bugunun eksik kayit kontrolleri daha once yapildi' };
     }
 
@@ -362,27 +373,33 @@ function checkHourlyMissingRecords() {
     var shiftMailResult = { success: true, skipped: true, message: 'Bildirim maili daha once gonderildi' };
     var finalMailResult = { success: true, skipped: true, message: 'Gun sonu maili henuz gerekli degil' };
 
-    if (target.shiftNotificationReady && !props.getProperty(shiftNotificationKey)) {
+    if ((force || target.shiftNotificationReady) && (force || !props.getProperty(shiftNotificationKey))) {
       notificationResult = createMissingDailyRecordAnnouncement(target);
-      shiftMailResult = sendMissingDailyRecordShiftMail(target, notificationResult);
 
       if (notificationResult.success || notificationResult.duplicate) {
+        shiftMailResult = sendMissingDailyRecordShiftMail(target, notificationResult);
         props.setProperty(shiftNotificationKey, new Date().toISOString());
+      } else {
+        shiftMailResult = {
+          success: true,
+          skipped: true,
+          message: 'Merkezi bildirim olusmadigi icin vardiya maili gonderilmedi'
+        };
       }
 
       addSystemLog({
         tarih: target.tarih,
-        saat: '16:00',
+        saat: target.shiftNotificationCheckTime,
         modul: 'Gunluk Veri',
         eksikKayit: '08-16 vardiyasinda gunluk kayit yok',
         otomatikKayitSonucu: notificationResult.success ? '16-24 vardiyasina bildirim olusturuldu' : 'Bildirim olusturulamadi',
-        mailSonucu: shiftMailResult.success ? 'Basarili' : 'Basarisiz',
+        mailSonucu: shiftMailResult.skipped ? 'Gonderilmedi' : (shiftMailResult.success ? 'Basarili' : 'Basarisiz'),
         hataMesaji: notificationResult.success ? (shiftMailResult.success ? '' : shiftMailResult.error) : notificationResult.error,
         detay: 'Gunduz vardiyasi gunluk veri girmedigi icin 16-24 vardiyasina otomatik bildirim'
       });
     }
 
-    if (target.finalMailReady && !props.getProperty(finalMailKey)) {
+    if (target.finalMailReady && (force || !props.getProperty(finalMailKey))) {
       finalMailResult = sendMissingDailyRecordFinalMail(target);
       if (finalMailResult.success) {
         props.setProperty(finalMailKey, new Date().toISOString());
@@ -446,6 +463,22 @@ function createMissingDailyRecordAnnouncement(target) {
       return { success: true, id: id, message: 'Bildirim web app uzerinden olusturuldu', data: webAppResult };
     }
 
+    var localResult = upsertLocalMissingDailyAnnouncement(target, id, title, now);
+    return {
+      success: false,
+      localBackup: localResult.success,
+      id: id,
+      error: 'Merkezi Bildirim Web App bildirimi olusturamadi: ' + (webAppResult.error || 'Bilinmeyen hata'),
+      localMessage: localResult.message || '',
+      localError: localResult.error || ''
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+function upsertLocalMissingDailyAnnouncement(target, id, title, now) {
+  try {
     var sheet = getOrCreateAnnouncementsSheet();
     var existingRow = findAnnouncementRowById(sheet, id);
 
@@ -461,7 +494,7 @@ function createMissingDailyRecordAnnouncement(target) {
       sheet.getRange(existingRow, 15).setValue(now);
       sheet.getRange(existingRow, 16).setValue('all');
       sheet.getRange(existingRow, 18).setValue('FALSE');
-      return { success: true, duplicate: true, id: id, message: 'Bildirim guncellendi' };
+      return { success: true, duplicate: true, id: id, message: 'Yerel bildirim yedegi guncellendi' };
     }
 
     sheet.appendRow([
@@ -485,19 +518,37 @@ function createMissingDailyRecordAnnouncement(target) {
       'FALSE'
     ]);
 
-    return { success: true, id: id, message: 'Bildirim olusturuldu' };
+    return { success: true, id: id, message: 'Yerel bildirim yedegi olusturuldu' };
   } catch (error) {
     return { success: false, error: error.toString() };
   }
 }
 
 function addAnnouncementViaBildirimWebApp(record) {
-  if (!BILDIRIM_WEB_APP_URL) {
+  var bildirimWebAppUrl = getBildirimWebAppUrl();
+  if (!bildirimWebAppUrl) {
     return { success: false, error: 'Bildirim web app URL tanimli degil' };
   }
 
   try {
-    var response = UrlFetchApp.fetch(BILDIRIM_WEB_APP_URL, {
+    var existingResponse = UrlFetchApp.fetch(
+      bildirimWebAppUrl + '?action=getAnnouncements&active=true&date=' + encodeURIComponent(record.startDate),
+      {
+        method: 'get',
+        muteHttpExceptions: true
+      }
+    );
+    if (existingResponse.getResponseCode() >= 200 && existingResponse.getResponseCode() < 300) {
+      var existingPayload = JSON.parse(existingResponse.getContentText() || '{}');
+      var existingItems = existingPayload.data || [];
+      for (var i = 0; i < existingItems.length; i++) {
+        if (String(existingItems[i].id || '') === String(record.id)) {
+          return { success: true, duplicate: true, data: existingItems[i], message: 'Bildirim zaten mevcut' };
+        }
+      }
+    }
+
+    var response = UrlFetchApp.fetch(bildirimWebAppUrl, {
       method: 'post',
       payload: Object.assign({ action: 'addAnnouncement' }, record),
       muteHttpExceptions: true
@@ -513,11 +564,18 @@ function addAnnouncementViaBildirimWebApp(record) {
   }
 }
 
+function getBildirimWebAppUrl() {
+  if (typeof getAppsScriptUrl === 'function') {
+    return getAppsScriptUrl('bildirim') || GUNLUK_BILDIRIM_WEB_APP_URL;
+  }
+  return GUNLUK_BILDIRIM_WEB_APP_URL;
+}
+
 function sendMissingDailyRecordShiftMail(target, notificationResult) {
   var subject = 'Gunluk Veri Girisi Eksik - 16-24 Vardiyasina Bildirim Olusturuldu - ' + target.tarih;
   var body = 'Gunluk Veri Girisi Uyarisi\n\n' +
     'Tarih: ' + target.tarih + '\n' +
-    'Kontrol: 08-16 vardiyasi bitis kontrolu\n\n' +
+    'Kontrol: ' + target.shiftNotificationCheckTime + ' 08-16 vardiyasi bitis kontrolu\n\n' +
     'Gunluk veri kaydi 08-16 vardiyasinda girilmedi.\n' +
     'Otomatik bildirim sistemi 16-24 vardiyasina kritik bildirim olusturdu.\n\n' +
     'Bildirim durumu: ' + (notificationResult.success ? 'Olusturuldu' : 'Olusturulamadi') + '\n' +

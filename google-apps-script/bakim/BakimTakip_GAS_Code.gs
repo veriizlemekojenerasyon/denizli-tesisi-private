@@ -2,8 +2,7 @@
 // Ortak kayit modeli + tur/motor bazli Sheets yapisi.
 
 const SPREADSHEET_NAME = 'Bakim Takip Sistemi';
-const SPREADSHEET_ID = '1ep4yY5U_QRghohq6DtkbG68KT8MMFLVMXe6S7atd2AQ';
-const KOJEN_ENERJI_API_URL = 'https://script.google.com/macros/s/AKfycbwGuDzkg9lZm_YD3dsYq0P9r-CvB-hrOYZta0WWF_8UwFEJphBboJ-OvnAWkHQP1qux/exec';
+const SPREADSHEET_ID = '1yCfpgTVxMmPqpKhEmJety1IwwM7Bu_HlEvpDjqnT12E';
 
 const DRIVE_FOLDERS = {
   PERIODIC: '1TGrKfYHrayZmiGW1J8GQd70jPtByBKY9',
@@ -122,6 +121,9 @@ function handleRequest(e) {
         return getMaintenanceTriggers();
       case 'getStats':
         return getMaintenanceStats(ss, params);
+      case 'getSummary':
+      case 'getDashboardSummary':
+        return getMaintenanceSummary(ss, params);
       case 'updateStats':
       case 'rebuildStats':
         updateStatsSheet(ss);
@@ -619,7 +621,13 @@ function getLatestEnergyMotorHoursFromSheets(ss, motor) {
 
 function getLatestEnergyMotorHoursFromApi(motor) {
   try {
-    const response = UrlFetchApp.fetch(KOJEN_ENERJI_API_URL + '?action=getLastRecords&count=150', {
+    const enerjiApiUrl = getAppsScriptUrl('enerji');
+    if (!enerjiApiUrl) {
+      Logger.log('Enerji API URL tanimli degil');
+      return 0;
+    }
+
+    const response = UrlFetchApp.fetch(enerjiApiUrl + '?action=getLastRecords&count=150', {
       method: 'get',
       muteHttpExceptions: true
     });
@@ -1266,34 +1274,88 @@ function getMaintenanceStats(ss, params) {
   });
 }
 
-function getMaintenanceReport(ss, params) {
-  const motorFilter = getParam(params, 'motor');
-  const typeFilter = normalizeMainType(getParam(params, 'type'));
-  const rawType = getParam(params, 'type');
+function getMaintenanceSummary(ss, params) {
   const rawRange = String(getParam(params, 'range') || '').trim().toLowerCase();
   const range = parseInt(rawRange, 10);
   const hasDateLimit = rawRange !== '' && rawRange !== 'all' && rawRange !== 'tum' && rawRange !== 'tumu' && !isNaN(range);
   const start = hasDateLimit ? new Date() : null;
   if (start) start.setDate(start.getDate() - range);
 
-  let records = readAllRecords(ss).filter(function(record) {
-    const date = parseDateTR(record.date);
-    const recordType = normalizeMainType(record.type);
-    if (start && date && date < start) return false;
-    if (motorFilter && record.motor !== motorFilter) return false;
-    if (rawType && recordType !== typeFilter) return false;
-    return true;
+  const summary = readMaintenanceSummary(ss, {
+    motor: getParam(params, 'motor'),
+    type: getParam(params, 'type'),
+    start: start
   });
 
-  const summary = { total: records.length, periodic: 0, normal: 0, fault: 0 };
-  records.forEach(function(record) {
-    const type = normalizeMainType(record.type);
-    if (type === 'Periyodik') summary.periodic++;
-    else if (type === 'Ariza') summary.fault++;
-    else summary.normal++;
+  return jsonResponse(true, 'Bakim ozeti getirildi', {
+    summary: summary,
+    stats: {
+      total: summary.total,
+      monthly: summary.monthly,
+      faults: summary.fault,
+      technicians: summary.technicians
+    }
   });
+}
 
-  return jsonResponse(true, 'Rapor olusturuldu', { summary: summary, records: records });
+function getMaintenanceReport(ss, params) {
+  const startedAt = new Date().getTime();
+  const motorFilter = getParam(params, 'motor');
+  const rawType = getParam(params, 'type');
+  const rawRange = String(getParam(params, 'range') || '').trim().toLowerCase();
+  const range = parseInt(rawRange, 10);
+  const limit = Math.max(0, parseInt(getParam(params, 'limit'), 10) || 0);
+  const offset = Math.max(0, parseInt(getParam(params, 'offset'), 10) || 0);
+  const summaryOnly = String(getParam(params, 'summaryOnly') || '').toLowerCase() === '1' ||
+    String(getParam(params, 'summaryOnly') || '').toLowerCase() === 'true';
+  const skipSummary = !summaryOnly && (
+    String(getParam(params, 'skipSummary') || '').toLowerCase() === '1' ||
+    String(getParam(params, 'skipSummary') || '').toLowerCase() === 'true'
+  );
+  const hasDateLimit = rawRange !== '' && rawRange !== 'all' && rawRange !== 'tum' && rawRange !== 'tumu' && !isNaN(range);
+  const start = hasDateLimit ? new Date() : null;
+  if (start) start.setDate(start.getDate() - range);
+
+  const filters = {
+    motor: motorFilter,
+    type: rawType,
+    start: start
+  };
+  const quickSummary = skipSummary ? null : readMaintenanceSummary(ss, filters);
+  const summary = {
+    total: quickSummary ? quickSummary.total : '',
+    periodic: quickSummary ? quickSummary.periodic : '',
+    normal: quickSummary ? quickSummary.normal : '',
+    fault: quickSummary ? quickSummary.fault : ''
+  };
+
+  let records = [];
+  if (!summaryOnly) {
+    records = limit > 0
+      ? readLimitedMaintenanceRecords(ss, filters, limit, offset)
+      : readAllRecords(ss).filter(function(record) {
+        return recordMatchesMaintenanceFilters(record, filters);
+      });
+  }
+
+  if (summaryOnly) {
+    return jsonResponse(true, 'Rapor ozeti olusturuldu', {
+      summary: summary,
+      records: [],
+      durationMs: new Date().getTime() - startedAt
+    });
+  }
+
+  return jsonResponse(true, 'Rapor olusturuldu', {
+    summary: summary,
+    records: records,
+    totalRecords: quickSummary ? summary.total : '',
+    returnedRecords: records.length,
+    limit: limit,
+    offset: offset,
+    summarySkipped: skipSummary,
+    durationMs: new Date().getTime() - startedAt
+  });
 }
 
 function getActiveRecords(ss, params) {
@@ -1310,6 +1372,168 @@ function getActiveRecords(ss, params) {
   });
 
   return jsonResponse(true, 'Aktif kayitlar getirildi', { records: records });
+}
+
+function readLimitedMaintenanceRecords(ss, options, limit, offset) {
+  const records = [];
+  const targetCount = Math.max(1, (limit || 0) + (offset || 0));
+  const chunkSize = Math.max(50, Math.min(250, targetCount));
+
+  getSheetDefinitions().forEach(function(definition) {
+    const sheet = ss.getSheetByName(definition.name);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    const headers = getSheetHeaders(sheet);
+    const columnCount = headers.length;
+    if (!columnCount) return;
+
+    let cursor = sheet.getLastRow();
+    let matchedForSheet = 0;
+    while (cursor >= 2 && matchedForSheet < targetCount) {
+      const startRow = Math.max(2, cursor - chunkSize + 1);
+      const rowCount = cursor - startRow + 1;
+      const rows = sheet.getRange(startRow, 1, rowCount, columnCount).getDisplayValues();
+
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const record = buildMaintenanceRecordFromRow(headers, rows[i], definition);
+        if (!record.recordNo) continue;
+        if (!recordMatchesMaintenanceFilters(record, options)) continue;
+
+        records.push(record);
+        matchedForSheet++;
+        if (matchedForSheet >= targetCount) break;
+      }
+
+      cursor = startRow - 1;
+    }
+  });
+
+  records.sort(function(a, b) {
+    return parseDateTimeTR(b.date, b.time) - parseDateTimeTR(a.date, a.time);
+  });
+
+  return records.slice(offset || 0, (offset || 0) + (limit || records.length));
+}
+
+function recordMatchesMaintenanceFilters(record, options) {
+  const opts = options || {};
+  const motorFilter = opts.motor ? normalizeMotor(opts.motor) : '';
+  const typeFilter = opts.type ? normalizeMainType(opts.type) : '';
+  const date = parseDateTR(record.date);
+  const recordType = normalizeMainType(record.type);
+
+  if (opts.start && date && date < opts.start) return false;
+  if (motorFilter && normalizeMotor(record.motor) !== motorFilter) return false;
+  if (typeFilter && recordType !== typeFilter) return false;
+  return true;
+}
+
+function buildMaintenanceRecordFromRow(headers, row, definition) {
+  const value = function(header) {
+    const index = headers.indexOf(header);
+    return index === -1 ? '' : row[index];
+  };
+
+  return {
+    recordNo: value('Kayit No'),
+    date: value('Tarih'),
+    time: value('Saat'),
+    motor: value('Motor'),
+    type: value('Bakim Ana Turu') || (definition && definition.mainType) || '',
+    subtype: value('Bakim Alt Turu'),
+    company: value('Destek Tipi'),
+    technician: value('Sorumlu'),
+    status: value('Durum'),
+    notes: value('Aciklama'),
+    files: value('Dosyalar'),
+    timestamp: value('Kayit Zamani'),
+    closedAt: value('Kapama Zamani'),
+    currentHours: value('Guncel Motor Saati'),
+    startDate: value('Baslangic Tarihi'),
+    startTime: value('Baslangic Saati'),
+    endDate: value('Bitis Tarihi'),
+    endTime: value('Bitis Saati'),
+    operation: value('Bakim Alt Turu') || value('Aciklama'),
+    sheetName: definition ? definition.name : ''
+  };
+}
+
+function readMaintenanceSummary(ss, options) {
+  const opts = options || {};
+  const motorFilter = opts.motor ? normalizeMotor(opts.motor) : '';
+  const typeFilter = opts.type ? normalizeMainType(opts.type) : '';
+  const start = opts.start || null;
+  const monthKey = formatMonthKey(new Date());
+  const technicians = {};
+  const summary = {
+    total: 0,
+    periodic: 0,
+    normal: 0,
+    fault: 0,
+    active: 0,
+    closed: 0,
+    monthly: 0,
+    technicians: 0
+  };
+
+  getSheetDefinitions().forEach(function(definition) {
+    const sheet = ss.getSheetByName(definition.name);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    const headers = getSheetHeaders(sheet);
+    const rowCount = sheet.getLastRow() - 1;
+    const recordNoColumn = headers.indexOf('Kayit No') + 1;
+    if (!recordNoColumn) return;
+
+    const dateColumn = headers.indexOf('Tarih') + 1;
+    const motorColumn = headers.indexOf('Motor') + 1;
+    const typeColumn = headers.indexOf('Bakim Ana Turu') + 1;
+    const statusColumn = headers.indexOf('Durum') + 1;
+    const technicianColumn = headers.indexOf('Sorumlu') + 1;
+
+    const rows = sheet.getRange(2, 1, rowCount, headers.length).getDisplayValues();
+    const recordNoIndex = recordNoColumn - 1;
+    const dateIndex = dateColumn - 1;
+    const motorIndex = motorColumn - 1;
+    const typeIndex = typeColumn - 1;
+    const statusIndex = statusColumn - 1;
+    const technicianIndex = technicianColumn - 1;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!String(row[recordNoIndex] || '').trim()) continue;
+
+      const recordDate = parseDateTR(row[dateIndex]);
+      const recordMotor = normalizeMotor(row[motorIndex]);
+      const recordType = normalizeMainType(row[typeIndex] || definition.mainType);
+      const status = normalizeStatus(row[statusIndex]);
+
+      if (start && recordDate && recordDate < start) continue;
+      if (motorFilter && recordMotor !== motorFilter) continue;
+      if (typeFilter && recordType !== typeFilter) continue;
+
+      summary.total++;
+      if (recordType === 'Periyodik') summary.periodic++;
+      else if (recordType === 'Ariza') summary.fault++;
+      else summary.normal++;
+
+      if (status === 'Aktif') summary.active++;
+      else summary.closed++;
+
+      if (formatMonthKey(recordDate) === monthKey) summary.monthly++;
+      if (row[technicianIndex]) technicians[row[technicianIndex]] = true;
+    }
+  });
+
+  summary.technicians = Object.keys(technicians).length;
+  return summary;
+}
+
+function getColumnDisplayValues(sheet, column, rowCount) {
+  if (!column || column < 1 || rowCount < 1) return [];
+  return sheet.getRange(2, column, rowCount, 1).getDisplayValues().map(function(row) {
+    return row[0];
+  });
 }
 
 function closeRecord(ss, params) {

@@ -1,6 +1,7 @@
 // Bakım Takibi JavaScript - ÇALIŞAN VERSİYON
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWnHTk--4bdTxPPTsRco5edkSH0jqnoLEHjhh8zH2TjIQU2YHU--81AGEZnbwnPhcV/exec";
+const SCRIPT_URL = window.AppConfig.getScriptUrl('bakim');
 const selectedMaintenanceFiles = { periodic: [], normal: [], fault: [] };
+const REPORT_RECORD_LIMIT = 100;
 
 function isOperatorHistoryOnlyView() {
     return document.body.classList.contains('operator-history-view');
@@ -27,6 +28,7 @@ async function initializeSystem() {
         
         // JSON parse etmeyi dene
         let result;
+
         try {
             result = JSON.parse(responseText);
             console.log('Parsed result:', result);
@@ -42,7 +44,7 @@ async function initializeSystem() {
             // İstatistikleri yükle (DOMContentLoaded'da zaten çağrılıyor)
             
             // Raporu da yükle
-            if (maintenanceReporter) {
+            if (maintenanceReporter && !isOperatorHistoryOnlyView()) {
                 await maintenanceReporter.generateReport();
             }
             
@@ -76,13 +78,13 @@ async function saveMaintenanceData(formType, formElement) {
         // Input değerlerini direkt al (FormData yerine)
         const getInputValue = (name) => {
             const input = formElement.querySelector(`[name="${name}"]`);
-            console.log(`🔍 Looking for [name="${name}"]:`, input ? `Found: "${input.value}"` : 'NOT FOUND');
+            console.log(` Looking for [name="${name}"]:`, input ? `Found: "${input.value}"` : 'NOT FOUND');
             return input ? input.value : '';
         };
         
         // Alternatif yöntem: Tüm inputları topla
         const allInputs = formElement.querySelectorAll('input, select, textarea');
-        console.log('📋 All inputs in form:', allInputs.length);
+        console.log(' All inputs in form:', allInputs.length);
         allInputs.forEach(input => {
             console.log(`  - ${input.tagName} [name="${input.name}"] = "${input.value}"`);
         });
@@ -94,7 +96,7 @@ async function saveMaintenanceData(formType, formElement) {
         
         // Teknisyen ve Firma değerlerini büyük harfe çevir
         const technicianMapping = {
-            'ibrahim-ogun': 'İBRAHİM OĞUN ŞAHİN',
+            'ibrahim-ogun': 'İBRAHİM OGÜN ŞAHİN',
             'yakup-can': 'YAKUP CAN CİN',
             'oguzhan-yaylali': 'OĞUZHAN YAYLALI',
             'altan-hunoglu': 'ALTAN HUNOĞLU'
@@ -155,7 +157,7 @@ async function saveMaintenanceData(formType, formElement) {
         
         typeValue = typeMapping[typeValue] || typeValue.toUpperCase();
         
-        console.log('🔍 Direct values:');
+        console.log(' Direct values:');
         console.log('  - typeValue:', typeValue);
         console.log('  - raw technicianValue:', getInputValue('technician'));
         console.log('  - raw companyValue:', getInputValue('technician-company'));
@@ -267,7 +269,7 @@ async function saveMaintenanceData(formType, formElement) {
             // İstatistikleri otomatik yenile
             setTimeout(() => {
                 if (window.maintenanceStats) {
-                    console.log('📊 Kayıt başarılı, istatistikler yenileniyor...');
+                    console.log(' Kayıt başarılı, istatistikler yenileniyor...');
                     window.maintenanceStats.loadStats(6);
                 }
             }, 1000);
@@ -396,9 +398,9 @@ class MaintenanceStats {
             console.log('Stats API yanıtı:', data);
             
             if (data.success) {
-                console.log('📊 Stats verisi:', data.stats);
-                console.log('📊 Chart verisi:', data.chartData);
-                console.log('📊 Chart JSON:', JSON.stringify(data.chartData, null, 2));
+                console.log(' Stats verisi:', data.stats);
+                console.log(' Chart verisi:', data.chartData);
+                console.log(' Chart JSON:', JSON.stringify(data.chartData, null, 2));
                 
                 // Chart verisini sakla
                 this.chartData = data.chartData;
@@ -435,8 +437,8 @@ class MaintenanceStats {
 
     // İstatistik kartlarını güncelle
     updateStatCards(stats) {
-        console.log('📊 updateStatCards çağrıldı, gelen stats:', stats);
-        console.log('📊 Stats JSON:', JSON.stringify(stats, null, 2));
+        console.log(' updateStatCards çağrıldı, gelen stats:', stats);
+        console.log(' Stats JSON:', JSON.stringify(stats, null, 2));
         
         if (!stats) {
             console.warn('Stats verisi yok, demo veriler gösteriliyor');
@@ -444,7 +446,7 @@ class MaintenanceStats {
             return;
         }
         
-        console.log('📊 Stats değerleri:');
+        console.log(' Stats değerleri:');
         console.log('  - total:', stats.total);
         console.log('  - monthly:', stats.monthly);
         console.log('  - faults:', stats.faults);
@@ -456,7 +458,7 @@ class MaintenanceStats {
         document.getElementById('fault-count').textContent = stats.faults || stats.fault || 0;  // Her iki formatı da destekle
         document.getElementById('technician-count').textContent = stats.technicians || 0;
         
-        console.log('✅ İstatistik kartları güncellendi');
+        console.log('İstatistik kartları güncellendi');
     }
 
     // Demo istatistikler göster - SADECE hata durumunda
@@ -602,7 +604,7 @@ class MaintenanceStats {
             };
         }
         
-        console.log('🎨 Çoklu çizgi grafik çiziliyor:', chartData);
+        console.log(' Çoklu çizgi grafik çiziliyor:', chartData);
         
         const allValues = [...chartData.periodic, ...chartData.normal, ...chartData.fault];
         const maxValue = Math.max(...allValues, 1);
@@ -784,7 +786,7 @@ class MaintenanceStats {
         ctx.textAlign = 'center';
         ctx.fillText(`Toplam: ${totalMaintenances} bakım`, width / 2, height - 10);
         
-        console.log('✅ Çoklu çizgi grafik başarıyla çizildi');
+        console.log('Çoklu çizgi grafik başarıyla çizildi');
     }
     
     // Eski parseChartData fonksiyonu kaldırıldı - artık çoklu çizgi grafik kullanılacak
@@ -1303,7 +1305,7 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedMaintenanceFiles[formType].forEach(file => {
                 const div = document.createElement('div');
                 div.className = 'file-item';
-                div.innerHTML = `<span>📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)</span>
+                div.innerHTML = `<span> ${file.name} (${(file.size/1024).toFixed(1)} KB)</span>
                                 <button type="button" class="file-remove" data-name="${file.name}">&times;</button>`;
                 list.appendChild(div);
             });
@@ -1463,7 +1465,7 @@ function showNotification(arg1, arg2, arg3) {
     
     notification.innerHTML = `
         <div style="font-weight: bold; margin-bottom: 5px; font-size: 1rem;">
-            ${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'} ${title}
+            ${title}
         </div>
         <div style="font-size: 0.9rem; line-height: 1.4;">${message}</div>
         <button onclick="this.parentElement.remove()" style="
@@ -1561,6 +1563,7 @@ class MaintenanceReporter {
         this.records = [];
         this.filteredRecords = [];
         this.currentSort = { column: null, direction: 'asc' };
+        this.activeSummaryKey = '';
     }
 
     // Rapor oluştur
@@ -1568,15 +1571,24 @@ class MaintenanceReporter {
         const motor = document.getElementById('report-motor')?.value || '';
         const type = normalizeMaintenanceTypeParam(document.getElementById('report-type')?.value || '');
         const dateRange = document.getElementById('report-date-range')?.value || 'all';
+        const recordLimit = REPORT_RECORD_LIMIT;
+        this.setLoadingState();
+        this.setSummaryLoadingState();
 
         console.log('=== RAPOR OLUŞTURMA BAŞLATILIYOR ===');
         console.log('Motor:', motor, 'Tip:', type, 'Tarih aralığı:', dateRange);
 
         try {
-            const url = `${SCRIPT_URL}?action=getReport&motor=${encodeURIComponent(motor)}&type=${encodeURIComponent(type)}&range=${encodeURIComponent(dateRange)}`;
-            console.log('URL:', url);
+            const url = new URL(SCRIPT_URL);
+            url.searchParams.append('action', 'getReport');
+            url.searchParams.append('motor', motor);
+            url.searchParams.append('type', type);
+            url.searchParams.append('range', dateRange);
+            url.searchParams.append('limit', String(recordLimit));
+            url.searchParams.append('skipSummary', '1');
+            console.log('URL:', url.toString());
             
-            const response = await fetch(url);
+            const response = await fetch(url, { method: 'GET', cache: 'no-cache' });
             console.log('Response status:', response.status);
             
             const data = await response.json();
@@ -1585,6 +1597,7 @@ class MaintenanceReporter {
             if (data.success) {
                 console.log('Başarılı - displayReport çağrılıyor');
                 this.displayReport(data);
+                this.loadReportSummary(motor, type, dateRange);
             } else {
                 console.warn('API başarısız:', data.message);
                 this.showDemoReport();
@@ -1596,6 +1609,30 @@ class MaintenanceReporter {
     }
 
     // Raporu göster
+    async loadReportSummary(motor, type, dateRange) {
+        const summaryKey = [motor || '', type || '', dateRange || 'all'].join('|');
+        this.activeSummaryKey = summaryKey;
+
+        try {
+            const url = new URL(SCRIPT_URL);
+            url.searchParams.append('action', 'getReport');
+            url.searchParams.append('motor', motor || '');
+            url.searchParams.append('type', type || '');
+            url.searchParams.append('range', dateRange || 'all');
+            url.searchParams.append('summaryOnly', '1');
+
+            const response = await fetch(url, { method: 'GET', cache: 'no-cache' });
+            const data = await response.json();
+            if (this.activeSummaryKey !== summaryKey) return;
+
+            if (data.success) {
+                this.updateSummaryCards(data.summary || {}, false);
+            }
+        } catch (error) {
+            console.warn('Bakim rapor ozeti alinamadi:', error);
+        }
+    }
+
     displayReport(data) {
         const summary = data.summary || {};
         const records = data.records || [];
@@ -1606,16 +1643,56 @@ class MaintenanceReporter {
         const normalEl = document.getElementById('summary-normal');
         const faultEl = document.getElementById('summary-fault');
         
-        if (totalEl) totalEl.textContent = summary.total || 0;
-        if (periodicEl) periodicEl.textContent = summary.periodic || 0;
-        if (normalEl) normalEl.textContent = summary.normal || 0;
-        if (faultEl) faultEl.textContent = summary.fault || 0;
+        if (totalEl) totalEl.textContent = data.summarySkipped ? '...' : (summary.total ?? 0);
+        if (periodicEl) periodicEl.textContent = data.summarySkipped ? '...' : (summary.periodic ?? 0);
+        if (normalEl) normalEl.textContent = data.summarySkipped ? '...' : (summary.normal ?? 0);
+        if (faultEl) faultEl.textContent = data.summarySkipped ? '...' : (summary.fault ?? 0);
         
         // Tabloyu doldur
         this.populateTable(records);
+        this.showRecordLimitInfo(data);
     }
 
     // Demo rapor göster
+    setLoadingState() {
+        const tbody = document.getElementById('maintenance-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="no-data">
+                    <i class="fas fa-spinner fa-spin"></i> Bakim kayitlari yukleniyor...
+                </td>
+            </tr>
+        `;
+    }
+
+    setSummaryLoadingState() {
+        this.updateSummaryCards({ total: '', periodic: '', normal: '', fault: '' }, true);
+    }
+
+    updateSummaryCards(summary, isLoading) {
+        const totalEl = document.getElementById('summary-total');
+        const periodicEl = document.getElementById('summary-periodic');
+        const normalEl = document.getElementById('summary-normal');
+        const faultEl = document.getElementById('summary-fault');
+        const formatValue = (value) => {
+            if (isLoading && (value === '' || value === null || typeof value === 'undefined')) return '...';
+            return (value === '' || value === null || typeof value === 'undefined') ? 0 : value;
+        };
+
+        if (totalEl) totalEl.textContent = formatValue(summary.total);
+        if (periodicEl) periodicEl.textContent = formatValue(summary.periodic);
+        if (normalEl) normalEl.textContent = formatValue(summary.normal);
+        if (faultEl) faultEl.textContent = formatValue(summary.fault);
+    }
+
+    showRecordLimitInfo(data) {
+        const total = parseInt(data.totalRecords || data.summary?.total || 0, 10);
+        const returned = parseInt(data.returnedRecords || (data.records || []).length || 0, 10);
+        if (!total || returned >= total) return;
+        showNotification('Bilgi', `Tabloda son ${returned} kayit gosteriliyor. Tum kayitlar icin Excel indir kullanilabilir.`, 'info');
+    }
+
     showDemoReport() {
         console.warn('Demo rapor gösteriliyor');
         
@@ -2057,19 +2134,19 @@ function displayOilSampleNotifications(motors) {
 
     if (oilAlerts.length > 0) {
         oilAlerts.forEach(alert => {
-            showNotification('⚠️ Yağ Numune Zamanı', alert.message, 'error', 10000);
+            showNotification('Yağ Numune Zamanı', alert.message, 'error', 10000);
         });
     }
     
     if (oilWarnings.length > 0) {
         oilWarnings.forEach(warning => {
-            showNotification('ℹ️ Yağ Numune Yaklaşıyor', warning.message, 'warning', 8000);
+            showNotification('Yağ Numune Yaklaşıyor', warning.message, 'warning', 8000);
         });
     }
     
     // Alternatör gresleme bildirimleri
     if (altAlerts.length > 0 || altWarnings.length > 0) {
-        const title = altAlerts.length > 0 ? 'Alternator Gresleme Zamani' : 'Alternator Gresleme Yaklasiyor';
+        const title = altAlerts.length > 0 ? 'Alternatör Gresleme Zamanı' : 'Alternatör Gresleme Yaklaşıyor';
         const type = altAlerts.length > 0 ? 'error' : 'warning';
         const messages = altAlerts.concat(altWarnings).map(item => item.message).join('<br>');
         showNotification(title, messages, type);
@@ -2079,13 +2156,13 @@ function displayOilSampleNotifications(motors) {
 
     if (altAlerts.length > 0) {
         altAlerts.forEach(alert => {
-            showNotification('🔧 Alternatör Gresleme Zamanı', alert.message, 'error', 10000);
+            showNotification('Alternatör Gresleme Zamanı', alert.message, 'error', 10000);
         });
     }
     
     if (altWarnings.length > 0) {
         altWarnings.forEach(warning => {
-            showNotification('ℹ️ Alternatör Gresleme Yaklaşıyor', warning.message, 'warning', 8000);
+            showNotification('Alternatör Gresleme Yaklaşıyor', warning.message, 'warning', 8000);
         });
     }
     

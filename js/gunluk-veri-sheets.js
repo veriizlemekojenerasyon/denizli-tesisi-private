@@ -8,7 +8,7 @@
 // ============================================
 const GUNLUK_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxWz5Ea81m_kJ8TybTaowHlNqdAZeK2dQ70pJWPDTVm_ooAwnnO6nOlN5ZBIPnZLRmK/exec',
+    APPS_SCRIPT_URL: window.AppConfig.getScriptUrl('gunluk'),
     
     // Sayfa başlığı
     PAGE_NAME: 'Günlük Veri Girişi',
@@ -509,7 +509,7 @@ const GunlukApp = {
         records.forEach((record, index) => {
             // Açıklama varsa göster
             const aciklamaBadge = record.aciklama ? 
-                `<span class="edit-badge" title="${record.aciklama}">📝 Düzenlendi</span>` : '';
+                `<span class="edit-badge" title="${record.aciklama}">Düzenlendi</span>` : '';
             
             html += `
                 <tr>
@@ -620,7 +620,7 @@ const GunlukApp = {
     }
 };
 
-// Kimlik dogrulama kontrolü
+// Kimlik doğrulama kontrolü
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
@@ -636,33 +636,33 @@ function checkAuth() {
         const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
         
         allUserNameDisplays.forEach((element, index) => {
-            element.textContent = fullName || user.email || 'Kullanici';
+            element.textContent = fullName || user.email || 'Kullanıcı';
         });
         
         // user-name-display elementini de güncelle
         const userNameDisplayKebab = document.getElementById('user-name-display');
         if (userNameDisplayKebab) {
-            userNameDisplayKebab.textContent = fullName || user.email || 'Kullanici';
+            userNameDisplayKebab.textContent = fullName || user.email || 'Kullanıcı';
         }
         
-        console.log('Günlük Veri - Kullanici adi ayarlandi:', fullName || user.email || 'Kullanici');
+        console.log('Günlük Veri - Kullanıcı adı ayarlandı:', fullName || user.email || 'Kullanıcı');
     } catch (e) {
-        console.error('Günlük Veri - Kullanici bilgileri okunamadi:', e);
+        console.error('Günlük Veri - Kullanıcı bilgileri okunamadı:', e);
         const allElements = document.querySelectorAll('[id="userNameDisplay"]');
         allElements.forEach(element => {
-            element.textContent = 'Kullanici';
+            element.textContent = 'Kullanıcı';
         });
         
         const userNameDisplayKebab = document.getElementById('user-name-display');
         if (userNameDisplayKebab) {
-            userNameDisplayKebab.textContent = 'Kullanici';
+            userNameDisplayKebab.textContent = 'Kullanıcı';
         }
     }
 }
 
-// Sayfa yüklendiðinde baþlat
+// Sayfa yüklendiğinde başlat
 document.addEventListener('DOMContentLoaded', function() {
-    // Önce kimlik dogrulama kontrolü
+    // Önce kimlik doğrulama kontrolü
     checkAuth();
     
     GunlukApp.init();

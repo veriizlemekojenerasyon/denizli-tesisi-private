@@ -1,5 +1,5 @@
-// Kullanici Yonetimi JavaScript - Ayrik Dosya
-const USER_URL = 'https://script.google.com/macros/s/AKfycbxPz61SLIfNe1Or-24t4MK-HdDOOshr4LbbgSuOxSA12tn9QASgdQYov5sl5tgiVprR/exec';
+// Kullanıcı Yönetimi JavaScript - Ayrık Dosya
+const USER_URL = window.AppConfig.getScriptUrl('kullanici');
 
 let users = [];
 let filteredUsers = [];
@@ -35,7 +35,7 @@ function checkAuth() {
         if (display) {
             const firstName = currentUser.firstName || currentUser.ad || currentUser['Ad'] || '';
             const lastName = currentUser.lastName || currentUser.soyad || currentUser['Soyad'] || '';
-            display.textContent = (firstName + ' ' + lastName).trim() || currentUser.email || 'Kullanici';
+            display.textContent = (firstName + ' ' + lastName).trim() || currentUser.email || 'Kullanıcı';
         }
         return true;
     } catch (e) {
@@ -47,9 +47,9 @@ function checkAuth() {
 
 function showLockScreen(type) {
     const messages = {
-        giris: { title: '🔒 Giris Gerekli', text: 'Lutfen index.html sayfasindan giris yapin.' },
-        yetki: { title: '🚫 Yetkisiz Erisim', text: 'Bu sayfa sadece admin kullanicilar icindir.' },
-        hata: { title: '⚠️ Oturum Hatasi', text: 'Oturumunuz sonlandi. Lutfen tekrar giris yapin.' }
+        giris: { title: 'Giriş Gerekli', text: 'Lütfen index.html sayfasından giriş yapın.' },
+        yetki: { title: 'Yetkisiz Erişim', text: 'Bu sayfa sadece admin kullanıcılar içindir.' },
+        hata: { title: 'Oturum Hatası', text: 'Oturumunuz sonlandı. Lütfen tekrar giriş yapın.' }
     };
     
     const msg = messages[type] || messages.giris;
@@ -89,7 +89,7 @@ function setupEvents() {
 function logout() {
     localStorage.removeItem('loggedInUser');
     localStorage.removeItem('currentUser');
-    alert('Cikis yapildi!');
+    alert('Çıkış yapıldı!');
     window.location.href = 'anasayfa.html';
 }
 
@@ -102,11 +102,11 @@ async function loadUsers() {
             users = data.users;
         } else {
             users = [];
-            showNotif('Google Sheets baglanti hatasi!', 'error');
+            showNotif('Google Sheets bağlantı hatası!', 'error');
         }
     } catch (e) {
         users = [];
-        showNotif('Sunucuya ulasilamadi: ' + e.message, 'error');
+        showNotif('Sunucuya ulaşılamadı: ' + e.message, 'error');
     }
     filteredUsers = [...users];
     renderUsers();
@@ -116,8 +116,8 @@ async function loadUsers() {
 
 function getDefaultUsers() {
     return [
-        { id: 1, firstName: 'Admin', lastName: 'Kullanici', email: 'admin@sistem.com', role: 'admin', status: 'active', photo: '', createdAt: new Date().toLocaleDateString('tr-TR') },
-        { id: 2, firstName: 'Operator', lastName: 'Test', email: 'operator@sistem.com', role: 'operator', status: 'active', photo: '', createdAt: new Date().toLocaleDateString('tr-TR') }
+        { id: 1, firstName: 'Admin', lastName: 'Kullanıcı', email: 'admin@sistem.com', role: 'admin', status: 'active', photo: '', createdAt: new Date().toLocaleDateString('tr-TR') },
+        { id: 2, firstName: 'Operatör', lastName: 'Test', email: 'operator@sistem.com', role: 'operator', status: 'active', photo: '', createdAt: new Date().toLocaleDateString('tr-TR') }
     ];
 }
 
@@ -129,19 +129,19 @@ function renderUsers() {
     const pageUsers = filteredUsers.slice(start, start + usersPerPage);
     
     tbody.innerHTML = pageUsers.length === 0
-        ? '<tr><td colspan="7" style="text-align:center;padding:40px;">Kullanici bulunamadi</td></tr>'
+        ? '<tr><td colspan="7" style="text-align:center;padding:40px;">Kullanıcı bulunamadı</td></tr>'
         : pageUsers.map(u => `
             <tr>
                 <td><img src="${u.photo || (u.role === 'admin' ? 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22 width=%2240%22 height=%2240%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%234a90d9%22/><path d=%22M20 8c3 0 5.5 2.5 5.5 5.5S23 19 20 19s-5.5-2.5-5.5-5.5S17 8 20 8zm0 12c5.5 0 11 2.8 11 8.3V32H9v-3.7c0-5.5 5.5-8.3 11-8.3z%22 fill=%22white%22/></svg>' : 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22 width=%2240%22 height=%2240%22><circle cx=%2220%22 cy=%2220%22 r=%2220%22 fill=%22%2327ae60%22/><path d=%22M20 8c3 0 5.5 2.5 5.5 5.5S23 19 20 19s-5.5-2.5-5.5-5.5S17 8 20 8zm0 12c5.5 0 11 2.8 11 8.3V32H9v-3.7c0-5.5 5.5-8.3 11-8.3z%22 fill=%22white%22/></svg>')}" class="user-avatar" alt="${u.firstName}"></td>
                 <td><div class="user-name">${u.firstName} ${u.lastName}</div><div class="user-email">${u.email}</div></td>
                 <td>${u.email}</td>
-                <td><span class="badge badge-${u.role}">${u.role === 'admin' ? 'Admin' : 'Operator'}</span></td>
+                <td><span class="badge badge-${u.role}">${u.role === 'admin' ? 'Admin' : 'Operatör'}</span></td>
                 <td><span class="badge badge-${u.status}">${u.status === 'active' ? 'Aktif' : 'Pasif'}</span></td>
                 <td>${u.createdAt || '-'}</td>
                 <td>
                     <div class="actions">
-                        <button class="btn-icon btn-edit" onclick="editUser(${u.id})" title="Duzenle">✏️</button>
-                        <button class="btn-icon btn-delete" onclick="deleteUser(${u.id})" ${u.id === 1 ? 'disabled' : ''} title="Sil">🗑️</button>
+                        <button class="btn-icon btn-edit" onclick="editUser(${u.id})" title="Düzenle">✏️</button>
+                        <button class="btn-icon btn-delete" onclick="deleteUser(${u.id})" ${u.id === 1 ? 'disabled' : ''} title="Sil">Sil</button>
                     </div>
                 </td>
             </tr>
@@ -192,9 +192,9 @@ function updateStats() {
 function openAddModal() {
     currentEditId = null;
     userPhotoData = null;
-    document.getElementById('modalTitle').textContent = 'Yeni Kullanici Ekle';
+    document.getElementById('modalTitle').textContent = 'Yeni Kullanıcı Ekle';
     document.getElementById('userForm').reset();
-    document.getElementById('previewImage').src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23e0e0e0%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2230%22>👤</text></svg>';
+    document.getElementById('previewImage').src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23e0e0e0%22/><text x=%2250%22 y=%2258%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2230%22>?</text></svg>';
     document.getElementById('passwordGroup').style.display = 'block';
     document.getElementById('password').required = true;
     document.querySelector('.modal-overlay').classList.add('active');
@@ -206,13 +206,13 @@ function editUser(id) {
     
     currentEditId = id;
     userPhotoData = u.photo || null;
-    document.getElementById('modalTitle').textContent = 'Kullanici Duzenle';
+    document.getElementById('modalTitle').textContent = 'Kullanıcı Düzenle';
     document.getElementById('firstName').value = u.firstName;
     document.getElementById('lastName').value = u.lastName;
     document.getElementById('email').value = u.email;
     document.getElementById('role').value = u.role;
     document.getElementById('status').value = u.status;
-    document.getElementById('previewImage').src = u.photo || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23e0e0e0%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2230%22>👤</text></svg>';
+    document.getElementById('previewImage').src = u.photo || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23e0e0e0%22/><text x=%2250%22 y=%2258%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2230%22>?</text></svg>';
     document.getElementById('passwordGroup').style.display = 'none';
     document.getElementById('password').required = false;
     document.getElementById('password').value = '';
@@ -256,14 +256,14 @@ async function saveUser() {
     if (!currentEditId) {
         const pass = document.getElementById('password').value;
         if (pass.length < 6) {
-            showNotif('Sifre en az 6 karakter olmali!', 'error');
+            showNotif('Şifre en az 6 karakter olmalı!', 'error');
             return;
         }
         data.password = pass;
     }
     
     if (users.find(u => u.email === data.email && u.id !== data.id)) {
-        showNotif('Bu e-posta kullaniliyor!', 'error');
+        showNotif('Bu e-posta kullanılıyor!', 'error');
         return;
     }
     
@@ -279,15 +279,15 @@ async function saveUser() {
         const result = await res.json();
         
         if (result.success) {
-            // Google Sheets'ten yeniden yukle
+            // Google Sheets'ten yeniden yükle
             await loadUsers();
             closeModal();
-            showNotif(currentEditId ? 'Guncellendi!' : 'Eklendi!', 'success');
+            showNotif(currentEditId ? 'Güncellendi!' : 'Eklendi!', 'success');
         } else {
-            showNotif('Kayit hatasi: ' + (result.error || 'Bilinmeyen hata'), 'error');
+            showNotif('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
         }
     } catch (e) {
-        showNotif('Sunucu hatasi: ' + e.message, 'error');
+        showNotif('Sunucu hatası: ' + e.message, 'error');
     }
     
     showLoading(false);
@@ -329,10 +329,10 @@ async function confirmDelete() {
             closeDeleteModal();
             showNotif('Silindi!', 'success');
         } else {
-            showNotif('Silme hatasi: ' + (result.error || 'Bilinmeyen hata'), 'error');
+            showNotif('Silme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
         }
     } catch (e) {
-        showNotif('Sunucu hatasi: ' + e.message, 'error');
+        showNotif('Sunucu hatası: ' + e.message, 'error');
     }
     
     showLoading(false);

@@ -19,6 +19,7 @@ function doPost(e) {
 }
 
 function saatlikHandleRequest(e) {
+  var startedAt = new Date().getTime();
   var params = (e && e.parameter) ? e.parameter : {};
   var action = params.action;
   var lock = null;
@@ -80,6 +81,10 @@ function saatlikHandleRequest(e) {
         result = { success: false, error: 'Geçersiz işlem' };
     }
     
+    if (result && typeof result === 'object') {
+      result.durationMs = new Date().getTime() - startedAt;
+    }
+
     if (lock) lock.releaseLock();
     
     return ContentService.createTextOutput(JSON.stringify(result))
@@ -157,29 +162,132 @@ function mapSaatlikRow(row) {
 }
 
 function findSaatlikRowByDateTime(sheet, tarih, saat) {
-  var lastRow = sheet.getLastRow();
-  if (lastRow < 2) return -1;
-  var values = sheet.getRange(2, 2, lastRow - 1, 2).getDisplayValues();
-  var targetTarih = saatlikFormatDateTR(tarih);
-  var targetSaat = String(saat || '').trim();
-  for (var i = 0; i < values.length; i++) {
-    if (values[i][0] === targetTarih && String(values[i][1] || '').trim() === targetSaat) {
-      return i + 2;
-    }
-  }
-  return -1;
+  return saatlikGetRecordIndexInfo(sheet, tarih, saat).foundRow;
 }
 
 function saatlikSaveRecord(data) {
   var sheet = getSaatlikSheet(true);
-  var foundRow = findSaatlikRowByDateTime(sheet, data.tarih, data.saat);
-  return foundRow === -1 ? saatlikAddRecord(data) : saatlikUpdateRecord(data);
+  var info = saatlikGetRecordIndexInfo(sheet, data.tarih, data.saat);
+  return info.foundRow === -1
+    ? saatlikWriteAddRecord(sheet, data, info)
+    : saatlikWriteUpdateRecord(sheet, data, info.foundRow);
+}
+
+function saatlikGetRecordIndexInfo(sheet, tarih, saat) {
+  var lastRow = sheet ? sheet.getLastRow() : 0;
+  var targetTarih = saatlikFormatDateTR(tarih);
+  var targetSaat = saatlikNormalizeSaat(saat);
+  var targetTime = saatlikParseDateTimeTR(targetTarih, targetSaat).getTime();
+
+  if (!sheet || lastRow < 2) {
+    return { foundRow: -1, insertRow: 2, nextID: 1, lastRow: lastRow };
+  }
+
+  var lastValues = sheet.getRange(lastRow, 1, 1, 3).getDisplayValues()[0];
+  var lastTarih = saatlikFormatDateTR(lastValues[1] || '');
+  var lastSaat = saatlikNormalizeSaat(lastValues[2] || '');
+  var lastTime = saatlikParseDateTimeTR(lastTarih, lastSaat).getTime();
+  var lastID = parseInt(lastValues[0], 10) || 0;
+  var fallbackNextID = Math.max(lastID, lastRow - 1) + 1;
+
+  if (lastTarih === targetTarih && lastSaat === targetSaat) {
+    return { foundRow: lastRow, insertRow: lastRow, nextID: fallbackNextID, lastRow: lastRow };
+  }
+
+  if (!isNaN(targetTime) && !isNaN(lastTime) && targetTime > lastTime) {
+    return { foundRow: -1, insertRow: lastRow + 1, nextID: fallbackNextID, lastRow: lastRow };
+  }
+
+  var rows = sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
+  var foundRow = -1;
+  var insertRow = lastRow + 1;
+  var maxID = lastID;
+
+  for (var i = 0; i < rows.length; i++) {
+    var rowID = parseInt(rows[i][0], 10) || 0;
+    if (rowID > maxID) maxID = rowID;
+
+    var rowTarih = saatlikFormatDateTR(rows[i][1] || '');
+    var rowSaat = saatlikNormalizeSaat(rows[i][2] || '');
+    if (rowTarih === targetTarih && rowSaat === targetSaat) {
+      foundRow = i + 2;
+      break;
+    }
+
+    if (insertRow === lastRow + 1) {
+      var rowTime = saatlikParseDateTimeTR(rowTarih, rowSaat).getTime();
+      if (!isNaN(targetTime) && !isNaN(rowTime) && rowTime > targetTime) {
+        insertRow = i + 2;
+      }
+    }
+  }
+
+  return {
+    foundRow: foundRow,
+    insertRow: foundRow === -1 ? insertRow : foundRow,
+    nextID: Math.max(maxID, lastRow - 1) + 1,
+    lastRow: lastRow
+  };
+}
+
+function saatlikWriteAddRecord(sheet, data, info) {
+  var nextID = (info && info.nextID) || 1;
+  var formattedTarih = saatlikFormatDateTR(data.tarih);
+  var formattedSaat = saatlikNormalizeSaat(data.saat);
+  var newRow = (info && info.insertRow) || (sheet.getLastRow() + 1);
+  var rowData = [
+    nextID.toString(),
+    formattedTarih,
+    formattedSaat,
+    data.vardiya,
+    parseFloat(data.aktifMwh) || 0,
+    parseFloat(data.reaktifMwh) || 0,
+    parseFloat(data.aydemAktif) || 0,
+    parseFloat(data.aydemReaktif) || 0,
+    data.kaydeden || '',
+    data.notlar || '',
+    saatlikFormatDateTimeTR(new Date())
+  ];
+
+  if (newRow <= sheet.getLastRow()) {
+    sheet.insertRowBefore(newRow);
+  }
+
+  var range = sheet.getRange(newRow, 1, 1, 11);
+  range.setValues([rowData]);
+  range.setHorizontalAlignment('center');
+  range.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+
+  return { success: true, message: 'Kayit basariyla eklendi! (ID: ' + nextID + ')', row: newRow };
+}
+
+function saatlikWriteUpdateRecord(sheet, data, foundRow) {
+  var recordID = sheet.getRange(foundRow, 1).getDisplayValue();
+  var values = [[
+    data.vardiya,
+    parseFloat(data.aktifMwh) || 0,
+    parseFloat(data.reaktifMwh) || 0,
+    parseFloat(data.aydemAktif) || 0,
+    parseFloat(data.aydemReaktif) || 0,
+    data.kaydeden || '',
+    data.notlar || '',
+    saatlikFormatDateTimeTR(new Date())
+  ]];
+
+  sheet.getRange(foundRow, 4, 1, 8).setValues(values);
+
+  return { success: true, message: 'Kayit basariyla guncellendi! (ID: ' + recordID + ')', row: foundRow };
 }
 
 // Yeni kayıt ekle
 function saatlikAddRecord(data) {
   try {
     var sheet = getSaatlikSheet(true);
+    var info = saatlikGetRecordIndexInfo(sheet, data.tarih, data.saat);
+    if (info.foundRow !== -1) {
+      return { success: false, error: 'Bu tarih ve saat icin kayit zaten var! Duzenleme yapin.' };
+    }
+    return saatlikWriteAddRecord(sheet, data, info);
     
     // Aynı tarih ve saat için kayıt var mı kontrol et
     var lastRow = sheet.getLastRow();
@@ -249,6 +357,12 @@ function saatlikUpdateRecord(data) {
       return { success: false, error: 'Kayıt bulunamadı!' };
     }
     
+    var info = saatlikGetRecordIndexInfo(sheet, data.tarih, data.saat);
+    if (info.foundRow === -1) {
+      return { success: false, error: 'Kayit bulunamadi!' };
+    }
+    return saatlikWriteUpdateRecord(sheet, data, info.foundRow);
+
     var foundRow = findSaatlikRowByDateTime(sheet, data.tarih, data.saat);
     var recordID = '';
     
@@ -947,6 +1061,15 @@ function saatlikParseSaatLabel(value) {
 
 function saatlikFormatHourLabel(hour) {
   return saatlikPad2(hour) + ':00';
+}
+
+function saatlikNormalizeSaat(value) {
+  var text = String(value || '').trim();
+  if (!text) return '00:00';
+  var parts = text.split(':');
+  var hour = parseInt(parts[0] || '0', 10);
+  var minute = parseInt(parts[1] || '0', 10);
+  return saatlikPad2(isNaN(hour) ? 0 : hour) + ':' + saatlikPad2(isNaN(minute) ? 0 : minute);
 }
 
 function saatlikFindInsertPosition(sheet, tarih, saat) {

@@ -11,6 +11,8 @@
  */
 
 // CORS ayarları
+var VARDIYA_LOCK_WAIT_MS = 1200;
+
 function doGet(e) {
   return handleRequest(e);
 }
@@ -20,73 +22,110 @@ function doPost(e) {
 }
 
 function handleRequest(e) {
-  var lock = LockService.getScriptLock();
+  var requestStartedAt = new Date().getTime();
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action;
+  var lock = null;
+  var lockWaitMs = 0;
+  var lockSkipped = false;
   try {
-    lock.waitLock(30000);
+    if (isVardiyaWriteAction(action)) {
+      var lockStartedAt = new Date().getTime();
+      lock = LockService.getScriptLock();
+      if (!lock.tryLock(VARDIYA_LOCK_WAIT_MS)) {
+        lock = null;
+        lockSkipped = true;
+      }
+      lockWaitMs = new Date().getTime() - lockStartedAt;
+    }
     
-    var action = e.parameter.action;
     var result = {};
     
     switch(action) {
       case 'addRecord':
-        result = addRecord(e.parameter);
+        result = addRecord(params);
         break;
       case 'updateRecord':
-        result = updateRecord(e.parameter);
+        result = updateRecord(params);
         break;
       case 'getRecords':
         result = getRecords();
         break;
       case 'getLastRecords':
-        result = getLastRecords(parseInt(e.parameter.count) || 32);
+        result = getLastRecords(parseInt(params.count) || 32);
         break;
       case 'getLastRecordsWithIslemler':
-        result = getLastRecordsWithIslemler(parseInt(e.parameter.count) || 32);
+        result = getLastRecordsWithIslemler(parseInt(params.count) || 32);
         break;
       case 'getRecordByDateVardiya':
-        result = getRecordByDateVardiya(e.parameter.tarih, e.parameter.vardiya);
+        result = getRecordByDateVardiya(params.tarih, params.vardiya);
         break;
       case 'endVardiya':
-        result = endVardiya(e.parameter);
+        result = endVardiya(params);
         break;
       case 'addIslem':
-        result = addIslem(e.parameter);
+        result = addIslem(params);
         break;
       case 'updateDevredenIsler':
-        result = updateDevredenIsler(e.parameter);
+        result = updateDevredenIsler(params);
         break;
       case 'getIslemlerByVardiyaId':
-        result = getIslemlerByVardiyaId(e.parameter.vardiyaId);
+        result = getIslemlerByVardiyaId(params.vardiyaId);
         break;
       case 'getMonthlyCleaningList':
-        result = getMonthlyCleaningList(e.parameter.year, e.parameter.month);
+        result = getMonthlyCleaningList(params.year, params.month);
         break;
       case 'saveCleaningChecklist':
-        result = saveCleaningChecklist(e.parameter);
+        result = saveCleaningChecklist(params);
         break;
       case 'getCleaningChecklist':
-        result = getCleaningChecklist(e.parameter);
+        result = getCleaningChecklist(params);
         break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
     
-    lock.releaseLock();
+    if (result && typeof result === 'object') {
+      result.totalDurationMs = new Date().getTime() - requestStartedAt;
+      result.lockWaitMs = lockWaitMs;
+      result.lockSkipped = lockSkipped;
+    }
+
+    if (lock) lock.releaseLock();
     
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
-    lock.releaseLock();
+    if (lock) {
+      try {
+        lock.releaseLock();
+      } catch (lockError) {}
+    }
     return ContentService.createTextOutput(JSON.stringify({ 
       success: false, 
-      error: error.toString() 
+      error: error.toString(),
+      totalDurationMs: new Date().getTime() - requestStartedAt,
+      lockWaitMs: lockWaitMs,
+      lockSkipped: lockSkipped
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
+function isVardiyaWriteAction(action) {
+  return [
+    'addRecord',
+    'updateRecord',
+    'endVardiya',
+    'addIslem',
+    'updateDevredenIsler',
+    'saveCleaningChecklist'
+  ].indexOf(action) !== -1;
+}
+
 // Yeni vardiya kaydı ekle
 function addRecord(data) {
+  var startedAt = new Date().getTime();
   try {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = spreadsheet.getSheetByName('VardiyaTakip');
@@ -134,12 +173,89 @@ function addRecord(data) {
       
       Logger.log('VardiyaTakip sayfası otomatik olarak oluşturuldu.');
     } else {
-      ensureVardiyaDevredenIslerColumn(sheet);
+      if (!getVardiyaDevredenIslerColumn(sheet)) {
+        ensureVardiyaDevredenIslerColumn(sheet);
+      }
     }
     
     // Aynı tarih ve vardiya için aktif kayıt var mı kontrol et
     var lastRow = sheet.getLastRow();
     var nextID = 1;
+
+    {
+      var fastFormattedTarih = formatDateTR(data.tarih);
+      var fastInputVardiya = data.vardiya;
+      var fastCloseExisting = String(data.closeExisting || '').toLowerCase() === '1' ||
+        String(data.closeExisting || '').toLowerCase() === 'true';
+      var fastActiveDuplicateRow = 0;
+      var fastActiveDuplicateId = '';
+      var fastMaxID = 0;
+
+      if (lastRow > 1) {
+        fastMaxID = parseInt(sheet.getRange(lastRow, 1).getDisplayValue(), 10) || (lastRow - 1);
+        var fastDateMatches = sheet.getRange(2, 2, lastRow - 1, 1)
+          .createTextFinder(fastFormattedTarih)
+          .matchEntireCell(true)
+          .findAll();
+
+        for (var fastIndex = 0; fastIndex < fastDateMatches.length; fastIndex++) {
+          var fastRowNumber = fastDateMatches[fastIndex].getRow();
+          var fastRowMeta = sheet.getRange(fastRowNumber, 1, 1, 9).getDisplayValues()[0];
+
+          if (fastRowMeta[2] === fastInputVardiya && isActiveStatus(fastRowMeta[8])) {
+            fastActiveDuplicateRow = fastRowNumber;
+            fastActiveDuplicateId = fastRowMeta[0];
+            break;
+          }
+        }
+        nextID = fastMaxID + 1;
+      }
+
+      if (fastActiveDuplicateRow) {
+        if (!fastCloseExisting) {
+          return {
+            success: false,
+            duplicateActive: true,
+            existingId: fastActiveDuplicateId,
+            error: 'Bu tarih ve vardiya icin aktif kayit zaten var!',
+            durationMs: new Date().getTime() - startedAt
+          };
+        }
+
+        var closeTime = formatTimeTR(new Date());
+        var closeDateTime = formatDateTimeTR(new Date());
+        sheet.getRange(fastActiveDuplicateRow, 8, 1, 3).setValues([[closeTime, 'Tamamlandi', closeDateTime]]);
+      }
+
+      var fastNow = new Date();
+      var fastKayitTarihi = formatDateTimeTR(fastNow);
+      var fastBaslangicSaati = formatTimeTR(fastNow);
+      var fastNewRow = lastRow + 1;
+      sheet.getRange(fastNewRow, 1, 1, 11).setValues([[
+        nextID.toString(),
+        fastFormattedTarih,
+        fastInputVardiya,
+        data.personel || '',
+        data.operator || '',
+        data.yardimciOperator || '',
+        fastBaslangicSaati,
+        '',
+        'Aktif',
+        fastKayitTarihi,
+        ''
+      ]]);
+
+      return {
+        success: true,
+        message: 'Vardiya basariyla baslatildi! (ID: ' + nextID + ')',
+        durationMs: new Date().getTime() - startedAt,
+        closedExistingId: fastActiveDuplicateId || '',
+        data: {
+          id: nextID.toString(),
+          baslangicSaati: fastBaslangicSaati
+        }
+      };
+    }
     
     if (lastRow > 1) {
       var dates = sheet.getRange(2, 2, lastRow - 1, 1).getDisplayValues();
@@ -252,6 +368,7 @@ function normalizeVardiyaHeader(value) {
 
 // Vardiya bitir
 function endVardiya(data) {
+  var startedAt = new Date().getTime();
   try {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = spreadsheet.getSheetByName('VardiyaTakip');
@@ -259,11 +376,79 @@ function endVardiya(data) {
     if (!sheet) {
       return { success: false, error: 'Sayfa bulunamadı!' };
     }
-    var devredenColumn = ensureVardiyaDevredenIslerColumn(sheet);
+    var devredenColumn = getVardiyaDevredenIslerColumn(sheet);
+    if (!devredenColumn) {
+      devredenColumn = ensureVardiyaDevredenIslerColumn(sheet);
+    }
     
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) {
       return { success: false, error: 'Kayıt bulunamadı!' };
+    }
+
+    {
+      var fastTargetId = String(data.id || '').trim();
+      var fastTargetTarih = formatDateTR(data.tarih);
+      var fastTargetVardiya = String(data.vardiya || '').trim();
+      var fastFoundRow = -1;
+      var fastRecordID = '';
+
+      if (fastTargetId) {
+        var fastIdMatches = sheet.getRange(2, 1, lastRow - 1, 1)
+          .createTextFinder(fastTargetId)
+          .matchEntireCell(true)
+          .findAll();
+
+        for (var fastIdIndex = 0; fastIdIndex < fastIdMatches.length; fastIdIndex++) {
+          var fastIdRow = fastIdMatches[fastIdIndex].getRow();
+          var fastIdMeta = sheet.getRange(fastIdRow, 1, 1, 9).getDisplayValues()[0];
+          if (isActiveStatus(fastIdMeta[8])) {
+            fastFoundRow = fastIdRow;
+            fastRecordID = fastIdMeta[0];
+            break;
+          }
+        }
+      }
+
+      if (fastFoundRow === -1 && fastTargetTarih && fastTargetVardiya) {
+        var fastDateMatches = sheet.getRange(2, 2, lastRow - 1, 1)
+          .createTextFinder(fastTargetTarih)
+          .matchEntireCell(true)
+          .findAll();
+
+        for (var fastDateIndex = 0; fastDateIndex < fastDateMatches.length; fastDateIndex++) {
+          var fastDateRow = fastDateMatches[fastDateIndex].getRow();
+          var fastDateMeta = sheet.getRange(fastDateRow, 1, 1, 9).getDisplayValues()[0];
+          if (fastDateMeta[2] === fastTargetVardiya && isActiveStatus(fastDateMeta[8])) {
+            fastFoundRow = fastDateRow;
+            fastRecordID = fastDateMeta[0];
+            break;
+          }
+        }
+      }
+
+      if (fastFoundRow === -1) {
+        return { success: false, error: 'Aktif vardiya kaydı bulunamadı!', durationMs: new Date().getTime() - startedAt };
+      }
+
+      var fastNow = new Date();
+      var fastBitisSaati = formatTimeTR(fastNow);
+      sheet.getRange(fastFoundRow, 8, 1, 3).setValues([[
+        fastBitisSaati,
+        'Tamamlandı',
+        formatDateTimeTR(fastNow)
+      ]]);
+      sheet.getRange(fastFoundRow, devredenColumn).setValue(data.devredenIsler || '');
+
+      return {
+        success: true,
+        message: 'Vardiya başarıyla sonlandırıldı! (ID: ' + fastRecordID + ')',
+        durationMs: new Date().getTime() - startedAt,
+        data: {
+          id: fastRecordID,
+          bitisSaati: fastBitisSaati
+        }
+      };
     }
     
     // Tarih ve vardiyaya göre aktif kaydı bul
@@ -423,8 +608,8 @@ function getRecords() {
       return { success: true, data: [] };
     }
     
-    var devredenColumn = ensureVardiyaDevredenIslerColumn(sheet);
-    var columnCount = Math.max(11, sheet.getLastColumn());
+    var devredenColumn = getVardiyaDevredenIslerColumn(sheet) || 11;
+    var columnCount = Math.max(11, devredenColumn, sheet.getLastColumn());
     var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, columnCount).getDisplayValues();
     var records = [];
     
@@ -455,14 +640,47 @@ function getRecords() {
 // Son N kaydı getir
 function getLastRecords(count) {
   try {
-    var result = getRecords();
-    if (!result.success) return result;
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = spreadsheet.getSheetByName('VardiyaTakip');
+
+    if (!sheet) {
+      return { success: true, data: [], total: 0, message: 'Sayfa henuz olusturulmamis.' };
+    }
+
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: true, data: [], total: 0 };
+    }
+
+    var total = lastRow - 1;
+    var rowCount = Math.min(Math.max(parseInt(count, 10) || 32, 1), total, 500);
+    var startRow = Math.max(2, lastRow - rowCount + 1);
+    var devredenColumn = getVardiyaDevredenIslerColumn(sheet) || 11;
+    var columnCount = Math.max(11, devredenColumn, sheet.getLastColumn());
+    var data = sheet.getRange(startRow, 1, rowCount, columnCount).getDisplayValues();
+    var records = [];
+
+    for (var i = data.length - 1; i >= 0; i--) {
+      var row = data[i];
+      records.push({
+        id: row[0],
+        tarih: row[1],
+        vardiya: row[2],
+        personel: row[3],
+        operator: row[4],
+        yardimciOperator: row[5],
+        baslangicSaati: row[6],
+        bitisSaati: row[7],
+        durum: row[8],
+        kayitTarihi: row[9],
+        devredenIsler: row[devredenColumn - 1] || ''
+      });
+    }
     
     return { 
       success: true, 
-      data: result.data.slice(0, count),
-      total: result.data.length,
-      message: result.message
+      data: records,
+      total: total
     };
     
   } catch (error) {
@@ -672,6 +890,12 @@ function getLastRecordsWithIslemler(count) {
     }
     
     var vardiyaKayitlari = vardiyaResult.data;
+    var vardiyaIdSet = {};
+    for (var recordIndex = 0; recordIndex < vardiyaKayitlari.length; recordIndex++) {
+      if (vardiyaKayitlari[recordIndex].id) {
+        vardiyaIdSet[String(vardiyaKayitlari[recordIndex].id)] = true;
+      }
+    }
     
     // Tüm işlemleri çek
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -683,7 +907,8 @@ function getLastRecordsWithIslemler(count) {
       
       for (var i = 0; i < islemData.length; i++) {
         var row = islemData[i];
-        var vardiyaId = row[1];
+        var vardiyaId = String(row[1] || '');
+        if (!vardiyaIdSet[vardiyaId]) continue;
         
         if (!islemlerMap[vardiyaId]) {
           islemlerMap[vardiyaId] = [];

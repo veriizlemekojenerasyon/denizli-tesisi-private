@@ -24,7 +24,7 @@ function handleRequest(e) {
   var lock = null;
 
   try {
-    if (action === 'addEndOfDayValues' || action === 'testAddEndOfDayValues') {
+    if (action === 'addEndOfDayValues' || action === 'testAddEndOfDayValues' || action === 'createEndOfDaySheets') {
       lock = LockService.getScriptLock();
       lock.waitLock(5000);
     }
@@ -40,6 +40,9 @@ function handleRequest(e) {
         break;
       case 'testAddEndOfDayValues':
         result = testAddEndOfDayValues(params);
+        break;
+      case 'createEndOfDaySheets':
+        result = createEndOfDaySheets(params.motor, params.includeMainEnergy);
         break;
       case 'getEndOfDayValues':
         result = getEndOfDayValues(params);
@@ -65,6 +68,7 @@ function getApiHealth() {
     availableActions: [
       'addEndOfDayValues',
       'testAddEndOfDayValues',
+      'createEndOfDaySheets',
       'getEndOfDayValues'
     ],
     sheetPattern: 'EnerjiGunSonu-GM-*'
@@ -103,6 +107,47 @@ function getOrCreateEnerjiEndOfDaySheet(motor) {
   }
 
   return sheet;
+}
+
+function createEndOfDaySheets(motor, includeMainEnergyValue) {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var motors = motor ? [normalizeEnerjiMotorLabel(motor)] : ['GM-1', 'GM-2', 'GM-3'];
+    var includeMainEnergy = String(includeMainEnergyValue || '').toLowerCase() === '1' ||
+      String(includeMainEnergyValue || '').toLowerCase() === 'true';
+    var sheets = [];
+
+    for (var i = 0; i < motors.length; i++) {
+      var currentMotor = normalizeEnerjiMotorLabel(motors[i]);
+      var endOfDaySheetName = getEnerjiEndOfDaySheetName(currentMotor);
+      var endOfDayExisted = !!spreadsheet.getSheetByName(endOfDaySheetName);
+      var endOfDaySheet = getOrCreateEnerjiEndOfDaySheet(currentMotor);
+      var result = {
+        motor: currentMotor,
+        endOfDaySheet: endOfDaySheet.getName(),
+        endOfDayCreated: !endOfDayExisted
+      };
+
+      if (includeMainEnergy) {
+        var mainSheetName = 'Enerji ' + currentMotor;
+        var mainExisted = !!spreadsheet.getSheetByName(mainSheetName);
+        var mainSheet = getOrCreateMainEnergySheet(currentMotor);
+        result.mainEnergySheet = mainSheet.getName();
+        result.mainEnergyCreated = !mainExisted;
+      }
+
+      sheets.push(result);
+    }
+
+    return {
+      success: true,
+      message: motors.length + ' motor icin gun sonu sayfalari hazirlandi.',
+      includeMainEnergy: includeMainEnergy,
+      sheets: sheets
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
 }
 
 function addEndOfDayValues(data) {

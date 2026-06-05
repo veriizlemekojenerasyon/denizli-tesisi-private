@@ -13,7 +13,7 @@
 // ============================================
 const BUHAR_CONFIG = {
     // Google Apps Script Web App URL
-    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzfyTZBsaswmpE2n-pWQScgnQW3EIqy8oteTXurwK5umzyvGR9YGN30w-XQYqzgyKAG/exec',
+    APPS_SCRIPT_URL: window.AppConfig.getScriptUrl('buhar'),
     
     // Sayfa basligi
     PAGE_NAME: 'Buhar Verisi',
@@ -21,7 +21,7 @@ const BUHAR_CONFIG = {
     // Varsayilan kullanici adi
     DEFAULT_USER: 'Admin',
     
-    // 📧 Mail uyarı ayarları
+    // g��� Mail uyarı ayarları
     EMAIL_ENABLED: true, // Mail gönderme aç/kapa
     EMAIL_TO: 'mrtcsk0320@gmail.com', // Uyarı maili gönderilecek adres
     EMAIL_SUBJECT: 'Buhar Verisi Uyarısı - Değer Girilmedi'
@@ -40,7 +40,7 @@ const BuharApp = {
         this.checkExistingRecord();
         this.loadLastRecords();
         
-        // 🔥 OTOMATİK KAYIT KONTROLÜ BAŞLAT
+        // g��� OTOMATİK KAYIT KONTROLÜ BA�?LAT
         this.startAutoRecordCheck();
         
         console.log('BuharApp baslatildi');
@@ -340,10 +340,10 @@ const BuharApp = {
         }
     },
     
-    // 📧 Mail gönderme fonksiyonu
+    // g��� Mail gönderme fonksiyonu
     sendEmailAlert: async function(subject, body) {
         if (!BUHAR_CONFIG.EMAIL_ENABLED) {
-            console.log('📧 Mail gönderme kapalı');
+            console.log('g��� Mail gönderme kapalı');
             return { success: true, message: 'Mail gönderme kapalı' };
         }
         
@@ -357,7 +357,7 @@ const BuharApp = {
             const response = await fetch(url, { method: 'GET', mode: 'cors' });
             const result = await response.json();
             
-            console.log('📧 Mail sonucu:', result);
+            console.log('g��� Mail sonucu:', result);
             return result;
         } catch (error) {
             console.error('Mail gönderme hatası:', error);
@@ -365,9 +365,9 @@ const BuharApp = {
         }
     },
     
-    // 🔥 OTOMATİK KAYIT KONTROLÜ
+    // g��� OTOMATİK KAYIT KONTROLÜ
     startAutoRecordCheck: function() {
-        console.log('🔥 Otomatik buhar kayıt kontrolü başlatılıyor...');
+        console.log('g��� Otomatik buhar kayıt kontrolü başlatılıyor...');
         
         // Her 5 dakikada bir kontrol et (günlük kontrol için)
         setInterval(() => {
@@ -380,20 +380,20 @@ const BuharApp = {
         }, 10000); // 10 saniye
     },
     
-    // 🔥 OTOMATİK KAYIT KONTROLÜ VE GÖNDERİM
+    // g��� OTOMATİK KAYIT KONTROLÜ VE GÖNDERİM
     checkAndAutoRecord: async function() {
         const now = new Date();
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
         
-        console.log(`🔥 Buhar kontrolü: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+        console.log(`g��� Buhar kontrolü: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
         
         // Her gün 23:59'da kontrol et (günün sonu kontrolü)
         if (currentHour !== 23 || currentMinute !== 59) {
             return;
         }
         
-        console.log('🔥 23:59 kontrolü yapılıyor...');
+        console.log('g��� 23:59 kontrolü yapılıyor...');
         
         // Dünün tarihini al
         const yesterday = new Date();
@@ -407,7 +407,7 @@ const BuharApp = {
         const hasRecord = await this.isExistingRecord(yesterdayStr);
         
         if (!hasRecord) {
-            console.log('🚨 Dün için buhar kaydı bulunamadı! Otomatik kayıt gönderiliyor...');
+            console.log('g��� Dün için buhar kaydı bulunamadı! Otomatik kayıt gönderiliyor...');
             
             // Otomatik kayıt verileri
             const autoData = {
@@ -424,7 +424,7 @@ const BuharApp = {
                 this.showNotification('warning', 'Otomatik Kayıt', 'Dün için buhar verisi otomatik olarak kaydedildi (Değer girilmedi)');
                 this.loadLastRecords();
                 
-                // 📧 Mail gönder
+                // g��� Mail gönder
                 const mailBody = `Buhar Verisi Uyarısı\n\nTarih: ${yesterdayStr}\n\n${yesterdayStr} için buhar verisi girilmedi. Otomatik olarak boş kayıt yapıldı.\n\nLütfen ilgili personeli bilgilendirin.`;
                 await this.sendEmailAlert(`Buhar Verisi Uyarısı - ${yesterdayStr} Değer Girilmedi`, mailBody);
                 
@@ -494,7 +494,7 @@ function checkAuth() {
 }
 
 // ============================================
-// SAYFA YÜKLENDIÐINDE BAÞLAT
+// SAYFA YÜKLENDIÐINDE BA�?LAT
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     // Önce kimlik dogrulama kontrolü

@@ -22,14 +22,13 @@ body {
 /* Sol Navigasyon Menüsü - Yeni Modern Tasarım */
 .sidebar {
     width: 280px;
+    flex: 0 0 280px;
     background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     display: flex;
     flex-direction: column;
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
+    position: relative;
+    min-height: 100vh;
     overflow: hidden;
     z-index: 1000;
 }
@@ -265,8 +264,9 @@ body {
     display: flex;
     flex-direction: column;
     background: #f8f9fa;
-    margin-left: 280px;
+    margin-left: 0;
     min-height: 100vh;
+    min-width: 0;
 }
 
 /* Header */
@@ -761,6 +761,7 @@ body {
 @media (max-width: 1024px) {
     .sidebar {
         width: 240px;
+        flex-basis: 240px;
     }
     .kojen-table-row {
         grid-template-columns: 60px repeat(8, 1fr);
@@ -776,6 +777,7 @@ body {
 
 @media (max-width: 768px) {
     .sidebar {
+        flex-basis: auto;
         width: 70px;
         overflow: hidden;
     }
@@ -1047,11 +1049,12 @@ body {
     .sidebar {
         position: fixed;
         width: 280px;
+        flex-basis: auto;
         z-index: 1000;
     }
     
     .main-content {
-        margin-left: 280px;
+        margin-left: 0;
     }
     .sidebar-header {
         padding: 20px 10px;

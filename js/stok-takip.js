@@ -1,7 +1,7 @@
 // Stok Takip JavaScript
 
 // Google Apps Script URL
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxttVkL243aTFdGTKJCTJYoPfKGccCymmMTRt1w2zpFSVf53wY7eRB-_5_jqdA3QRi_/exec";
+const SCRIPT_URL = window.AppConfig.getScriptUrl('stok');
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Başlangıç değerlerini ayarla

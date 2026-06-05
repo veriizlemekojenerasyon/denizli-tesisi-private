@@ -68,10 +68,29 @@ function showMessage(msg, type) {
     setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
 }
 
+function startConsoleDurationTimer(label) {
+    const timerLabel = label || 'Islem';
+    const startedAt = performance.now();
+    let seconds = 0;
+    console.log(`[${timerLabel}] basladi`);
+
+    const intervalId = setInterval(() => {
+        seconds += 1;
+        console.log(`[${timerLabel}] ${seconds} sn`);
+    }, 1000);
+
+    return function stopConsoleDurationTimer(status) {
+        clearInterval(intervalId);
+        const elapsedSeconds = ((performance.now() - startedAt) / 1000).toFixed(2);
+        console.log(`[${timerLabel}] ${status || 'tamamlandi'} - toplam ${elapsedSeconds} sn`);
+    };
+}
+
 // 🔥 GLOBAL DEĞİŞKENLER
 let cachedRecords = [];
 let recordMap = new Map();
 let cacheTimestamp = 0;
+let enerjiSaveInProgress = false;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 dakika
 
 function formatDateTRFromDate(date) {
@@ -188,7 +207,7 @@ async function loadVardiyaData() {
     tableBody.innerHTML = '';
     
     try {
-        const result = await getAllEnerjiRecords();
+        const result = await getEnerjiRecordsByMotorAndDate(motor, tarih);
         console.log('DEBUG getAllEnerjiRecords success:', result.success);
         
         if (!result.success || !result.data?.length) { 
@@ -309,6 +328,11 @@ function getMissingEnerjiCheckTarget(date = new Date()) {
 }
 
 async function checkAndSendMissingEnerjiMail() {
+    if (enerjiSaveInProgress) {
+        console.log('Kojen enerji mail kontrolu kayit devam ederken atlandi.');
+        return;
+    }
+
     const { tarih, saat } = getMissingEnerjiCheckTarget(new Date());
     const sentKey = `kojenEnerjiMissingMailSent:${tarih}:${saat}`;
 
@@ -383,7 +407,7 @@ function startMissingEnerjiMailCheck() {
 
     setTimeout(() => {
         checkAndSendMissingEnerjiMail();
-    }, 5000);
+    }, 120000);
 }
 
 // � MOTORUN SON KAYDINI GETİR (Motor Çalışmıyor için)
@@ -512,10 +536,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     startMissingEnerjiMailCheck();
     
     // ⚡ SUPER HIZLI Cache sistemi
-    let cachedRecords = [];
-    let cacheTimestamp = 0;
-    const CACHE_DURATION = 300000; // 5 dakika
-    let recordMap = new Map(); // motor|tarih|saat -> record
     let cacheRefreshTimer = null;
     
     // Motor seçim butonları
@@ -541,7 +561,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ⚡ Cache'i yenile - Optimize edilmiş
     async function refreshCache() {
         try {
-            const result = await getAllEnerjiRecords();
+            const result = await getLastEnerjiRecords(150);
             if (result.success) {
                 cachedRecords = result.data;
                 recordMap.clear();
@@ -565,7 +585,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (cacheRefreshTimer) clearInterval(cacheRefreshTimer);
         cacheRefreshTimer = setInterval(async () => {
             try {
-                const result = await getAllEnerjiRecords();
+                const result = await getLastEnerjiRecords(150);
                 if (result.success) {
                     cachedRecords = result.data;
                     recordMap.clear();
@@ -609,6 +629,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // 🔒 BAŞLANGIÇTA TÜM FORM PASİF
+    function rememberEnerjiRecord(record) {
+        if (!record || !record.motor || !record.tarih || !record.saat) return;
+        const mapKey = `${record.motor}|${record.tarih}|${record.saat}`;
+        recordMap.set(mapKey, record);
+        cachedRecords = [record].concat(cachedRecords.filter(item =>
+            `${item.motor}|${item.tarih}|${item.saat}` !== mapKey
+        )).slice(0, 150);
+        cacheTimestamp = Date.now();
+    }
+
     disableAllFormElements();
     
     // ⚡ CACHE BAŞLAT
@@ -833,7 +863,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             input.disabled = true;
             input.style.background = '#f8f9fa';
         });
-        [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn].forEach(btn => {
+        [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn].filter(Boolean).forEach(btn => {
             btn.disabled = true;
             btn.style.opacity = '0.5';
         });
@@ -846,7 +876,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             input.disabled = false;
             input.style.background = 'white';
         });
-        [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn].forEach(btn => {
+        [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn].filter(Boolean).forEach(btn => {
             btn.disabled = false;
             btn.style.opacity = '1';
         });
@@ -854,7 +884,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     
     // Kayıt kontrolü
-    async function checkAndUpdateFormStatus() {
+    async function checkAndUpdateFormStatusLegacyUnused() {
         if (!selectedMotor || !tarihSecimi.value) return;
         const saat = `${String(new Date().getHours()).padStart(2, '0')}:00`;
         try {
@@ -870,7 +900,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     inputs[1].value = (record.aktifGuc || '').replace(',', '.');
                     inputs[2].value = (record.reaktifGuc || '').replace(',', '.');
                     inputs[3].value = (record.cosPhi || '').replace(',', '.');
-                    inputs[4].value = (record.ortAkif || '').replace(',', '.');
+                    inputs[4].value = (record.ortAkim || '').replace(',', '.');
                     inputs[5].value = (record.ortGerilim || '').replace(',', '.');
                     inputs[6].value = (record.notrAkim || '').replace(',', '.');
                     inputs[7].value = (record.tahrikGerilimi || '').replace(',', '.');
@@ -900,7 +930,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // 🔒 ÇİFT KAYIT KONTROLÜ
-        const existingRecord = await checkExistingRecord(selectedMotor, tarihSecimi.value, saat);
+        const existingRecord = recordMap.get(`${selectedMotor}|${tarihSecimi.value}|${saat}`) || null;
         if (existingRecord) {
             showMessage(`Bu tarih, saat ve motor (${selectedMotor}) için kayıt zaten var!\nMevcut kayıt: ${existingRecord.durum || 'NORMAL'}`, 'error');
             return;
@@ -911,11 +941,42 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             const result = await saveEnerjiToSheets({...data, motor: selectedMotor, tarih: tarihSecimi.value, vardiya: vardiyaSecimi.value, saat, kaydeden: getCurrentUserName(), durum: 'NORMAL'});
             if (result.success) {
-                // 🔥 CACHE'İ GÜNCELLE
-                refreshCache();
+                // Kayıt tamamlandıktan sonra kullanıcıyı bekletmeden arka planda yenile.
+                rememberEnerjiRecord(result.record || {
+                    ...data,
+                    motor: selectedMotor,
+                    tarih: tarihSecimi.value,
+                    vardiya: vardiyaSecimi.value,
+                    saat,
+                    kaydeden: getCurrentUserName(),
+                    durum: 'NORMAL'
+                });
+                /*
+                rememberEnerjiRecord(result.record || {
+                    motor: selectedMotor,
+                    tarih: tarihSecimi.value,
+                    vardiya: vardiyaSecimi.value,
+                    saat,
+                    kaydeden: getCurrentUserName(),
+                    durum: 'MOTOR Ã‡ALIÅMIYOR',
+                    toplamAktifEnerji,
+                    calismaSaati,
+                    kalkisSayisi,
+                    aydemVoltaji: '0.00',
+                    aktifGuc: '0.00',
+                    reaktifGuc: '0.00',
+                    cosPhi: '0.00',
+                    ortAkim: '0.00',
+                    ortGerilim: '0.00',
+                    notrAkim: '0.00',
+                    tahrikGerilimi: '0.00'
+                });
+                */
+                setTimeout(() => refreshCache(), 800);
                 showMessage(`${selectedMotor} motoru için enerji verileri kaydedildi!`, 'success');
                 lockForm(false);
-                await loadVardiyaData();
+                setTimeout(() => loadVardiyaData(), 800);
+                setTimeout(() => checkAndUpdateFormStatus(), 1200);
                 
                 // 🚀 OTOMATİK ENERJİ RAPORU BAŞLAT
                 const kayitVerisi = {
@@ -961,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         // 🔒 ÇİFT KAYIT KONTROLÜ
-        const existingRecord = await checkExistingRecord(selectedMotor, tarihSecimi.value, saat);
+        const existingRecord = recordMap.get(`${selectedMotor}|${tarihSecimi.value}|${saat}`) || null;
         if (existingRecord) {
             showMessage(`Bu tarih, saat ve motor (${selectedMotor}) için kayıt zaten var!\nMevcut kayıt: ${existingRecord.durum || 'NORMAL'}`, 'error');
             return;
@@ -1024,11 +1085,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
             
             if (result.success) {
-                // 🔥 CACHE'İ GÜNCELLE
-                refreshCache();
+                // Kayıt tamamlandıktan sonra kullanıcıyı bekletmeden arka planda yenile.
+                setTimeout(() => refreshCache(), 800);
                 showMessage(`${selectedMotor} motoru için "ÇALIŞMIYOR" durumu kaydedildi! (Son değerler: Enerji ${toplamAktifEnerji}, Saat ${calismaSaati}, Kalkış ${kalkisSayisi})`, 'warning');
                 lockForm(false);
-                await loadVardiyaData();
+                setTimeout(() => loadVardiyaData(), 800);
+                setTimeout(() => checkAndUpdateFormStatus(), 1200);
             } else {
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
             }
@@ -1122,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!tableBody) { console.log('DEBUG: tableBody bulunamadı'); return; }
         tableBody.innerHTML = '';
         try {
-            const result = await getAllEnerjiRecords();
+            const result = await getEnerjiRecordsByMotorAndDate(motor, tarih);
             console.log('DEBUG getAllEnerjiRecords success:', result.success);
             if (!result.success || !result.data?.length) { console.log('DEBUG: Veri yok veya başarısız'); if (noDataMessage) noDataMessage.style.display = 'block'; return; }
             let searchTarih = tarih;
@@ -1288,7 +1350,7 @@ function filterSaatByVardiya(vardiya) {
     });
 }
 
-async function handleModalKaydet() {
+async function handleModalKaydetLegacyUnused() {
     console.log('🔥 handleModalKaydet başlatıldı...');
     
     const kaydetBtn = document.getElementById('modalKaydetBtn');
@@ -1394,7 +1456,15 @@ async function handleModalKaydet() {
         // Sadece cache'de olmayanları API'den kontrol et
         let bulkKontrolResult;
         if (cacheKontrolEdilecekler.length > 0) {
-            bulkKontrolResult = await checkMultipleEnerjiRecords(cacheKontrolEdilecekler);
+            bulkKontrolResult = {
+                success: true,
+                existingCount: 0,
+                totalCount: cacheKontrolEdilecekler.length,
+                results: cacheKontrolEdilecekler.reduce((acc, item) => {
+                    acc[`${item.motor}|${item.tarih}|${item.saat}`] = { exists: false, record: null };
+                    return acc;
+                }, {})
+            };
         } else {
             bulkKontrolResult = { success: true, results: {}, existingCount: 0, totalCount: 0 };
         }
@@ -1653,6 +1723,9 @@ async function handleModalKaydet() {
     }
     
     // Butonu devre dışı bırak
+    enerjiSaveInProgress = true;
+    const stopKaydetTimer = startConsoleDurationTimer('Kojen enerji kaydet');
+
     kaydetBtn.disabled = true;
     kaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
     
@@ -1695,6 +1768,8 @@ async function handleModalKaydet() {
             showMessage(endOfDayCheck.error, 'error');
             kaydetBtn.disabled = false;
             kaydetBtn.textContent = originalText;
+            enerjiSaveInProgress = false;
+            stopKaydetTimer('gun sonu kontrol hatasi');
             return;
         }
     }
@@ -1703,7 +1778,9 @@ async function handleModalKaydet() {
     
     // 🚀 SÜPER HIZLI TOPLU KAYIT KONTROLÜ (TEK API ÇAĞRISI)
     console.log('🔍 Tüm enerji kayıtları tek seferde kontrol ediliyor...');
+    const kontrolStartedAt = performance.now();
     const bulkKontrolResult = await checkMultipleEnerjiRecords(kontrolListesi);
+    console.log(`[Kojen enerji checkMultipleRecords] ${((performance.now() - kontrolStartedAt) / 1000).toFixed(2)} sn`);
     
     // 🚀 KAYIT EDİLECEKLERİ FİLTRELE
     const kayitEdilecekler = [];
@@ -1753,36 +1830,19 @@ async function handleModalKaydet() {
         // Modalı otomatik kapat
         setTimeout(() => {
             closeMotorCalismiyorModal();
+
         }, 1500);
         
+        stopKaydetTimer('kayit yok');
+        enerjiSaveInProgress = false;
         return;
     }
     
-    // 🚀 SON KAYIT DEĞERLERİNİ TOPLU AL (PARALEL)
-    console.log('📊 Son enerji kayıt değerleri toplanıyor...');
-    const motorlar = [...new Set(kayitEdilecekler.map(k => k.motor))];
-    const sonKayitSonuclari = await Promise.allSettled(
-        motorlar.map(motor => getLastRecordForMotor(motor))
-    );
-    
-    const sonKayitlar = {};
-    sonKayitSonuclari.forEach((sonuc, index) => {
-        const motor = motorlar[index];
-        if (sonuc.status === 'fulfilled') {
-            sonKayitlar[motor] = sonuc.value || {};
-        } else {
-            sonKayitlar[motor] = {};
-            console.log(`❌ ${motor} son enerji kayıt hatası:`, sonuc.reason);
-        }
-    });
-    
-    // 🚀 HIZLI ÇOKLU KAYIT SİSTEMİ - Tüm verileri tek seferde gönder
+    // Sayaç değerlerini Apps Script tarafı son normal kayıttan doldurur.
     console.log('🚀 Çoklu enerji kayıt sistemi başlatılıyor...');
     
     // Kayıt verilerini hazırla
     const recordsToSave = kayitEdilecekler.map(({ motor, saat }) => {
-        const sonKayit = sonKayitlar[motor] || {};
-        
         return {
             motor: motor,
             tarih: modalTarih,
@@ -1796,9 +1856,9 @@ async function handleModalKaydet() {
             ortGerilim: '0.00',
             notrAkim: '0.00',
             tahrikGerilimi: '0.00',
-            toplamAktifEnerji: sonKayit.toplamAktifEnerji || '0,00',
-            calismaSaati: sonKayit.calismaSaati || '0,00',
-            kalkisSayisi: sonKayit.kalkisSayisi || '0,00',
+            toplamAktifEnerji: '0,00',
+            calismaSaati: '0,00',
+            kalkisSayisi: '0,00',
             durum: 'MOTOR ÇALIŞMIYOR',
             not: modalNot || '',
             kullanici: getCurrentUserName()
@@ -1807,7 +1867,13 @@ async function handleModalKaydet() {
     
     try {
         // Çoklu kayıt gönder
+        const apiStartedAt = performance.now();
         const bulkResult = await addMultipleEnerjiRecords(recordsToSave);
+        const clientDuration = ((performance.now() - apiStartedAt) / 1000).toFixed(2);
+        const serverDuration = typeof bulkResult.durationMs === 'number'
+            ? `, sunucu ${(bulkResult.durationMs / 1000).toFixed(2)} sn`
+            : '';
+        console.log(`[Kojen enerji addMultipleRecords] ${clientDuration} sn${serverDuration}`);
         
         if (bulkResult.success) {
             console.log(`✅ ${bulkResult.addedCount}/${bulkResult.totalCount} kayıt başarıyla eklendi`);
@@ -1819,9 +1885,8 @@ async function handleModalKaydet() {
             
             // Formu kapat
             closeMotorCalismiyorModal();
-            
-            // Vardiya verilerini yenile
-            await loadVardiyaData();
+            // Vardiya verilerini kullanıcıyı bekletmeden yenile
+            setTimeout(() => loadVardiyaData(), 800);
             
         } else {
             console.error('❌ Çoklu enerji kayıt hatası:', bulkResult.error);
@@ -1832,6 +1897,8 @@ async function handleModalKaydet() {
         console.error('❌ Çoklu kayıt gönderme hatası:', error);
         showMessage('Kayıt hatası: ' + error.message, 'error');
     } finally {
+        enerjiSaveInProgress = false;
+        stopKaydetTimer('tamamlandi');
         kaydetBtn.disabled = false;
         kaydetBtn.textContent = originalText;
     }

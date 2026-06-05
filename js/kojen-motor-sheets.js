@@ -4,7 +4,7 @@
  */
 
 const KojenMotorSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzWnHTk--4bdTxPPTsRco5edkSH0jqnoLEHjhh8zH2TjIQU2YHU--81AGEZnbwnPhcV/exec',
+    WEB_APP_URL: window.AppConfig.getScriptUrl('motor'),
     EMAIL_ENABLED: true,
     EMAIL_TO: 'mrtcsk0320@gmail.com',
     EMAIL_SUBJECT: 'Kojen Motor Veri Uyarısı - Kayıt Girilmedi'
@@ -39,7 +39,7 @@ async function saveMotorToSheets(data) {
         });
         
         // Motor çalışmıyorsa tüm değerleri 0 olarak gönder
-        if (data.durum === 'MOTOR ÇALIŞMIYOR') {
+        if (data.durum === 'MOTOR ÇALI�?MIYOR') {
             // Doğru alanları gönder
             urlParams.append('jenYatakSicaklikDE', '0');
             urlParams.append('jenYatakSicaklikNDE', '0');
@@ -122,34 +122,34 @@ async function checkExistingMotorRecord(motor, tarih, saat) {
 }
 
 /**
- * 🚀 TOPLU MOTOR KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
+ * g��� TOPLU MOTOR KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
  * @param {Array} kombinasyonlar - [{motor, tarih, saat}, ...]
  * @returns {Promise<Object>} - Kontrol sonuçları
  */
 async function checkMultipleMotorRecords(kombinasyonlar) {
-    console.log('🚀 TOPLU MOTOR KAYIT KONTROLÜ BAŞLATILIYOR:', kombinasyonlar.length, 'kombinasyon');
-    console.log('📊 Gelen kombinasyonlar:', kombinasyonlar);
+    console.log('g��� TOPLU MOTOR KAYIT KONTROLÜ BA�?LATILIYOR:', kombinasyonlar.length, 'kombinasyon');
+    console.log('g��� Gelen kombinasyonlar:', kombinasyonlar);
     
     try {
         // Tüm kombinasyonları tek bir string'e dönüştür
         const kontrolData = kombinasyonlar.map(k => {
-            console.log('🔍 Kombinasyon:', k);
+            console.log('g��� Kombinasyon:', k);
             return `${k.motor}|${k.tarih}|${k.saat}`;
         }).join(',');
         
-        console.log('📊 Oluşturulan kontrolData:', kontrolData);
+        console.log('g��� Oluşturulan kontrolData:', kontrolData);
         
         const url = KojenMotorSheetsConfig.WEB_APP_URL + 
             `?action=checkMultipleRecords&data=${encodeURIComponent(kontrolData)}`;
         
-        console.log('🌐 Toplu motor kontrol URL:', url);
-        console.log('📡 Toplu motor fetch isteği gönderiliyor...');
+        console.log('g��� Toplu motor kontrol URL:', url);
+        console.log('g��� Toplu motor fetch isteği gönderiliyor...');
         
         const response = await fetch(url);
-        console.log('📡 Response status:', response.status);
+        console.log('g��� Response status:', response.status);
         
         const result = await response.json();
-        console.log('📊 Toplu motor kontrol sonucu:', result);
+        console.log('g��� Toplu motor kontrol sonucu:', result);
         
         return result;
         
@@ -183,11 +183,11 @@ async function getMotorRecordsByMotorAndDate(motor, tarih, vardiya) {
             url += `&vardiya=${encodeURIComponent(vardiya)}`;
         }
         
-        console.log(`🔍 API çağrısı: ${url}`);
+        console.log(`g��� API çağrısı: ${url}`);
         
         const response = await fetch(url);
         const result = await response.json();
-        console.log(`🔍 API yanıt:`, result);
+        console.log(`g��� API yanıt:`, result);
         return result;
         
     } catch (error) {
@@ -290,10 +290,11 @@ async function addMultipleMotorRecords(records) {
         // Parametreleri hazırla
         const urlParams = new URLSearchParams({
             action: 'addMultipleRecords',
-            data: jsonData
+            data: jsonData,
+            fastMode: '1'
         });
         
-        console.log('🚀 Çoklu motor kaydı gönderiliyor:', records.length, 'kayıt');
+        console.log('g��� Çoklu motor kaydı gönderiliyor:', records.length, 'kayıt');
         
         const response = await fetch(url, {
             method: 'POST',
@@ -308,7 +309,7 @@ async function addMultipleMotorRecords(records) {
         }
         
         const result = await response.json();
-        console.log('📊 Çoklu motor kayıt sonucu:', result);
+        console.log('g��� Çoklu motor kayıt sonucu:', result);
         
         return result;
         

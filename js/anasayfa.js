@@ -39,12 +39,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Buhar verisi config
-    const BUHAR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfyTZBsaswmpE2n-pWQScgnQW3EIqy8oteTXurwK5umzyvGR9YGN30w-XQYqzgyKAG/exec';
-    const KOJEN_ENERJI_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGuDzkg9lZm_YD3dsYq0P9r-CvB-hrOYZta0WWF_8UwFEJphBboJ-OvnAWkHQP1qux/exec';
-    const KOJEN_MOTOR_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--4bdTxPPTsRco5edkSH0jqnoLEHjhh8zH2TjIQU2YHU--81AGEZnbwnPhcV/exec';
-const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--4bdTxPPTsRco5edkSH0jqnoLEHjhh8zH2TjIQU2YHU--81AGEZnbwnPhcV/exec';
-    const SAATLIK_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzpkF4RJJ46d9A9518oxSwGaeuSgw-VHodQ5hjCApqb1H0FuIEnYNsqGOSdWXf9Yc/exec';
-    const GUNLUK_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxWz5Ea81m_kJ8TybTaowHlNqdAZeK2dQ70pJWPDTVm_ooAwnnO6nOlN5ZBIPnZLRmK/exec';
+    const BUHAR_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('buhar');
+    const KOJEN_ENERJI_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('enerji');
+    const KOJEN_MOTOR_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('motor');
+    const BAKIM_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('bakim');
+    const SAATLIK_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('saatlik');
+    const GUNLUK_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('gunluk');
     const ADMIN_TRIGGER_MODULES = [
         { key: 'saatlik', label: 'Saatlik Veri', url: SAATLIK_APPS_SCRIPT_URL },
         { key: 'motor', label: 'Kojen Motor', url: KOJEN_MOTOR_APPS_SCRIPT_URL },
@@ -60,37 +60,40 @@ const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--
     const SUMMARY_CACHE_DATE_KEY = 'dashboardSummaryCacheDate';
     const ANNOUNCEMENT_MODAL_PENDING_KEY = 'showHomeAnnouncementModal';
     const ANNOUNCEMENT_MODAL_SHOWN_KEY = 'homeAnnouncementModalShown';
-    const defaultAnnouncements = [
-        {
-            title: '08-16 vardiyasi: kojenerasyon saha kontrol listesi tamamlanacak',
-            priority: 'high'
-        },
-        {
-            title: 'GM motor yag ve sogutma degerleri saatlik kayitlarda dikkatle kontrol edilecek',
-            priority: 'medium'
-        },
-        {
-            title: 'Vardiya tesliminde yapilan isler ve bekleyen konular vardiya notuna yazilacak',
-            priority: 'normal'
-        }
-    ];
+    const defaultAnnouncements = [];
     let dashboardAnnouncements = null;
     let announcementsRefreshPromise = null;
     let dashboardSummaryRefreshPromise = null;
+    let dashboardMotorCardsRefreshPromise = null;
+    let maintenanceTotalRefreshPromise = null;
     loadCachedMaintenanceTotal();
     loadCachedMotorData();
     loadCachedSummaryValues();
     loadCachedAnnouncementCount();
 
     // Sayfa yuklendiginde verileri bekletmeden goster
-    loadDashboardData();
+    updateMotorData();
+    updateSummaryData();
+    setTimeout(refreshDashboardMotorCardsInBackground, 100);
+    setTimeout(refreshMaintenanceTotalInBackground, 150);
+    setTimeout(loadDashboardData, 900);
     setTimeout(openLoginAnnouncementModalIfPending, 250);
     setInterval(loadDashboardData, 5 * 60 * 1000);
-    setTimeout(ensureAdminTriggersAfterLogin, 1800);
+    setTimeout(ensureAdminTriggersAfterLogin, 10000);
 
     async function loadDashboardData() {
         updateMotorData();
         updateSummaryData();
+
+        refreshMaintenanceTotalInBackground();
+        await refreshDashboardMotorCardsInBackground();
+        const dashboardLoaded = await loadDashboardSummary();
+        if (dashboardLoaded) {
+            refreshMaintenanceTotalInBackground();
+            updateMotorData();
+            updateSummaryData();
+            return;
+        }
 
         const tasks = [
             updateAnnouncementTicker(),
@@ -101,7 +104,6 @@ const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--
         ];
 
         await Promise.allSettled(tasks);
-        refreshDashboardSummaryInBackground();
     }
 
     async function refreshDashboardSummaryInBackground() {
@@ -115,6 +117,28 @@ const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--
             dashboardSummaryRefreshPromise = null;
         });
         return dashboardSummaryRefreshPromise;
+    }
+
+    async function refreshDashboardMotorCardsInBackground() {
+        if (dashboardMotorCardsRefreshPromise) return dashboardMotorCardsRefreshPromise;
+        dashboardMotorCardsRefreshPromise = loadDashboardMotorCards().then(cardsLoaded => {
+            if (cardsLoaded) {
+                updateMotorData();
+                updateSummaryData();
+            }
+            return cardsLoaded;
+        }).finally(() => {
+            dashboardMotorCardsRefreshPromise = null;
+        });
+        return dashboardMotorCardsRefreshPromise;
+    }
+
+    async function refreshMaintenanceTotalInBackground() {
+        if (maintenanceTotalRefreshPromise) return maintenanceTotalRefreshPromise;
+        maintenanceTotalRefreshPromise = loadMaintenanceTotal().finally(() => {
+            maintenanceTotalRefreshPromise = null;
+        });
+        return maintenanceTotalRefreshPromise;
     }
 
     // Motor verilerini güncelle
@@ -187,28 +211,7 @@ const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--
                 return false;
             }
 
-            if (result.summary) {
-                summaryData.dailyProduction = parseDashboardNumber(result.summary.dailyProduction);
-                summaryData.dailySteam = result.summary.dailySteam === null || result.summary.dailySteam === undefined
-                    ? null
-                    : parseDashboardNumber(result.summary.dailySteam);
-                cacheSummaryValues();
-            }
-
-            if (result.motors) {
-                Object.entries(result.motors).forEach(([key, data]) => {
-                    if (!motorData[key]) return;
-                    motorData[key].totalProduction = parseDashboardNumber(data.totalProduction);
-                    motorData[key].hourlyProduction = parseDashboardNumber(data.hourlyProduction);
-                    motorData[key].totalHours = parseDashboardNumber(data.totalHours);
-                    motorData[key].hourlyHours = parseDashboardNumber(data.hourlyHours);
-                    if (data.totalStarts !== undefined && data.totalStarts !== null && data.totalStarts !== '') {
-                        motorData[key].totalStarts = parseDashboardNumber(data.totalStarts);
-                    }
-                    motorData[key].status = data.status === 'running' ? 'running' : 'stopped';
-                });
-                cacheMotorData();
-            }
+            applyDashboardSummaryPayload(result);
 
             if (Array.isArray(result.announcements)) {
                 dashboardAnnouncements = result.announcements;
@@ -227,6 +230,70 @@ const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--
         } catch (error) {
             console.error('Dashboard ozeti yuklenemedi:', error);
             return false;
+        }
+    }
+
+    async function loadDashboardMotorCards() {
+        try {
+            const url = new URL(KOJEN_ENERJI_APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getDashboardMotorCards');
+
+            const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+            const result = await response.json();
+
+            if (!result.success) {
+                const errorText = String(result.error || result.message || '');
+                const normalizedErrorText = normalizeText(errorText);
+                if (normalizedErrorText.includes('gecersiz') || normalizedErrorText.includes('invalid')) {
+                    console.warn('Hizli motor kart endpointi bu deployda yok; son kayit fallback kullaniliyor.');
+                    await Promise.allSettled([
+                        loadLatestEnergyData(),
+                        loadLatestMotorStatus()
+                    ]);
+                    return true;
+                } else {
+                    console.error('Motor kartlari hizli yuklenemedi:', result.error || result.message);
+                }
+                return false;
+            }
+
+            applyDashboardSummaryPayload(result);
+            return true;
+        } catch (error) {
+            console.error('Motor kartlari hizli yuklenemedi:', error);
+            return false;
+        }
+    }
+
+    function applyDashboardSummaryPayload(result) {
+        if (result.summary) {
+            if (result.summary.dailyProduction !== undefined) {
+                summaryData.dailyProduction = parseDashboardNumber(result.summary.dailyProduction);
+            }
+            if (Object.prototype.hasOwnProperty.call(result.summary, 'dailySteam')) {
+                summaryData.dailySteam = result.summary.dailySteam === null || result.summary.dailySteam === undefined
+                    ? null
+                    : parseDashboardNumber(result.summary.dailySteam);
+            }
+            if (result.summary.activeFaults !== undefined) {
+                summaryData.activeFaults = parseDashboardNumber(result.summary.activeFaults);
+            }
+            cacheSummaryValues();
+        }
+
+        if (result.motors) {
+            Object.entries(result.motors).forEach(([key, data]) => {
+                if (!motorData[key]) return;
+                motorData[key].totalProduction = parseDashboardNumber(data.totalProduction);
+                motorData[key].hourlyProduction = parseDashboardNumber(data.hourlyProduction);
+                motorData[key].totalHours = parseDashboardNumber(data.totalHours);
+                motorData[key].hourlyHours = parseDashboardNumber(data.hourlyHours);
+                if (data.totalStarts !== undefined && data.totalStarts !== null && data.totalStarts !== '') {
+                    motorData[key].totalStarts = parseDashboardNumber(data.totalStarts);
+                }
+                motorData[key].status = data.status === 'running' ? 'running' : 'stopped';
+            });
+            cacheMotorData();
         }
     }
 
@@ -311,10 +378,23 @@ const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--
         const user = getLoggedInUser();
         const activeItems = items.filter(item => {
             const isActive = item.active !== false;
-            return isActive && matchesDateRange(item, today) && matchesTarget(item, user) && matchesShift(item);
+            return isActive &&
+                !isDefaultAnnouncement(item) &&
+                matchesDateRange(item, today) &&
+                matchesTarget(item, user) &&
+                matchesShift(item);
         });
 
-        return activeItems.length > 0 ? activeItems : defaultAnnouncements;
+        return activeItems;
+    }
+
+    function isDefaultAnnouncement(item) {
+        const text = String(item?.title || item?.message || '').trim().toLowerCase();
+        return [
+            '08-16 vardiyasi: kojenerasyon saha kontrol listesi tamamlanacak',
+            'gm motor yag ve sogutma degerleri saatlik kayitlarda dikkatle kontrol edilecek',
+            'vardiya tesliminde yapilan isler ve bekleyen konular vardiya notuna yazilacak'
+        ].includes(text);
     }
 
     function matchesDateRange(item, today) {
@@ -564,20 +644,16 @@ const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--
         }
     }
     async function loadMaintenanceData() {
-        await loadMaintenanceTotal();
+        await refreshMaintenanceTotalInBackground();
     }
 
     async function loadMaintenanceTotal() {
         try {
-            const url = new URL(BAKIM_APPS_SCRIPT_URL);
-            url.searchParams.append('action', 'getReport');
-            url.searchParams.append('range', 'all');
+            const result = await fetchMaintenanceSummary();
+            const total = getMaintenanceSummaryTotal(result);
 
-            const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
-            const result = await response.json();
-
-            if (result.success && result.summary) {
-                summaryData.pendingMaintenance = parseDashboardNumber(result.summary.total);
+            if (result && result.success && Number.isFinite(total)) {
+                summaryData.pendingMaintenance = total;
                 localStorage.setItem(MAINTENANCE_TOTAL_CACHE_KEY, String(summaryData.pendingMaintenance));
                 updateSummaryData();
             } else {
@@ -586,6 +662,42 @@ const BAKIM_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWnHTk--
         } catch (error) {
             console.error('Toplam bakim form adedi yuklenemedi:', error);
         }
+    }
+
+    async function fetchMaintenanceSummary() {
+        const requests = [
+            { action: 'getSummary', range: 'all' },
+            { action: 'getReport', range: 'all', summaryOnly: 'true' },
+            { action: 'getStats', period: '1' }
+        ];
+
+        for (const params of requests) {
+            const url = new URL(BAKIM_APPS_SCRIPT_URL);
+            Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
+
+            try {
+                const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+                const result = await response.json();
+                if (result.success && Number.isFinite(getMaintenanceSummaryTotal(result))) {
+                    return result;
+                }
+            } catch (error) {
+                console.warn('Bakim ozeti alternatifi basarisiz:', params.action, error);
+            }
+        }
+
+        return { success: false, error: 'Bakim ozeti alinamadi' };
+    }
+
+    function getMaintenanceSummaryTotal(result) {
+        if (!result) return NaN;
+        if (result.summary && result.summary.total !== undefined) {
+            return parseDashboardNumber(result.summary.total);
+        }
+        if (result.stats && result.stats.total !== undefined) {
+            return parseDashboardNumber(result.stats.total);
+        }
+        return NaN;
     }
 
     async function loadActiveFaultCount() {

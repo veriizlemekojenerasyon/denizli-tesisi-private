@@ -14,14 +14,14 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkAuth() {
     const logged = localStorage.getItem('loggedInUser');
     if (!logged) {
-        showLockScreen('Bu sayfayi kullanmak icin giris yapmalisiniz.');
+        showLockScreen('Bu sayfayı kullanmak için giriş yapmalısınız.');
         return false;
     }
 
     try {
         currentUser = JSON.parse(logged);
         if (currentUser.role !== 'admin') {
-            showLockScreen('Bu sayfa sadece admin kullanicilar icindir.');
+            showLockScreen('Bu sayfa sadece admin kullanıcılar içindir.');
             return false;
         }
 
@@ -29,7 +29,7 @@ function checkAuth() {
         document.getElementById('currentUserName').textContent = name;
         return true;
     } catch (error) {
-        showLockScreen('Oturum bilgisi okunamadi. Lutfen tekrar giris yapin.');
+        showLockScreen('Oturum bilgisi okunamadı. Lütfen tekrar giriş yapın.');
         return false;
     }
 }
@@ -129,7 +129,7 @@ async function saveAnnouncement(event) {
     if (window.saveAnnouncementToSheets && window.isBildirimSheetsEnabled?.()) {
         const result = await saveAnnouncementToSheets(record, Boolean(editingId));
         if (!result.success) {
-            alert('Google Sheets kayit hatasi: ' + (result.error || 'Bilinmeyen hata'));
+        alert('Google Sheets kayıt hatası: ' + (result.error || 'Bilinmeyen hata'));
             return;
         }
 
@@ -188,7 +188,7 @@ function renderAnnouncements() {
         : 'Aktif bildirim yok.';
 
     if (announcements.length === 0) {
-        list.innerHTML = '<div class="empty-state">Henuz bildirim yok. Soldaki formdan ilk duyuruyu ekleyin.</div>';
+        list.innerHTML = '<div class="empty-state">Henüz bildirim yok. Soldaki formdan ilk duyuruyu ekleyin.</div>';
         return;
     }
 
@@ -200,18 +200,18 @@ function renderAnnouncements() {
             <div class="announcement-meta">
                 <span class="badge">${formatDateRange(item)}</span>
                 <span class="badge">${formatCategory(item.category)}</span>
-                <span class="badge">${item.shift || 'Tum vardiyalar'}</span>
+                <span class="badge">${item.shift || 'Tüm vardiyalar'}</span>
                 <span class="badge">${formatPageTarget(item.pageTarget)}</span>
                 <span class="badge">${formatPriority(item.priority)}</span>
                 <span class="badge">${getReadCount(item)} okundu</span>
-                <span class="badge">${item.completed ? 'Tamamlandi' : 'Bekliyor'}</span>
+                <span class="badge">${item.completed ? 'Tamamlandı' : 'Bekliyor'}</span>
                 <span class="badge">${item.active === false ? 'Pasif' : 'Aktif'}</span>
             </div>
-            ${item.attachmentUrl ? `<a class="attachment-link" href="${escapeHtml(item.attachmentUrl)}" target="_blank" rel="noopener">${escapeHtml(item.attachmentName || 'Eki ac')}</a>` : ''}
+            ${item.attachmentUrl ? `<a class="attachment-link" href="${escapeHtml(item.attachmentUrl)}" target="_blank" rel="noopener">${escapeHtml(item.attachmentName || 'Eki aç')}</a>` : ''}
             <div class="card-actions">
-                <button type="button" class="btn btn-secondary" data-action="toggle" data-id="${item.id}">${item.active === false ? 'Yayinla' : 'Pasif Yap'}</button>
-                <button type="button" class="btn btn-secondary" data-action="complete" data-id="${item.id}">Tamamlandi</button>
-                <button type="button" class="btn btn-primary" data-action="edit" data-id="${item.id}">Duzenle</button>
+                <button type="button" class="btn btn-secondary" data-action="toggle" data-id="${item.id}">${item.active === false ? 'Yayınla' : 'Pasif Yap'}</button>
+                <button type="button" class="btn btn-secondary" data-action="complete" data-id="${item.id}">Tamamlandı</button>
+                <button type="button" class="btn btn-primary" data-action="edit" data-id="${item.id}">Düzenle</button>
                 <button type="button" class="btn btn-danger" data-action="delete" data-id="${item.id}">Sil</button>
             </div>
         `;
@@ -231,7 +231,7 @@ async function handleListAction(event) {
 
     if (action === 'edit') {
         editingId = id;
-        document.getElementById('formTitle').textContent = 'Bildirimi Duzenle';
+        document.getElementById('formTitle').textContent = 'Bildirimi Düzenle';
         document.getElementById('announcementTitle').value = item.title || '';
         document.getElementById('announcementStartDate').value = toInputDate(item.startDate || item.date || '');
         document.getElementById('announcementEndDate').value = toInputDate(item.endDate || '');
@@ -253,10 +253,10 @@ async function handleListAction(event) {
         if (window.setAnnouncementActiveOnSheets && window.isBildirimSheetsEnabled?.()) {
             const result = await setAnnouncementActiveOnSheets(id, nextActive);
             if (!result.success) {
-                alert('Durum guncellenemedi: ' + (result.error || 'Bilinmeyen hata'));
+                alert('Durum güncellenemedi: ' + (result.error || 'Bilinmeyen hata'));
                 return;
             }
-            window.SystemAuditLog?.write?.('Bildirim durumu degisti', item.title || id, 'ok');
+            window.SystemAuditLog?.write?.('Bildirim durumu değişti', item.title || id, 'ok');
             await loadAnnouncements();
             return;
         }
@@ -264,7 +264,7 @@ async function handleListAction(event) {
         item.active = nextActive;
         item.updatedAt = new Date().toISOString();
         persistAnnouncements();
-        window.SystemAuditLog?.write?.('Bildirim durumu degisti', item.title || id, 'ok');
+        window.SystemAuditLog?.write?.('Bildirim durumu değişti', item.title || id, 'ok');
         renderAnnouncements();
         return;
     }
@@ -273,10 +273,10 @@ async function handleListAction(event) {
         if (window.completeAnnouncementOnSheets && window.isBildirimSheetsEnabled?.()) {
             const result = await completeAnnouncementOnSheets(id, getCurrentUserName(), currentUser?.email || '');
             if (!result.success) {
-                alert('Bildirim tamamlanamadi: ' + (result.error || 'Bilinmeyen hata'));
+                alert('Bildirim tamamlanamadı: ' + (result.error || 'Bilinmeyen hata'));
                 return;
             }
-            window.SystemAuditLog?.write?.('Bildirim tamamlandi', item.title || id, 'ok');
+            window.SystemAuditLog?.write?.('Bildirim tamamlandı', item.title || id, 'ok');
             await loadAnnouncements();
             return;
         }
@@ -286,7 +286,7 @@ async function handleListAction(event) {
         item.completedBy.push({ reader: getCurrentUserName(), email: currentUser?.email || '', readAt: new Date().toISOString() });
         item.updatedAt = new Date().toISOString();
         persistAnnouncements();
-        window.SystemAuditLog?.write?.('Bildirim tamamlandi', item.title || id, 'ok');
+        window.SystemAuditLog?.write?.('Bildirim tamamlandı', item.title || id, 'ok');
         renderAnnouncements();
         return;
     }
@@ -321,27 +321,27 @@ async function clearInactiveAnnouncements() {
             alert('Pasif bildirimler silinemedi: ' + (result.error || 'Bilinmeyen hata'));
             return;
         }
-        window.SystemAuditLog?.write?.('Pasif bildirimler silindi', `${inactiveCount} kayit`, 'warn');
+        window.SystemAuditLog?.write?.('Pasif bildirimler silindi', `${inactiveCount} kayıt`, 'warn');
         await loadAnnouncements();
         return;
     }
 
     announcements = announcements.filter(item => item.active !== false);
     persistAnnouncements();
-    window.SystemAuditLog?.write?.('Pasif bildirimler silindi', `${inactiveCount} kayit`, 'warn');
+    window.SystemAuditLog?.write?.('Pasif bildirimler silindi', `${inactiveCount} kayıt`, 'warn');
     renderAnnouncements();
 }
 
 function formatDateRange(item) {
     const start = item.startDate || item.date || '';
     const end = item.endDate || '';
-    if (!start && !end) return 'Tum tarihler';
+    if (!start && !end) return 'Tüm tarihler';
     if (!end || end === start) return formatDate(start);
     return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
 function formatDate(value) {
-    if (!value) return 'Tum tarihler';
+    if (!value) return 'Tüm tarihler';
     const parts = value.split('-');
     return parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : value;
 }
@@ -364,9 +364,9 @@ function formatPriority(value) {
 
 function formatCategory(value) {
     const labels = {
-        operation: 'Isletme',
-        maintenance: 'Bakim',
-        safety: 'Guvenlik',
+        operation: 'İşletme',
+        maintenance: 'Bakım',
+        safety: 'Güvenlik',
         shift: 'Vardiya',
         general: 'Genel'
     };
@@ -375,17 +375,17 @@ function formatCategory(value) {
 
 function formatPageTarget(value) {
     const labels = {
-        all: 'Tum sayfalar',
+        all: 'Tüm sayfalar',
         anasayfa: 'Ana sayfa',
         vardiya: 'Vardiya',
         saatlik: 'Saatlik',
         'kojen-motor': 'Kojen Motor',
         'kojen-enerji': 'Kojen Enerji',
-        bakim: 'Bakim',
+        bakim: 'Bakım',
         stok: 'Stok',
         admin: 'Admin'
     };
-    return labels[value || 'all'] || 'Tum sayfalar';
+    return labels[value || 'all'] || 'Tüm sayfalar';
 }
 
 function getReadCount(item) {

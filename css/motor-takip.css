@@ -1233,19 +1233,11 @@ body {
 /* Responsive Stiller */
 @media (max-width: 1200px) {
     .sidebar {
-        transform: translateX(-100%);
-    }
-    
-    .sidebar.active {
         transform: translateX(0);
     }
     
     .main-content {
         margin-left: 0;
-    }
-    
-    .menu-toggle {
-        display: block;
     }
     
     .form-row {

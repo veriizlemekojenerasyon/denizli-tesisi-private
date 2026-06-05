@@ -13,11 +13,11 @@
             opacity: 0;
             animation: fadeIn 0.5s ease-in forwards;
         }
-        
+
         @keyframes fadeIn {
             to { opacity: 1; }
         }
-        
+
         /* Smooth scroll */
         html {
             scroll-behavior: smooth;
@@ -34,91 +34,12 @@
                     <div class="company-name">KOJENERASYON</div>
                 </div>
             </div>
-            <ul class="sidebar-menu">
-                <li class="menu-item">
-                    <a href="anasayfa.html" class="menu-link">
-                        <span class="menu-icon">🏠</span>
-                        <span class="menu-text">Ana Sayfa</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="saatlik-veri-giris.html" class="menu-link">
-                        <span class="menu-icon">📊</span>
-                        <span class="menu-text">Saatlik Veri Girişi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="gunluk-veri-giris.html" class="menu-link">
-                        <span class="menu-icon">📆</span>
-                        <span class="menu-text">Günlük Veri Girişi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="buhar-verisi.html" class="menu-link">
-                        <span class="menu-icon">💨</span>
-                        <span class="menu-text">Buhar Verisi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="vardiya.html" class="menu-link">
-                        <span class="menu-icon">👥</span>
-                        <span class="menu-text">Vardiya Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="motor-takip.html" class="menu-link">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Motor Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kojen-motor-veri.html" class="menu-link">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Kojen Motor Veri</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kojen-enerji-veri.html" class="menu-link">
-                        <span class="menu-icon">⚡</span>
-                        <span class="menu-text">Kojen Enerji Veri</span>
-                    </a>
-                </li>
-                <li class="menu-item active">
-                    <a href="bakim-takibi.html" class="menu-link">
-                        <span class="menu-icon">🔧</span>
-                        <span class="menu-text">Bakım Takibi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="stok-takip.html" class="menu-link">
-                        <span class="menu-icon">📦</span>
-                        <span class="menu-text">Stok Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-menu-item">
-                    <a href="admin-kontrol.html" class="menu-link">
-                        <span class="menu-icon">&#9881;</span>
-                        <span class="menu-text">Merkezi Kontrol</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-menu-item">
-                    <a href="admin-bildirim.html" class="menu-link">
-                        <span class="menu-icon">&#128226;</span>
-                        <span class="menu-text">Bildirim Y&#246;netimi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kullanici-yonetimi.html" class="menu-link">
-                        <span class="menu-icon">👤</span>
-                        <span class="menu-text">Kullanıcı Yönetimi</span>
-                    </a>
-                </li>
-            </ul>
+            <ul class="sidebar-menu"></ul>
             <div class="sidebar-footer">
                 <button class="logout-btn" id="sidebarLogout">Çıkış Yap</button>
             </div>
         </nav>
-        
+
         <!-- Main Content -->
         <div class="main-content">
             <!-- Header -->
@@ -133,43 +54,43 @@
                         <button class="logout-btn" id="headerLogout">Çıkış Yap</button>
                     </div>
                 </div>
-                
+
                 <div class="header-bottom">
                     <h3>Bakım Takibi</h3>
                 </div>
             </header>
-            
+
             <!-- Dashboard Content -->
             <div class="dashboard-content">
                 <!-- Üst Panel: İstatistik ve Grafik -->
                 <div class="top-dashboard-row">
                     <!-- İstatistik Paneli -->
                     <div class="stats-panel">
-                        <h2>📊 Bakım İstatistikleri</h2>
+                        <h2>Bakım İstatistikleri</h2>
                         <div class="stats-grid">
                             <div class="stat-card">
-                                <div class="stat-icon">🔧</div>
+                                <div class="stat-icon">T</div>
                                 <div class="stat-content">
                                     <div class="stat-number" id="total-maintenance">0</div>
                                     <div class="stat-label">Toplam Bakım</div>
                                 </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon">📅</div>
+                                <div class="stat-icon">A</div>
                                 <div class="stat-content">
                                     <div class="stat-number" id="monthly-maintenance">0</div>
                                     <div class="stat-label">Bu Ay</div>
                                 </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon">⚠️</div>
+                                <div class="stat-icon">!</div>
                                 <div class="stat-content">
                                     <div class="stat-number" id="fault-count">0</div>
                                     <div class="stat-label">Arıza Sayısı</div>
                                 </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon">👨‍🔧</div>
+                                <div class="stat-icon">K</div>
                                 <div class="stat-content">
                                     <div class="stat-number" id="technician-count">0</div>
                                     <div class="stat-label">Aktif Teknisyen</div>
@@ -179,7 +100,7 @@
                                 <div class="stat-icon">!</div>
                                 <div class="stat-content">
                                     <div class="stat-number" id="overdue-maintenance">0</div>
-                                    <div class="stat-label">Geciken Is</div>
+                                    <div class="stat-label">Geciken İş</div>
                                 </div>
                             </div>
                         </div>
@@ -188,7 +109,7 @@
                     <!-- Grafik Paneli -->
                     <div class="chart-panel">
                         <div class="chart-header">
-                            <h2>📈 Bakım Grafiği</h2>
+                            <h2>Bakım Grafiği</h2>
                             <div class="chart-controls">
                                 <button class="chart-btn active" data-period="6">6 Ay</button>
                                 <button class="chart-btn" data-period="12">1 Yıl</button>
@@ -202,7 +123,7 @@
                                 <span>Grafik yükleniyor...</span>
                             </div>
                             <div class="chart-empty" id="chart-empty" style="display: none;">
-                                <div class="empty-icon">📊</div>
+                                <div class="empty-icon"></div>
                                 <h3>Veri Bulunamadı</h3>
                                 <p>Gösterilecek bakım verisi bulunmuyor</p>
                             </div>
@@ -238,15 +159,15 @@
                     <div class="form-selector">
                         <h2>Yeni İş Emri</h2>
                         <div class="form-buttons">
-                            <button type="button" class="form-btn active" data-form="periodic">🔄 Periyodik Bakım</button>
-                            <button type="button" class="form-btn" data-form="normal">🔧 Normal Bakım</button>
-                            <button type="button" class="form-btn" data-form="fault">⚠️ Arıza Bakımı</button>
+                            <button type="button" class="form-btn active" data-form="periodic">Periyodik Bakım</button>
+                            <button type="button" class="form-btn" data-form="normal">Normal Bakım</button>
+                            <button type="button" class="form-btn" data-form="fault">Arıza Bakımı</button>
                         </div>
                     </div>
 
                     <!-- Periyodik Bakım Formu -->
                     <div class="maintenance-form" id="periodic-form">
-                        <h3>🔄 Periyodik Bakım Formu</h3>
+                        <h3>Periyodik Bakım Formu</h3>
                         <form class="maintenance-form-content">
                             <div class="form-row">
                                 <div class="form-group">
@@ -311,10 +232,10 @@
                                 </div>
                             </div>
                             <div class="form-group full-width">
-                                <label>📎 Dosya ve Fotoğraf Ekle</label>
+                                <label>Dosya ve Fotoğraf Ekle</label>
                                 <div class="file-upload-container">
                                     <div class="file-upload-area" id="periodic-file-area">
-                                        <div class="file-upload-icon">📁</div>
+                                        <div class="file-upload-icon"></div>
                                         <p class="file-upload-text">Dosyaları buraya sürükleyin veya tıklayın</p>
                                         <input type="file" id="periodic-files" name="periodic-files" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png" class="file-input">
                                     </div>
@@ -322,15 +243,15 @@
                                 </div>
                             </div>
                             <div class="form-actions full-width">
-                                <button type="submit" class="btn btn-primary">💾 Kaydet</button>
-                                <button type="reset" class="btn btn-secondary">🔄 Temizle</button>
+                                <button type="submit" class="btn btn-primary">Kaydet</button>
+                                <button type="reset" class="btn btn-secondary">Temizle</button>
                             </div>
                                                     </form>
                     </div>
 
                     <!-- Normal Bakım Formu -->
                     <div class="maintenance-form" id="normal-form" style="display: none;">
-                        <h3>🔧 Normal Bakım Formu</h3>
+                        <h3>Normal Bakım Formu</h3>
                         <form class="maintenance-form-content">
                             <div class="form-row">
                                 <div class="form-group">
@@ -468,10 +389,10 @@
                                 </div>
                             </div>
                             <div class="form-group full-width">
-                                <label>📎 Dosya ve Fotoğraf Ekle</label>
+                                <label>Dosya ve Fotoğraf Ekle</label>
                                 <div class="file-upload-container">
                                     <div class="file-upload-area" id="normal-file-area">
-                                        <div class="file-upload-icon">📁</div>
+                                        <div class="file-upload-icon"></div>
                                         <p class="file-upload-text">Dosyaları buraya sürükleyin veya tıklayın</p>
                                         <input type="file" id="normal-files" name="normal-files" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png" class="file-input">
                                     </div>
@@ -479,15 +400,15 @@
                                 </div>
                             </div>
                             <div class="form-actions full-width">
-                                <button type="submit" class="btn btn-primary">💾 Kaydet</button>
-                                <button type="reset" class="btn btn-secondary">🔄 Temizle</button>
+                                <button type="submit" class="btn btn-primary">Kaydet</button>
+                                <button type="reset" class="btn btn-secondary">Temizle</button>
                             </div>
                                                     </form>
                     </div>
 
                     <!-- Arıza Bakımı Formu -->
                     <div class="maintenance-form" id="fault-form" style="display: none;">
-                        <h3>⚠️ Arıza Bakımı Formu</h3>
+                        <h3>Arıza Bakımı Formu</h3>
                         <form class="maintenance-form-content">
                             <div class="form-row">
                                 <div class="form-group">
@@ -559,10 +480,10 @@
                                 </div>
                             </div>
                             <div class="form-group full-width">
-                                <label>📎 Dosya ve Fotoğraf Ekle</label>
+                                <label>Dosya ve Fotoğraf Ekle</label>
                                 <div class="file-upload-container">
                                     <div class="file-upload-area" id="fault-file-area">
-                                        <div class="file-upload-icon">📁</div>
+                                        <div class="file-upload-icon"></div>
                                         <p class="file-upload-text">Dosyaları buraya sürükleyin veya tıklayın</p>
                                         <input type="file" id="fault-files" name="fault-files" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png" class="file-input">
                                     </div>
@@ -570,8 +491,8 @@
                                 </div>
                             </div>
                             <div class="form-actions full-width">
-                                <button type="submit" class="btn btn-primary">💾 Kaydet</button>
-                                <button type="reset" class="btn btn-secondary">🔄 Temizle</button>
+                                <button type="submit" class="btn btn-primary">Kaydet</button>
+                                <button type="reset" class="btn btn-secondary">Temizle</button>
                             </div>
                         </form>
                     </div>
@@ -613,14 +534,14 @@
                                     </select>
                                 </div>
                                 <div class="control-group">
-                                    <button class="btn btn-primary" onclick="generateReport()">📈 Rapor Oluştur</button>
-                                    <button class="btn btn-secondary" onclick="exportReport()">📥 Excel İndir</button>
+                                    <button class="btn btn-primary" onclick="generateReport()">Rapor Oluştur</button>
+                                    <button class="btn btn-secondary" onclick="exportReport()">Excel İndir</button>
                                 </div>
                             </div>
-                            
+
                             <div class="report-results" id="report-results">
                                 <div class="report-summary">
-                                    <h3>📋 Rapor Özeti</h3>
+                                    <h3>Rapor Özeti</h3>
                                     <div class="summary-grid">
                                         <div class="summary-item">
                                             <span class="summary-label">Toplam Kayıt:</span>
@@ -640,12 +561,12 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="report-table-container" id="detayli-bakim-gecmisi">
-                                    <h3>📄 Detaylı Bakım Geçmişi</h3>
+                                    <h3>Detaylı Bakım Geçmişi</h3>
                                     <div class="table-controls">
                                         <input type="text" id="table-search" placeholder="Ara..." style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                        <button onclick="refreshTable()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 Yenile</button>
+                                        <button onclick="refreshTable()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">Yenile</button>
                                     </div>
                                     <div class="table-wrapper">
                                         <table id="maintenance-table" class="maintenance-table">
@@ -670,13 +591,13 @@
                                     </div>
                                 </div>
 
-                                
-                                
+
+
                                 <!-- Aktif Kayıtlar Yönetim Paneli -->
                                 <div class="active-records-panel" style="margin-top: 30px; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
                                     <h3>Aktif İş Emirleri</h3>
                                     <p style="color: #666; margin-bottom: 15px; font-size: 0.9rem;">Açık bakım ve arıza işlerini takip edin, tamamlanan kayıtları kapatın.</p>
-                                    
+
                                     <div class="active-records-controls" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
                                         <select id="active-filter-motor" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
                                             <option value="">Tüm Motorlar</option>
@@ -690,9 +611,9 @@
                                             <option value="Normal">Normal</option>
                                             <option value="Ariza">Arıza</option>
                                         </select>
-                                        <button onclick="loadActiveRecords()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">🔄 Listele</button>
+                                        <button onclick="loadActiveRecords()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Listele</button>
                                     </div>
-                                    
+
                                     <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
                                         <table id="active-records-table" class="maintenance-table" style="width: 100%; border-collapse: collapse;">
                                             <thead>
@@ -723,7 +644,9 @@
             </div>
         </div>
     </div>
-    
+
+<script src="js/app-config.js"></script>
+<script src="js/sidebar-menu.js"></script>
     <script>
         // Kullanıcı adını göster - ÖNCE çalıştır
         (function displayUserName() {
@@ -759,7 +682,9 @@
             } catch (e) { window.location.href = 'anasayfa.html'; return; }
         })();
     </script>
-    <script src="js/bakim-takibi-redesign.js"></script>
-    <script src="js/bakim-takibi.js"></script>
+
+<script src="js/bakim-takibi-redesign.js"></script>
+
+<script src="js/bakim-takibi.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 // Motor Takip JavaScript Fonksiyonları
 
-// 📧 Mail gönderme konfigürasyonu
+// Mail gönderme konfigürasyonu
 const MOTOR_MAIL_CONFIG = {
     ENABLED: false, // Şimdilik kapalı
     EMAIL_TO: 'mrtcsk0320@gmail.com',
@@ -12,48 +12,55 @@ function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
         window.location.href = 'anasayfa.html';
-        return;
+        return false;
     }
     
     try {
         const user = JSON.parse(loggedInUser);
         const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
         
-        // 🔒 ROL KONTROLÜ - Motor takip sadece admin kullanıcılara açık
-        if (user.role !== 'admin') {
-            document.body.innerHTML = `
+        // ROL KONTROLÜ - Motor takip sadece admin kullanıcılara açık
+        if (String(user.role || '').toLowerCase() !== 'admin') {
+            const mainContent = document.querySelector('.main-content');
+            const unauthorizedHtml = `
                 <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial; background: #f5f5f5;">
                     <div style="text-align: center; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                        <h2 style="color: #e74c3c; margin-bottom: 15px;">🚫 Yetkisiz Erişim</h2>
+                        <h2 style="color: #e74c3c; margin-bottom: 15px;">Yetkisiz Erişim</h2>
                         <p style="color: #666; margin-bottom: 20px;">Motor Takip sayfasına erişim yetkiniz bulunmamaktadır.</p>
                         <p style="margin-bottom: 20px;">Bu sayfa sadece admin kullanıcılar içindir.</p>
-                        <a href="anasayfa.html" style="display: inline-block; background: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">🏠 Ana Sayfaya Git</a>
+                        <a href="anasayfa.html" style="display: inline-block; background: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Ana Sayfaya Git</a>
                     </div>
                 </div>
             `;
-            return;
+            if (mainContent) {
+                mainContent.innerHTML = unauthorizedHtml;
+            } else {
+                document.body.innerHTML = unauthorizedHtml;
+            }
+            return false;
         }
         
         // Tüm userNameDisplay elementlerini güncelle
         const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
         
         allUserNameDisplays.forEach((element, index) => {
-            element.textContent = fullName || user.email || 'Kullanici';
+            element.textContent = fullName || user.email || 'Kullanıcı';
         });
         
-        console.log('Motor Takip - Kullanici adi ayarlandi:', fullName || user.email || 'Kullanici');
+        console.log('Motor Takip - Kullanıcı adı ayarlandı:', fullName || user.email || 'Kullanıcı');
     } catch (e) {
-        console.error('Motor Takip - Kullanici bilgileri okunamadi:', e);
+        console.error('Motor Takip - Kullanıcı bilgileri okunamadı:', e);
         const allElements = document.querySelectorAll('[id="userNameDisplay"]');
         allElements.forEach(element => {
-            element.textContent = 'Kullanici';
+            element.textContent = 'Kullanıcı';
         });
     }
+    return true;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     // Önce kimlik dogrulama kontrolü
-    checkAuth();
+    if (!checkAuth()) return;
     
     // Sayfa yüklendiğinde çalışacak fonksiyonlar
     initializeMotorTracking();
@@ -124,7 +131,7 @@ function isRecordExists(tarih, saat) {
 }
 
 // Google Apps Script URL
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbySQpjSWkHLMppL6lhNTxw0Q1UzM6BAB3Rc4FF3mr3IsDqPUa1vJtA4kexQxkuRoK8Y/exec';
+const GAS_URL = window.AppConfig.getScriptUrl('motorTakip');
 
 // Kayıtları Yükle - Sadece Google Apps Script'ten çek (LocalStorage devre dışı)
 async function loadRecords() {
@@ -807,9 +814,9 @@ function attemptCameraAccess(kontrolTipi, attempt = 1) {
                     if (error.name === 'NotAllowedError') {
                         errorMessage = '❌ Kamera izni reddedildi. Lütfen tarayıcı ayarlarından kamera iznini verin.';
                     } else if (error.name === 'NotFoundError') {
-                        errorMessage = '📷 Kamera bulunamadı. Lütfen kamera bağlantısını kontrol edin.';
+                        errorMessage = 'Kamera bulunamadı. Lütfen kamera bağlantısını kontrol edin.';
                     } else if (error.name === 'NotReadableError' || error.name === 'DeviceInUseError') {
-                        errorMessage = '🔒 Kamera başka bir uygulama tarafından kullanılıyor.\n\nÇözümler:\n• Tüm sekmeleri kapatıp browser\'ı yeniden başlatın\n• Zoom/Teams/Skype gibi uygulamaları kapatın\n• Farklı browser deneyin';
+                        errorMessage = 'Kamera başka bir uygulama tarafından kullanılıyor.\n\nÇözümler:\n• Tüm sekmeleri kapatıp browser\'ı yeniden başlatın\n• Zoom/Teams/Skype gibi uygulamaları kapatın\n• Farklı browser deneyin';
                     } else if (error.name === 'OverconstrainedError') {
                         errorMessage = '⚙️ Kamera ayarları desteklenmiyor.';
                     } else {
@@ -1095,10 +1102,10 @@ function temizleTumKontroller() {
     selectedMotor = null;
 }
 
-// 📧 Motor Takip Mail Gönderme Fonksiyonu
+// Motor Takip Mail Gönderme Fonksiyonu
 async function sendMotorMail(subject, body) {
     if (!MOTOR_MAIL_CONFIG.ENABLED) {
-        console.log('📧 Motor takip mail gönderme kapalı');
+        console.log('Motor takip mail gönderme kapalı');
         return { success: true, message: 'Mail gönderme kapalı' };
     }
     
@@ -1115,7 +1122,7 @@ async function sendMotorMail(subject, body) {
         });
         
         const result = await response.json();
-        console.log('📧 Motor takip mail sonucu:', result);
+        console.log('Motor takip mail sonucu:', result);
         return result;
     } catch (error) {
         console.error('Motor takip mail gönderme hatası:', error);
@@ -1123,7 +1130,7 @@ async function sendMotorMail(subject, body) {
     }
 }
 
-// 🔧 Mail ayarlarını aç/kapat (sadece admin)
+// Mail ayarlarını aç/kapat (sadece admin)
 function toggleMotorMailSettings() {
     const user = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
     
@@ -1147,11 +1154,11 @@ function toggleMotorMailSettings() {
         } else {
             mailToggleBtn.classList.remove('mail-enabled');
         }
-        mailToggleBtn.textContent = newStatus ? '📧 Mail Açık' : '📧 Mail Kapalı';
+        mailToggleBtn.textContent = newStatus ? 'Mail Açık' : 'Mail Kapalı';
     }
     
     // Bildirim göster
-    alert(`📧 Motor takip mail gönderme ${statusText}!\n\nDurum: ${newStatus ? 'Açık' : 'Kapalı'}\nMail adresi: ${MOTOR_MAIL_CONFIG.EMAIL_TO}`);
+    alert(`Motor takip mail gönderme ${statusText}!\n\nDurum: ${newStatus ? 'Açık' : 'Kapalı'}\nMail adresi: ${MOTOR_MAIL_CONFIG.EMAIL_TO}`);
     
     // Test mail gönder (açık ise)
     if (newStatus) {

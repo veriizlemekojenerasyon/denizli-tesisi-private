@@ -331,6 +331,64 @@ function validateLogin(data) {
   if (!data || !data.email || !data.password) {
     return { success: false, error: 'E-posta ve sifre gerekli!' };
   }
+
+  const user = getLoginUserByEmail(data.email);
+  const inputEmail = String(data.email).toLowerCase().trim();
+  const inputPassword = String(data.password).trim();
+  const inputPasswordHashed = hashPassword(inputPassword);
+
+  if (!user || String(user.email || '').toLowerCase().trim() !== inputEmail) {
+    return { success: false, error: 'E-posta veya sifre hatali!' };
+  }
+
+  const userPassword = String(user.password || '').trim();
+  if (userPassword !== inputPassword && userPassword !== inputPasswordHashed) {
+    return { success: false, error: 'E-posta veya sifre hatali!' };
+  }
+
+  if (user.status !== 'active') {
+    return { success: false, error: 'Hesabiniz pasif durumda!' };
+  }
+
+  const { password, ...userWithoutPassword } = user;
+  return {
+    success: true,
+    user: userWithoutPassword,
+    message: 'Giris basarili!'
+  };
+}
+
+function getLoginUserByEmail(email) {
+  const sheet = getOrCreateSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return null;
+
+  const targetEmail = String(email || '').toLowerCase().trim();
+  const values = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    const rowEmail = String(row[3] || '').toLowerCase().trim();
+    if (rowEmail !== targetEmail) continue;
+
+    return {
+      id: row[0] ? (parseInt(row[0], 10) || row[0]) : '',
+      firstName: row[1] || '',
+      lastName: row[2] || '',
+      email: row[3] || '',
+      password: row[4] || '',
+      role: row[5] || 'operator',
+      status: row[6] || 'active'
+    };
+  }
+
+  return null;
+}
+
+function validateLoginLegacy(data) {
+  if (!data || !data.email || !data.password) {
+    return { success: false, error: 'E-posta ve sifre gerekli!' };
+  }
   
   const userData = getAllUsers();
   const inputEmail = String(data.email).toLowerCase().trim();

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enerji Raporlari | Kojenerasyon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/enerji-rapor.css">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body data-active-page="enerji-rapor">
+    <div class="dashboard-container">
+        <nav class="sidebar" aria-label="Ana menu">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Koruma logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu"></ul>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <span id="sidebarUserNameDisplay">Yukleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout" type="button">Cikis Yap</button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <header class="report-header">
+                <div>
+                    <p class="eyebrow">Admin Enerji Analitigi</p>
+                    <h1>Enerji Raporlari</h1>
+                    <p class="header-subtitle">GM motor uretimi, calisma saati ve ortalama guc performansi.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn ghost" type="button" id="exportCsvBtn">
+                        <span class="btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                        </span>
+                        CSV
+                    </button>
+                    <button class="btn primary" type="button" id="refreshReportBtn">
+                        <span class="btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.6 6.1"/><path d="M3 12A9 9 0 0 1 18.6 5.9"/><path d="M18 2v4h4"/><path d="M6 22v-4H2"/></svg>
+                        </span>
+                        Yenile
+                    </button>
+                    <div class="current-user" id="userNameDisplay">Admin</div>
+                </div>
+            </header>
+
+            <main class="report-content" id="reportApp">
+                <section class="toolbar" aria-label="Rapor filtreleri">
+                    <div class="segmented" role="tablist" aria-label="Rapor donemi">
+                        <button type="button" class="segment active" data-period="daily">Gunluk</button>
+                        <button type="button" class="segment" data-period="weekly">Haftalik</button>
+                        <button type="button" class="segment" data-period="monthly">Aylik</button>
+                        <button type="button" class="segment" data-period="yearly">Yillik</button>
+                    </div>
+
+                    <div class="field-row">
+                        <label class="field">
+                            <span>Yil</span>
+                            <input type="number" id="yearInput" min="2020" max="2100" step="1">
+                        </label>
+                        <label class="field">
+                            <span>Baslangic</span>
+                            <input type="date" id="startDateInput">
+                        </label>
+                        <label class="field">
+                            <span>Bitis</span>
+                            <input type="date" id="endDateInput">
+                        </label>
+                    </div>
+
+                    <div class="segmented motor-segments" role="tablist" aria-label="Motor secimi">
+                        <button type="button" class="segment active" data-motor="total">Toplam</button>
+                        <button type="button" class="segment" data-motor="gm1">GM-1</button>
+                        <button type="button" class="segment" data-motor="gm2">GM-2</button>
+                        <button type="button" class="segment" data-motor="gm3">GM-3</button>
+                    </div>
+                </section>
+
+                <section class="notice" id="reportNotice" hidden></section>
+
+                <section class="kpi-grid" aria-label="Rapor ozeti">
+                    <article class="kpi-card">
+                        <span class="kpi-label">Uretim</span>
+                        <strong id="kpiProduction">--</strong>
+                        <span class="kpi-note">MWh</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Calisma Saati</span>
+                        <strong id="kpiHours">--</strong>
+                        <span class="kpi-note">saat</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Ortalama Guc</span>
+                        <strong id="kpiAverage">--</strong>
+                        <span class="kpi-note">MW</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Aktif Gun</span>
+                        <strong id="kpiActiveDays">--</strong>
+                        <span class="kpi-note">gun</span>
+                    </article>
+                </section>
+
+                <section class="report-grid">
+                    <article class="panel chart-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Uretim Trendi</h2>
+                                <p id="chartSubtitle">Secili donem performansi</p>
+                            </div>
+                            <span class="panel-chip" id="periodChip">Gunluk</span>
+                        </div>
+                        <div class="chart-area" id="productionChart" aria-label="Uretim grafigi"></div>
+                        <div class="chart-meta">
+                            <div class="chart-detail-strip" id="chartDetailStrip"></div>
+                            <div class="chart-legend" id="chartLegend"></div>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Motor Dagilimi</h2>
+                                <p>Secili tarih araligindaki uretim payi</p>
+                            </div>
+                        </div>
+                        <div class="motor-mix" id="motorMix"></div>
+                    </article>
+                </section>
+
+                <section class="report-grid lower-grid">
+                    <article class="panel table-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Donem Tablosu</h2>
+                                <p id="tableSubtitle">Rapor kirilimi</p>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Donem</th>
+                                        <th>GM-1 MWh</th>
+                                        <th>GM-2 MWh</th>
+                                        <th>GM-3 MWh</th>
+                                        <th>Toplam MWh</th>
+                                        <th>Calisma Saati</th>
+                                        <th>Ort. MW</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportTableBody"></tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Operasyon Ozeti</h2>
+                                <p>Secili filtreye gore one cikan sinyaller</p>
+                            </div>
+                        </div>
+                        <div class="insight-list" id="insightList"></div>
+                    </article>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/app-config.js"></script>
+    <script src="js/sidebar-menu.js"></script>
+    <script src="js/enerji-rapor.js"></script>
+    <script src="js/logout-system.js"></script>
+</body>
+</html>

@@ -4,12 +4,94 @@
  */
 
 const KojenEnerjiSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwGuDzkg9lZm_YD3dsYq0P9r-CvB-hrOYZta0WWF_8UwFEJphBboJ-OvnAWkHQP1qux/exec',
-    END_OF_DAY_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbxD8sxCtZ24wXdvM4e8DHd1G0teH9Gc7J96rSRSCr5wK2BfwFe3Bb0twYLPnzL2MZab/exec',
+    WEB_APP_URL: window.AppConfig.getScriptUrl('enerji'),
+    END_OF_DAY_WEB_APP_URL: window.AppConfig.getScriptUrl('enerjiGunSonu'),
+    YEARLY_REPORT_WEB_APP_URL: window.AppConfig.getScriptUrl('yillikEnerjiRapor'),
     EMAIL_ENABLED: true,
     EMAIL_TO: 'mrtcsk0320@gmail.com',
     EMAIL_SUBJECT: 'Kojen Enerji Veri Uyarısı - Kayıt Girilmedi'
 };
+
+let yearlyEnergyUpdateQueue = [];
+let yearlyEnergyUpdateTimer = null;
+
+function buildYearlyEnergyRecordPayload(record) {
+    if (!record) return null;
+    const motor = String(record.motor || '').trim();
+    const tarih = String(record.tarih || '').trim();
+    const saat = String(record.saat || '').trim();
+    if (!motor || !tarih || !saat) return null;
+    return { motor, tarih, saat };
+}
+
+function dedupeYearlyEnergyRecords(records) {
+    const seen = new Set();
+    const unique = [];
+    (records || []).forEach(record => {
+        const payload = buildYearlyEnergyRecordPayload(record);
+        if (!payload) return;
+        const key = `${payload.motor}|${payload.tarih}|${payload.saat}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        unique.push(payload);
+    });
+    return unique;
+}
+
+function scheduleYearlyEnergyUpdateForRecords(records, delayMs = 900) {
+    const payload = dedupeYearlyEnergyRecords(records);
+    if (!payload.length) return;
+
+    yearlyEnergyUpdateQueue = yearlyEnergyUpdateQueue.concat(payload);
+    if (yearlyEnergyUpdateTimer) {
+        window.clearTimeout(yearlyEnergyUpdateTimer);
+    }
+
+    yearlyEnergyUpdateTimer = window.setTimeout(() => {
+        const queued = dedupeYearlyEnergyRecords(yearlyEnergyUpdateQueue);
+        yearlyEnergyUpdateQueue = [];
+        yearlyEnergyUpdateTimer = null;
+
+        updateYearlyEnergyForRecords(queued).then(result => {
+            if (result && result.success) {
+                console.log('Yillik enerji sayfasi guncellendi:', result);
+            } else {
+                console.warn('Yillik enerji guncellemesi tamamlanamadi:', result);
+            }
+        });
+    }, delayMs);
+}
+
+async function updateYearlyEnergyForRecords(records) {
+    try {
+        const payload = dedupeYearlyEnergyRecords(records);
+        const url = KojenEnerjiSheetsConfig.YEARLY_REPORT_WEB_APP_URL;
+        if (!url) {
+            return { success: false, error: 'Yillik enerji rapor URL eksik.' };
+        }
+        if (!payload.length) {
+            return { success: true, skipped: true, message: 'Guncellenecek enerji kaydi yok.' };
+        }
+
+        const params = new URLSearchParams({
+            action: 'updateYearlyEnergyForRecords',
+            data: JSON.stringify(payload)
+        });
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: params.toString()
+        });
+
+        return await response.json();
+    } catch (error) {
+        console.error('Yillik enerji guncelleme hatasi:', error);
+        return { success: false, error: error.message };
+    }
+}
 
 /**
  * Enerji verilerini Google Sheets'e kaydet
@@ -39,9 +121,15 @@ async function saveEnerjiToSheets(data) {
             kaydeden: data.kaydeden || 'Admin',
             durum: data.durum || 'NORMAL'
         });
-        
-        // Motor çalışmıyor durumunda diğer veriler 0, ama son değerler korunur
-        if (data.durum === 'MOTOR ÇALIŞMIYOR') {
+        // Motor calismiyor durumunda diger veriler 0, ama son degerler korunur
+        const durumText = String(data.durum || '').toUpperCase()
+            .replace(/\u00C7/g, 'C')
+            .replace(/\u011E/g, 'G')
+            .replace(/\u0130/g, 'I')
+            .replace(/\u015E/g, 'S')
+            .replace(/\u00D6/g, 'O')
+            .replace(/\u00DC/g, 'U');
+        if (durumText.indexOf('MOTOR') !== -1 && durumText.indexOf('NORMAL') === -1) {
             // Diğer değerler 0
             params.append('aydemVoltaji', '0.00');
             params.append('aktifGuc', '0.00');
@@ -79,6 +167,15 @@ async function saveEnerjiToSheets(data) {
         });
         
         const result = await response.json();
+        if (result.success) {
+            scheduleYearlyEnergyUpdateForRecords([
+                result.record || {
+                    motor: data.motor || '',
+                    tarih: formattedTarih,
+                    saat: data.saat || ''
+                }
+            ]);
+        }
         return result;
         
     } catch (error) {
@@ -169,7 +266,7 @@ async function getEnerjiEndOfDayValues(motor, tarih) {
  * @returns {Promise<Object>} - Kontrol sonucu
  */
 async function checkExistingEnerjiRecord(motor, tarih, saat) {
-    console.log('🔍 checkExistingEnerjiRecord başlatıldı:', motor, tarih, saat);
+    console.log('g��� checkExistingEnerjiRecord başlatıldı:', motor, tarih, saat);
     
     try {
         // Tarih formatını düzelt
@@ -179,19 +276,19 @@ async function checkExistingEnerjiRecord(motor, tarih, saat) {
             formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
         
-        console.log('📅 Formatlanmış tarih:', formattedTarih);
+        console.log('g��� Formatlanmış tarih:', formattedTarih);
         
         const url = KojenEnerjiSheetsConfig.WEB_APP_URL + 
             `?action=checkExistingRecord&motor=${encodeURIComponent(motor)}&tarih=${encodeURIComponent(formattedTarih)}&saat=${encodeURIComponent(saat)}`;
         
-        console.log('🌐 İstek URL:', url);
-        console.log('📡 Fetch isteği gönderiliyor...');
+        console.log('g��� İstek URL:', url);
+        console.log('g��� Fetch isteği gönderiliyor...');
         
         const response = await fetch(url);
-        console.log('📡 Response status:', response.status);
+        console.log('g��� Response status:', response.status);
         
         const result = await response.json();
-        console.log('📊 Response result:', result.success ? 'SUCCESS' : 'FAILED');
+        console.log('g��� Response result:', result.success ? 'SUCCESS' : 'FAILED');
         
         return result;
         
@@ -202,31 +299,31 @@ async function checkExistingEnerjiRecord(motor, tarih, saat) {
 }
 
 /**
- * 🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
+ * g��� TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
  * @param {Array} kombinasyonlar - [{motor, tarih, saat}, ...]
  * @returns {Promise<Object>} - Kontrol sonuçları
  */
 async function checkMultipleEnerjiRecords(kombinasyonlar) {
-    console.log('🚀 TOPLU KAYIT KONTROLÜ BAŞLATILIYOR:', kombinasyonlar.length, 'kombinasyon');
-    console.log('📊 Gelen kombinasyonlar:', kombinasyonlar);
+    console.log('g��� TOPLU KAYIT KONTROLÜ BA�?LATILIYOR:', kombinasyonlar.length, 'kombinasyon');
+    console.log('g��� Gelen kombinasyonlar:', kombinasyonlar);
     
     try {
         // Tüm kombinasyonları tek bir string'e dönüştür
         const kontrolData = kombinasyonlar.map(k => `${k.motor}|${k.tarih}|${k.saat}`).join(',');
         
-        console.log('📊 Oluşturulan kontrolData:', kontrolData);
+        console.log('g��� Oluşturulan kontrolData:', kontrolData);
         
         const url = KojenEnerjiSheetsConfig.WEB_APP_URL + 
             `?action=checkMultipleRecords&data=${encodeURIComponent(kontrolData)}`;
         
-        console.log('🌐 Toplu kontrol URL:', url);
-        console.log('📡 Toplu fetch isteği gönderiliyor...');
+        console.log('g��� Toplu kontrol URL:', url);
+        console.log('g��� Toplu fetch isteği gönderiliyor...');
         
         const response = await fetch(url);
-        console.log('📡 Response status:', response.status);
+        console.log('g��� Response status:', response.status);
         
         const result = await response.json();
-        console.log('📊 Toplu kontrol sonucu:', result);
+        console.log('g��� Toplu kontrol sonucu:', result);
         
         return result;
         
@@ -331,7 +428,7 @@ async function sendKojenEnerjiEmailAlert(subject, body) {
 }
 
 /**
- * 🚀 ÇOKLU KAYIT SİSTEMİ - Tek seferde çoklu enerji kaydı
+ * g��� ÇOKLU KAYIT SİSTEMİ - Tek seferde çoklu enerji kaydı
  * @param {Array} records - Kaydedilecek enerji kayıtları
  * @returns {Promise<Object>} - Kayıt sonuçları
  */
@@ -349,7 +446,7 @@ async function runKojenEnerjiHourlyMissingRecordCheck() {
 }
 
 async function addMultipleEnerjiRecords(records) {
-    console.log('🚀 Çoklu enerji kaydı gönderiliyor:', records.length, 'kayıt');
+    console.log('g��� Çoklu enerji kaydı gönderiliyor:', records.length, 'kayıt');
     
     try {
         const url = KojenEnerjiSheetsConfig.WEB_APP_URL;
@@ -368,7 +465,10 @@ async function addMultipleEnerjiRecords(records) {
         });
         
         const result = await response.json();
-        console.log('📊 Çoklu enerji kayıt sonucu:', result);
+        console.log('g��� Çoklu enerji kayıt sonucu:', result);
+        if (result.success && result.addedRecords && result.addedRecords.length) {
+            scheduleYearlyEnergyUpdateForRecords(result.addedRecords);
+        }
         return result;
         
     } catch (error) {
@@ -377,10 +477,11 @@ async function addMultipleEnerjiRecords(records) {
     }
 }
 
-// Global scope'a ekle (HTML dosyasından erişim için)
 window.KojenEnerjiSheetsConfig = KojenEnerjiSheetsConfig;
 window.saveEnerjiToSheets = saveEnerjiToSheets;
 window.saveEnerjiEndOfDayValues = saveEnerjiEndOfDayValues;
+window.updateYearlyEnergyForRecords = updateYearlyEnergyForRecords;
+window.scheduleYearlyEnergyUpdateForRecords = scheduleYearlyEnergyUpdateForRecords;
 window.getEnerjiEndOfDayValues = getEnerjiEndOfDayValues;
 window.checkExistingEnerjiRecord = checkExistingEnerjiRecord;
 window.checkMultipleEnerjiRecords = checkMultipleEnerjiRecords;

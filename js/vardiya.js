@@ -9,9 +9,9 @@ function checkAutoRedirect() {
     const redirectTimes = ['15:59', '23:59', '07:59'];
     
     if (redirectTimes.includes(currentTime)) {
-        // Aktif vardiya varken kullaniciyi otomatik cikarma; kayit akisini bozabilir.
+        // Aktif vardiya varken kullanıcıyı otomatik çıkarma; kayıt akışını bozabilir.
         if (localStorage.getItem('mevcutVardiya')) {
-            console.log('Aktif vardiya var, otomatik yonlendirme atlandi.');
+            console.log('Aktif vardiya var, otomatik yönlendirme atlandı.');
             return false;
         }
         console.log(`⏰ Otomatik yönlendirme saati: ${currentTime}`);
@@ -19,7 +19,7 @@ function checkAutoRedirect() {
         // Vardiya İşlem Kaydetme modal'ı açık mı kontrol et
         const islemModal = document.querySelector('.islem-detaylari-modal');
         if (islemModal) {
-            console.log('💾 Vardiya İşlem Kaydetme açık, kaydediliyor...');
+            console.log('Vardiya İşlem Kaydetme açık, kaydediliyor...');
             // Modal'ı kapat ve kaydet
             islemModal.remove();
         }
@@ -34,7 +34,7 @@ function checkAutoRedirect() {
     return false;
 }
 
-// Kimlik dogrulama kontrolü
+// Kimlik doğrulama kontrolü
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
@@ -50,21 +50,21 @@ function checkAuth() {
         const allUserNameDisplays = document.querySelectorAll('[id="userNameDisplay"]');
         
         allUserNameDisplays.forEach((element, index) => {
-            element.textContent = fullName || user.email || 'Kullanici';
+            element.textContent = fullName || user.email || 'Kullanıcı';
         });
         
-        console.log('Vardiya - Kullanici adi ayarlandi:', fullName || user.email || 'Kullanici');
+        console.log('Vardiya - Kullanıcı adı ayarlandı:', fullName || user.email || 'Kullanıcı');
     } catch (e) {
-        console.error('Vardiya - Kullanici bilgileri okunamadi:', e);
+        console.error('Vardiya - Kullanıcı bilgileri okunamadı:', e);
         const allElements = document.querySelectorAll('[id="userNameDisplay"]');
         allElements.forEach(element => {
-            element.textContent = 'Kullanici';
+            element.textContent = 'Kullanıcı';
         });
     }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Önce kimlik dogrulama kontrolü
+    // Önce kimlik doğrulama kontrolü
     checkAuth();
     
     // ⏰ Otomatik yönlendirme kontrolünü başlat (her dakika kontrol et)
@@ -72,14 +72,88 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
     
     // Vardiya Google Apps Script URL
-    const VARDIYA_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbygGjbmXyFU7jzsWpZS8DlyB6JDFTB8KG89wqNoh6Ha5g4bLun5krcgYGkaAEJq2IBV/exec';
+    const VARDIYA_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('vardiya');
     const VARDIYA_CONTROL_URLS = {
-        saatlik: 'https://script.google.com/macros/s/AKfycbzzpkF4RJJ46d9A9518oxSwGaeuSgw-VHodQ5hjCApqb1H0FuIEnYNsqGOSdWXf9Yc/exec',
-        motor: 'https://script.google.com/macros/s/AKfycbzWnHTk--4bdTxPPTsRco5edkSH0jqnoLEHjhh8zH2TjIQU2YHU--81AGEZnbwnPhcV/exec',
-        enerji: 'https://script.google.com/macros/s/AKfycbwGuDzkg9lZm_YD3dsYq0P9r-CvB-hrOYZta0WWF_8UwFEJphBboJ-OvnAWkHQP1qux/exec',
-        bildirim: 'https://script.google.com/macros/s/AKfycbz9uR24xQeuV85ygxfFiakRRJz601KgaKCgOlHcsuYDjUl5xkR4o3HbIVn-tgVdSnTF/exec'
+        saatlik: window.AppConfig.getScriptUrl('saatlik'),
+        motor: window.AppConfig.getScriptUrl('motor'),
+        enerji: window.AppConfig.getScriptUrl('enerji'),
+        bildirim: window.AppConfig.getScriptUrl('bildirim')
     };
-    const VARDIYA_RECORD_FETCH_COUNT = '1500';
+    const VARDIYA_RECORD_FETCH_COUNT = '240';
+    const VARDIYA_CLOSE_PRECHECK_ENABLED = false;
+
+    function logVardiyaTiming(label, startedAt, result) {
+        console.log(label, Math.round(performance.now() - startedAt), 'ms', {
+            functionMs: result?.durationMs || '',
+            totalMs: result?.totalDurationMs || '',
+            lockWaitMs: result?.lockWaitMs || 0,
+            lockSkipped: Boolean(result?.lockSkipped)
+        });
+    }
+
+    function refreshWeeklyRecordsSoon(delayMs = 700) {
+        window.setTimeout(() => haftalikVardiyaKayitlariniGoster(), delayMs);
+    }
+
+    function resetVardiyaBitirButton() {
+        if (!vardiyaBitirBtn) return;
+        vardiyaBitirBtn.textContent = 'VARDİYAYI BİTİR';
+        vardiyaBitirBtn.disabled = false;
+    }
+
+    function reportVardiyaCloseBackgroundTasks(tasks) {
+        if (!tasks || !tasks.length) return;
+        Promise.all(tasks).then(results => {
+            const failed = results.filter(item => !item.success);
+            if (failed.length) {
+                console.warn('Vardiya kapatma arka plan kayit uyarisi:', failed.map(item => item.error));
+            }
+        });
+    }
+
+    function makeVardiyaCloseTask(promise) {
+        return Promise.resolve(promise)
+            .then(value => ({ success: true, value }))
+            .catch(error => ({ success: false, error }));
+    }
+
+    function runVardiyaCloseSideTasks(taskFactories, delayMs = 600) {
+        if (!taskFactories || !taskFactories.length) return;
+        window.setTimeout(() => {
+            reportVardiyaCloseBackgroundTasks(taskFactories.map(factory => {
+                try {
+                    return factory();
+                } catch (error) {
+                    return Promise.resolve({ success: false, error });
+                }
+            }));
+        }, delayMs);
+    }
+
+    function showVardiyaStatusMessage(message, type = 'info') {
+        const div = document.createElement('div');
+        const colors = {
+            success: '#16a34a',
+            error: '#dc2626',
+            warning: '#d97706',
+            info: '#2563eb'
+        };
+        div.textContent = message;
+        div.style.cssText = [
+            'position:fixed',
+            'right:20px',
+            'top:20px',
+            'z-index:9999',
+            'padding:12px 16px',
+            'border-radius:8px',
+            'color:#fff',
+            'font-weight:600',
+            'box-shadow:0 8px 24px rgba(15,23,42,.18)',
+            `background:${colors[type] || colors.info}`
+        ].join(';');
+        document.body.appendChild(div);
+        window.setTimeout(() => div.remove(), 3500);
+    }
     
     // Tarih seçicisine otomatik bugünün tarihini atama
     const tarihInput = document.getElementById('tarih');
@@ -342,12 +416,27 @@ document.addEventListener('DOMContentLoaded', function() {
         temizlikAySecimi.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     }
 
+    function getMonthlyCleaningVisibleRows(rows, year, month) {
+        const now = new Date();
+        const selectedYear = Number(year);
+        const selectedMonth = Number(month);
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        if (selectedYear === currentYear && selectedMonth === currentMonth) {
+            const todayText = formatDateTR(now);
+            return (rows || []).filter(row => normalizeDateText(row.tarih) === todayText);
+        }
+
+        return rows || [];
+    }
+
     async function loadMonthlyCleaningList() {
         if (!temizlikAySecimi || !temizlikAylikTableBody) return;
         const [year, month] = String(temizlikAySecimi.value || '').split('-');
         if (!year || !month) return;
 
-        temizlikAylikTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:18px;">Temizlik listesi yukleniyor...</td></tr>';
+        temizlikAylikTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:18px;">Temizlik listesi yükleniyor...</td></tr>';
 
         try {
             const url = new URL(VARDIYA_APPS_SCRIPT_URL);
@@ -359,17 +448,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!result.success) throw new Error(result.error || 'Liste yuklenemedi');
 
             const rows = result.data || [];
-            const doneCount = rows.filter(row => row.yapildi === 'EVET').length;
+            const currentDate = new Date();
+            const visibleRows = getMonthlyCleaningVisibleRows(rows, year, month);
+            const doneCount = visibleRows.filter(row => row.yapildi === 'EVET').length;
+            const isCurrentMonth = Number(year) === currentDate.getFullYear() && Number(month) === currentDate.getMonth() + 1;
             if (temizlikAylikOzet) {
-                temizlikAylikOzet.textContent = `${result.sheetName}: ${rows.length} gorev, ${doneCount} tamamlandi`;
+                temizlikAylikOzet.textContent = isCurrentMonth
+                    ? `${formatDateTR(currentDate)}: ${visibleRows.length} görev, ${doneCount} tamamlandı`
+                    : `${result.sheetName}: ${visibleRows.length} görev, ${doneCount} tamamlandı`;
             }
 
-            if (!rows.length) {
-                temizlikAylikTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:18px;">Bu ay icin temizlik kaydi yok.</td></tr>';
+            if (!visibleRows.length) {
+                temizlikAylikTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:18px;">${isCurrentMonth ? 'Bugün için temizlik kaydı yok.' : 'Bu ay için temizlik kaydı yok.'}</td></tr>`;
                 return;
             }
 
-            temizlikAylikTableBody.innerHTML = rows.map(row => {
+            temizlikAylikTableBody.innerHTML = visibleRows.map(row => {
                 const done = row.yapildi === 'EVET';
                 return `
                     <tr class="${done ? 'temizlik-done' : 'temizlik-pending'}">
@@ -385,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }).join('');
         } catch (error) {
             console.error('Aylik temizlik listesi hatasi:', error);
-            if (temizlikAylikOzet) temizlikAylikOzet.textContent = 'Liste yuklenemedi.';
+            if (temizlikAylikOzet) temizlikAylikOzet.textContent = 'Liste yüklenemedi.';
             temizlikAylikTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#991b1b; padding:18px;">${escapeHtml(error.message)}</td></tr>`;
         }
     }
@@ -528,6 +622,60 @@ document.addEventListener('DOMContentLoaded', function() {
             // Tarih formatını GG.AA.YYYY'den YYYY-AA-GG'ye çevir
             const formattedTarih = toIsoDateParam(selectedTarih);
 
+            {
+                const fastUrl = new URL(VARDIYA_APPS_SCRIPT_URL);
+                fastUrl.searchParams.append('action', 'addRecord');
+                fastUrl.searchParams.append('tarih', formattedTarih);
+                fastUrl.searchParams.append('vardiya', selectedVardiya);
+                fastUrl.searchParams.append('personel', selectedPersonel.adSoyad);
+                fastUrl.searchParams.append('operator', selectedPersonel.adSoyad);
+                fastUrl.searchParams.append('yardimciOperator', yardimciOperatorBilgisi);
+
+                const fastStartedAt = performance.now();
+                let fastResponse = await fetch(fastUrl);
+                let fastResult = await fastResponse.json();
+
+                if (!fastResult.success && fastResult.duplicateActive) {
+                    if (!confirm('Bu tarih ve vardiya icin aktif kayit var. Eski aktif kayit kapatilip yeni vardiya baslatilsin mi?')) {
+                        return;
+                    }
+
+                    fastUrl.searchParams.set('closeExisting', '1');
+                    fastResponse = await fetch(fastUrl);
+                    fastResult = await fastResponse.json();
+                }
+
+                logVardiyaTiming('Vardiya baslatma suresi:', fastStartedAt, fastResult);
+
+                if (fastResult.success) {
+                    const vardiyaBilgisi = {
+                        id: fastResult.data.id,
+                        vardiya: selectedVardiya,
+                        vardiyaAdi: vardiyaAdi,
+                        tarih: selectedTarih,
+                        personelId: selectedPersonelId,
+                        personelAdSoyad: selectedPersonel.adSoyad,
+                        pozisyon: selectedPersonel.pozisyon,
+                        baslangicZamani: new Date().toLocaleString('tr-TR'),
+                        yardimciOperator: yardimciOperatorId && yardimciOperatorVarMi ? {
+                            id: yardimciOperatorId,
+                            adSoyad: yardimciOperatorBilgisi,
+                            pozisyon: personelListesi.find(p => p.id == yardimciOperatorId).pozisyon
+                        } : null,
+                        islemler: []
+                    };
+
+                    localStorage.setItem('mevcutVardiya', JSON.stringify(vardiyaBilgisi));
+                    window.SystemAuditLog?.write?.('Vardiya baslatildi', `${selectedVardiya} - ${selectedPersonel.adSoyad}`, 'ok');
+                    mevcutVardiyaBilgisi();
+                    alert('Vardiya basariyla baslatildi! (ID: ' + fastResult.data.id + ')');
+                    refreshWeeklyRecordsSoon();
+                } else {
+                    alert('Hata: ' + (fastResult.error || 'Islem basarisiz!'));
+                }
+                return;
+            }
+
             // Mevcut kayıt var mı kontrol et
             const checkUrl = new URL(VARDIYA_APPS_SCRIPT_URL);
             checkUrl.searchParams.append('action', 'getRecordByDateVardiya');
@@ -585,10 +733,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
 
                 localStorage.setItem('mevcutVardiya', JSON.stringify(vardiyaBilgisi));
-                window.SystemAuditLog?.write?.('Vardiya baslatildi', `${selectedVardiya} - ${selectedPersonel.adSoyad}`, 'ok');
+                window.SystemAuditLog?.write?.('Vardiya başlatıldı', `${selectedVardiya} - ${selectedPersonel.adSoyad}`, 'ok');
                 mevcutVardiyaBilgisi();
                 alert('Vardiya başarıyla başlatıldı! (ID: ' + result.data.id + ')');
-                haftalikVardiyaKayitlariniGoster();
+                refreshWeeklyRecordsSoon();
             } else {
                 alert('Hata: ' + (result.error || 'İşlem başarısız!'));
             }
@@ -613,13 +761,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const hasSavedOperation = Array.isArray(vardiya.islemler) && vardiya.islemler.length > 0;
 
                 if (!pendingAciklama && !hasSavedOperation && !cleaningChecked) {
-                    alert('Vardiya bitirilemez. Lutfen islem aciklamasi girin veya temizlik yapildi tiklerinden en az birini isaretleyin!');
+                    alert('Vardiya bitirilemez. Lütfen işlem açıklaması girin veya temizlik yapıldı tiklerinden en az birini işaretleyin!');
                     return;
                 }
 
                 // Buton loading durumu
                 vardiyaBitirBtn.textContent = 'BİTİRİLİYOR...';
                 vardiyaBitirBtn.disabled = true;
+                const closeFlowStartedAt = performance.now();
+                const closeSideTaskFactories = [];
                 
                 try {
                     if (pendingAciklama) {
@@ -630,33 +780,40 @@ document.addEventListener('DOMContentLoaded', function() {
                         islemUrl.searchParams.append('zaman', new Date().toLocaleString('tr-TR'));
                         islemUrl.searchParams.append('kaydeden', vardiya.personelAdSoyad || 'Operator');
 
-                        const islemResponse = await fetch(islemUrl);
-                        const islemResult = await islemResponse.json();
-                        if (!islemResult.success) {
-                            alert('Hata: ' + (islemResult.error || 'Islem aciklamasi kaydedilemedi!'));
-                            return;
-                        }
-
-                        if (!vardiya.islemler) vardiya.islemler = [];
-                        vardiya.islemler.push({
-                            islem: pendingAciklama,
-                            zaman: new Date().toLocaleString('tr-TR'),
-                            kaydeden: vardiya.personelAdSoyad || 'Operator'
+                        closeSideTaskFactories.push(function() {
+                            const islemStartedAt = performance.now();
+                            return makeVardiyaCloseTask(
+                                fetch(islemUrl)
+                                    .then(response => response.json())
+                                    .then(islemResult => {
+                                        console.log('Vardiya kapatma islem kaydi suresi:', Math.round(performance.now() - islemStartedAt), 'ms', islemResult);
+                                        if (!islemResult.success) throw new Error(islemResult.error || 'Islem aciklamasi kaydedilemedi');
+                                        return islemResult;
+                                    })
+                            );
                         });
-                        localStorage.setItem('mevcutVardiya', JSON.stringify(vardiya));
-                        if (pendingAciklamaInput) pendingAciklamaInput.value = '';
                     }
 
                     if (cleaningChecked) {
-                        await saveCleaningChecklist(vardiya);
+                        closeSideTaskFactories.push(function() {
+                            const cleaningStartedAt = performance.now();
+                            return makeVardiyaCloseTask(
+                                Promise.resolve(saveCleaningChecklist(vardiya)).then(result => {
+                                    console.log('Vardiya kapatma temizlik kaydi suresi:', Math.round(performance.now() - cleaningStartedAt), 'ms');
+                                    return result;
+                                })
+                            );
+                        });
                     }
 
-                    const warnings = await runVardiyaClosePrecheck(vardiya);
-                    if (warnings.length) {
-                        const devam = confirm('Vardiya kapatma on kontrolunde uyarilar var:\n\n' + warnings.join('\n') + '\n\nYine de vardiya bitirilsin mi?');
-                        if (!devam) {
-                            window.SystemAuditLog?.write?.('Vardiya kapatma durduruldu', warnings.join(' | '), 'warn');
-                            return;
+                    if (VARDIYA_CLOSE_PRECHECK_ENABLED) {
+                        const warnings = await runVardiyaClosePrecheck(vardiya);
+                        if (warnings.length) {
+                            const devam = confirm('Vardiya kapatma on kontrolunde uyarilar var:\n\n' + warnings.join('\n') + '\n\nYine de vardiya bitirilsin mi?');
+                            if (!devam) {
+                                window.SystemAuditLog?.write?.('Vardiya kapatma durduruldu', warnings.join(' | '), 'warn');
+                                return;
+                            }
                         }
                     }
 
@@ -671,36 +828,59 @@ document.addEventListener('DOMContentLoaded', function() {
                     url.searchParams.append('vardiya', vardiya.vardiya || vardiyaSelect.value);
                     url.searchParams.append('devredenIsler', devredenIslerInput?.value.trim() || '');
                     
-                    const response = await fetch(url);
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        localStorage.removeItem('mevcutVardiya');
-                        document.getElementById('mevcutVardiya').style.display = 'none';
-                        if (temizlikChecklist) temizlikChecklist.style.display = 'none';
-                        personelSelect.value = '';
-                        if (devredenIslerInput) devredenIslerInput.value = '';
-                        operatorStatus.textContent = 'Personel seçiniz.';
-                        operatorStatus.style.color = '#e74c3c';
-                        window.SystemAuditLog?.write?.('Vardiya bitirildi', `${vardiya.vardiya || vardiyaSelect.value} - ${vardiya.personelAdSoyad || ''}`, 'ok');
-                        
-                        alert('Vardiya başarıyla bitirildi! (ID: ' + result.data.id + ')');
-                        haftalikVardiyaKayitlariniGoster();
-                    } else {
-                        if (String(result.error || '').includes('Aktif vardiya')) {
-                            clearMevcutVardiyaDisplay();
-                            alert('Bu vardiya tarayicida aktif gorunuyordu ancak Google Sheets tarafinda aktif kayit bulunamadi. Eski yerel kayit temizlendi.');
-                            haftalikVardiyaKayitlariniGoster();
-                        } else {
-                            alert('Hata: ' + (result.error || 'İşlem başarısız!'));
-                        }
-                    }
+                    const bitirStartedAt = performance.now();
+                    const endVardiyaPromise = fetch(url)
+                        .then(response => response.json())
+                        .then(result => {
+                            logVardiyaTiming('Vardiya bitirme suresi:', bitirStartedAt, result);
+                            if (!result.success) throw result;
+                            return result;
+                        });
+
+                    clearMevcutVardiyaDisplay();
+                    if (temizlikChecklist) temizlikChecklist.style.display = 'none';
+                    personelSelect.value = '';
+                    if (devredenIslerInput) devredenIslerInput.value = '';
+                    if (pendingAciklamaInput) pendingAciklamaInput.value = '';
+                    operatorStatus.textContent = 'Personel seçiniz.';
+                    operatorStatus.style.color = '#e74c3c';
+                    resetVardiyaBitirButton();
+                    showVardiyaStatusMessage('Vardiya bitirme isteği gönderildi.', 'success');
+
+                    endVardiyaPromise
+                        .then(result => {
+                            window.SystemAuditLog?.write?.('Vardiya bitirildi', `${vardiya.vardiya || vardiyaSelect.value} - ${vardiya.personelAdSoyad || ''}`, 'ok');
+                            console.log('Vardiya bitirme onaylandi:', result);
+                            runVardiyaCloseSideTasks(closeSideTaskFactories);
+                            refreshWeeklyRecordsSoon(500);
+                        })
+                        .catch(error => {
+                            const errorText = error?.error || error?.message || String(error || '');
+                            console.error('Vardiya bitirme arka plan hatasi:', error);
+
+                            if (String(errorText).includes('Aktif vardiya')) {
+                                clearMevcutVardiyaDisplay();
+                                showVardiyaStatusMessage('Eski yerel vardiya kaydı temizlendi.', 'warning');
+                                refreshWeeklyRecordsSoon();
+                                return;
+                            }
+
+                            localStorage.setItem('mevcutVardiya', JSON.stringify(vardiya));
+                            if (pendingAciklamaInput && pendingAciklama && !pendingAciklamaInput.value) {
+                                pendingAciklamaInput.value = pendingAciklama;
+                            }
+                            mevcutVardiyaBilgisi();
+                            showVardiyaStatusMessage('Vardiya bitirme doğrulanamadı: ' + errorText, 'error');
+                        });
+
+                    return;
                 } catch (error) {
                     console.error('Vardiya bitirme hatası:', error);
+                    resetVardiyaBitirButton();
                     alert('Bağlantı hatası!');
                 } finally {
-                    vardiyaBitirBtn.textContent = 'VARDİYAYI BİTİR';
-                    vardiyaBitirBtn.disabled = false;
+                    console.log('Vardiya kapatma toplam UI suresi:', Math.round(performance.now() - closeFlowStartedAt), 'ms');
+                    resetVardiyaBitirButton();
                 }
             }
         }
@@ -870,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-overlay"></div>
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>📋 İşlem Detayları</h2>
+                    <h2>İşlem Detayları</h2>
                     <button class="modal-close">✕</button>
                 </div>
                 <div class="modal-body">
@@ -896,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         try {
-            console.log('📊 Vardiya kayıtları ve işlemler tek seferde çekiliyor...');
+            console.log('Vardiya kayıtları ve işlemler tek seferde çekiliyor...');
             // Google Sheets'ten vardiya kayıtlarını ve işlemleri tek seferde çek
             const url = new URL(VARDIYA_APPS_SCRIPT_URL);
             url.searchParams.append('action', 'getLastRecordsWithIslemler');
@@ -905,7 +1085,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(url);
             const result = await response.json();
             
-            console.log('📊 Sonuç:', result);
+            console.log('Sonuç:', result);
             
             if (!result.success) {
                 throw new Error(result.error || 'İşlemler yüklenemedi');
@@ -914,7 +1094,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const tumVardiyaKayitlari = result.data || [];
             const mevcutVardiya = localStorage.getItem('mevcutVardiya');
             
-            console.log('📊 Toplam vardiya sayısı:', tumVardiyaKayitlari.length);
+            console.log('Toplam vardiya sayısı:', tumVardiyaKayitlari.length);
             
             // İşlemler her vardiya kaydının içinde (islemler) olarak geliyor
             // Map oluşturmaya gerek yok, direkt kullanabiliriz
@@ -925,7 +1105,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            console.log('📊 İşlemler yüklendi');
+            console.log('İşlemler yüklendi');
             
             // Modal içeriğini güncelle
             const modalBody = modal.querySelector('.modal-body');
@@ -951,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const vardiya = JSON.parse(mevcutVardiya);
             html += `
                 <div class="islem-grubu">
-                    <h3>🔄 Mevcut Vardiya İşlemleri</h3>
+                    <h3>Mevcut Vardiya İşlemleri</h3>
                     <div class="islem-listesi">
                         ${vardiya.islemler && vardiya.islemler.length > 0 ? 
                             vardiya.islemler.map(islem => `
@@ -979,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (islemliVardiyalar.length > 0) {
                 html += `
                     <div class="islem-grubu">
-                        <h3>📁 Arşivlenmiş Vardiya İşlemleri</h3>
+                        <h3>Arşivlenmiş Vardiya İşlemleri</h3>
                         <div class="islem-listesi">
                             ${islemliVardiyalar.map(vardiya => {
                                 const islemler = vardiyaIslemleriMap.get(vardiya.id) || [];
@@ -992,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return `
                                     <div class="vardiya-grubu">
                                         <div class="vardiya-baslik">
-                                            📅 ${vardiya.tarih} - ${vardiyaAdiMap[vardiya.vardiya] || vardiya.vardiya}
+                                            ${vardiya.tarih} - ${vardiyaAdiMap[vardiya.vardiya] || vardiya.vardiya}
                                             <span class="personel-info">${vardiya.personel || '-'}</span>
                                         </div>
                                         <div class="vardiya-islemleri">
@@ -1008,7 +1188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             }
                                             ${vardiya.devredenIsler ? `
                                                 <div class="islem-item">
-                                                    <div class="islem-baslik">Devreden Isler</div>
+                                                    <div class="islem-baslik">Devreden İşler</div>
                                                     <div class="islem-zaman">${vardiya.devredenIsler}</div>
                                                 </div>
                                             ` : ''}
@@ -1022,7 +1202,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 html += `
                     <div class="islem-grubu">
-                        <h3>📁 Arşivlenmiş Vardiya İşlemleri</h3>
+                        <h3>Arşivlenmiş Vardiya İşlemleri</h3>
                         <div class="islem-listesi">
                             <div class="bos-mesaj">Arşivde işlem kaydı bulunamadı.</div>
                         </div>
@@ -1116,7 +1296,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn('Yerel aktif vardiya kaydi Google Sheets ile eslesmedi, temizlendi.', vardiya, sheetRecord);
             return false;
         } catch (error) {
-            console.error('Mevcut vardiya dogrulama hatasi:', error);
+            console.error('Mevcut vardiya doğrulama hatası:', error);
             return mevcutVardiyaBilgisi();
         }
     }
@@ -1139,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const cleaningChecked = hasCheckedCleaningTask();
 
         if (!aciklama && !cleaningChecked) {
-            alert('Lutfen islem aciklamasi girin veya temizlik yapildi tiklerinden en az birini isaretleyin!');
+            alert('Lütfen işlem açıklaması girin veya temizlik yapıldı tiklerinden en az birini işaretleyin!');
             return;
         }
         
@@ -1173,7 +1353,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 window.SystemAuditLog?.write?.('Vardiya temizlik kontrolu kaydedildi', vardiya.vardiya || '', 'ok');
                 alert('Temizlik kontrolu kaydedildi!');
-                haftalikVardiyaKayitlariniGoster();
+                refreshWeeklyRecordsSoon();
                 return;
             }
 
@@ -1217,11 +1397,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     vardiya.devredenIsler = devredenIsler;
                 }
                 localStorage.setItem('mevcutVardiya', JSON.stringify(vardiya));
-                window.SystemAuditLog?.write?.('Vardiya islemi/devreden isi kaydedildi', (aciklama || devredenIsler).slice(0, 80), 'ok');
+                window.SystemAuditLog?.write?.('Vardiya işlemi/devreden işi kaydedildi', (aciklama || devredenIsler).slice(0, 80), 'ok');
                 
                 // Alanı temizle
                 islemAciklama.value = '';
-                haftalikVardiyaKayitlariniGoster();
+                refreshWeeklyRecordsSoon();
                 
                 alert('İşlem başarıyla kaydedildi! (ID: ' + result.data.id + ')');
             } else {

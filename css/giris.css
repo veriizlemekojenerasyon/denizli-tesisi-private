@@ -87,7 +87,7 @@ body {
 }
 
 .password-input input {
-    padding-right: 50px;
+    padding-right: 82px;
 }
 
 .toggle-password {
@@ -108,7 +108,10 @@ body {
 }
 
 .eye-icon {
-    font-size: 18px;
+    display: inline-block;
+    min-width: 44px;
+    font-size: 12px;
+    font-weight: 600;
     color: #718096;
 }
 

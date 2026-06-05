@@ -4,13 +4,7 @@
     const SHEETS_SCRIPT = 'js/bildirim-sheets.js';
     const TICKER_ID = 'globalAnnouncementTicker';
 
-    const fallbackAnnouncements = [
-        {
-            title: 'Vardiya tesliminde yapilan isler ve bekleyen konular vardiya notuna yazilacak',
-            priority: 'normal',
-            category: 'shift'
-        }
-    ];
+    const fallbackAnnouncements = [];
 
     document.addEventListener('DOMContentLoaded', initGlobalAnnouncements);
 
@@ -122,11 +116,21 @@
         const user = getLoggedInUser();
         return items.filter(item =>
             item.active !== false &&
+            !isDefaultAnnouncement(item) &&
             matchesDateRange(item, today) &&
             matchesTarget(item, user) &&
             matchesShift(item) &&
             matchesPageTarget(item)
         );
+    }
+
+    function isDefaultAnnouncement(item) {
+        const text = String(item?.title || item?.message || '').trim().toLowerCase();
+        return [
+            '08-16 vardiyasi: kojenerasyon saha kontrol listesi tamamlanacak',
+            'gm motor yag ve sogutma degerleri saatlik kayitlarda dikkatle kontrol edilecek',
+            'vardiya tesliminde yapilan isler ve bekleyen konular vardiya notuna yazilacak'
+        ].includes(text);
     }
 
     function matchesDateRange(item, today) {

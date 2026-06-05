@@ -18,86 +18,7 @@
                     <div class="company-name">KOJENERASYON</div>
                 </div>
             </div>
-            <ul class="sidebar-menu">
-                <li class="menu-item">
-                    <a href="anasayfa.html" class="menu-link">
-                        <span class="menu-icon">🏠</span>
-                        <span class="menu-text">Ana Sayfa</span>
-                    </a>
-                </li>
-                <li class="menu-item active">
-                    <a href="saatlik-veri-giris.html" class="menu-link">
-                        <span class="menu-icon">📊</span>
-                        <span class="menu-text">Saatlik Veri Girişi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="gunluk-veri-giris.html" class="menu-link">
-                        <span class="menu-icon">📆</span>
-                        <span class="menu-text">Günlük Veri Girişi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="buhar-verisi.html" class="menu-link">
-                        <span class="menu-icon">💨</span>
-                        <span class="menu-text">Buhar Verisi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="vardiya.html" class="menu-link">
-                        <span class="menu-icon">👥</span>
-                        <span class="menu-text">Vardiya Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="motor-takip.html" class="menu-link">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Motor Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kojen-motor-veri.html" class="menu-link">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Kojen Motor Veri</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kojen-enerji-veri.html" class="menu-link">
-                        <span class="menu-icon">⚡</span>
-                        <span class="menu-text">Kojen Enerji Veri</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="bakim-takibi.html" class="menu-link">
-                        <span class="menu-icon">🔧</span>
-                        <span class="menu-text">Bakım Takibi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="stok-takip.html" class="menu-link">
-                        <span class="menu-icon">📦</span>
-                        <span class="menu-text">Stok Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-menu-item">
-                    <a href="admin-kontrol.html" class="menu-link">
-                        <span class="menu-icon">&#9881;</span>
-                        <span class="menu-text">Merkezi Kontrol</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-menu-item">
-                    <a href="admin-bildirim.html" class="menu-link">
-                        <span class="menu-icon">&#128226;</span>
-                        <span class="menu-text">Bildirim Y&#246;netimi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kullanici-yonetimi.html" class="menu-link">
-                        <span class="menu-icon">👤</span>
-                        <span class="menu-text">Kullanıcı Yönetimi</span>
-                    </a>
-                </li>
-            </ul>
+            <ul class="sidebar-menu"></ul>
             <div class="sidebar-footer">
                 <div class="user-info" style="padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
                     <span id="userNameDisplay" style="color: white; font-size: 13px; font-weight: 500;">Yükleniyor...</span>
@@ -129,7 +50,7 @@
             <main class="dashboard-content">
                 <section class="data-entry-section">
                     <h2 class="section-title">Saatlik Veri Giriş Formu</h2>
-                    
+
 
                     <div class="mobile-quick-panel" aria-label="Mobil hızlı giriş paneli">
                         <div class="quick-panel-header">
@@ -235,7 +156,10 @@
         </div>
     </div>
 
-    <script src="js/saatlik-veri-giris.js"></script>
+
+<script src="js/app-config.js"></script>
+<script src="js/sidebar-menu.js"></script>
+<script src="js/saatlik-veri-giris.js"></script>
     <script>
         (function displayUserName() {
             const logged = localStorage.getItem('loggedInUser');
@@ -250,10 +174,14 @@
             } else if (display) { display.textContent = 'Misafir'; }
         })();
     </script>
-    <script src="js/global-duyurular.js"></script>
-    <script src="js/auto-refresh.js"></script>
-    <script src="js/admin-menu-visibility.js"></script>
-    <script src="js/logout-system.js"></script>
+
+<script src="js/global-duyurular.js"></script>
+
+<script src="js/auto-refresh.js"></script>
+
+<script src="js/admin-menu-visibility.js"></script>
+
+<script src="js/logout-system.js"></script>
 </body>
 </html>
 

@@ -18,86 +18,7 @@
                     <div class="company-name">KOJENERASYON</div>
                 </div>
             </div>
-            <ul class="sidebar-menu">
-                <li class="menu-item">
-                    <a href="anasayfa.html" class="menu-link">
-                        <span class="menu-icon">🏠</span>
-                        <span class="menu-text">Ana Sayfa</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="saatlik-veri-giris.html" class="menu-link">
-                        <span class="menu-icon">📊</span>
-                        <span class="menu-text">Saatlik Veri Girişi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="gunluk-veri-giris.html" class="menu-link">
-                        <span class="menu-icon">📆</span>
-                        <span class="menu-text">Günlük Veri Girişi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="buhar-verisi.html" class="menu-link">
-                        <span class="menu-icon">💨</span>
-                        <span class="menu-text">Buhar Verisi</span>
-                    </a>
-                </li>
-                <li class="menu-item active">
-                    <a href="vardiya.html" class="menu-link">
-                        <span class="menu-icon">👥</span>
-                        <span class="menu-text">Vardiya Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="motor-takip.html" class="menu-link">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Motor Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kojen-motor-veri.html" class="menu-link">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Kojen Motor Veri</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kojen-enerji-veri.html" class="menu-link">
-                        <span class="menu-icon">⚡</span>
-                        <span class="menu-text">Kojen Enerji Veri</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="bakim-takibi.html" class="menu-link">
-                        <span class="menu-icon">🔧</span>
-                        <span class="menu-text">Bakım Takibi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="stok-takip.html" class="menu-link">
-                        <span class="menu-icon">📦</span>
-                        <span class="menu-text">Stok Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-menu-item">
-                    <a href="admin-kontrol.html" class="menu-link">
-                        <span class="menu-icon">&#9881;</span>
-                        <span class="menu-text">Merkezi Kontrol</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-menu-item">
-                    <a href="admin-bildirim.html" class="menu-link">
-                        <span class="menu-icon">&#128226;</span>
-                        <span class="menu-text">Bildirim Y&#246;netimi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kullanici-yonetimi.html" class="menu-link">
-                        <span class="menu-icon">👤</span>
-                        <span class="menu-text">Kullanıcı Yönetimi</span>
-                    </a>
-                </li>
-            </ul>
+            <ul class="sidebar-menu"></ul>
             <div class="sidebar-footer">
                 <div class="user-info" style="padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
                     <span id="userNameDisplay" style="color: white; font-size: 13px; font-weight: 500;">Yükleniyor...</span>
@@ -129,7 +50,7 @@
             <main class="content">
                 <section class="vardiya-section">
                     <h2 class="section-title">Vardiya Bilgileri</h2>
-                    
+
                     <!-- Vardiya Seçimi -->
                     <div class="vardiya-form">
                         <div class="form-row">
@@ -162,7 +83,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Yardımcı Operatör Seçimi -->
                         <div class="yardimci-operator-section" id="yardimciOperatorSection" style="display: none;">
                             <div class="form-row">
@@ -270,15 +191,15 @@
                     <div class="temizlik-aylik-listesi">
                         <div class="temizlik-aylik-header">
                             <div>
-                                <h3 class="subsection-title">Aylik Temizlik Listesi</h3>
-                                <p>Google Sheets tarafinda ay bazli TemizlikListesi sayfasi olusturulur.</p>
+                                <h3 class="subsection-title">Güncel Temizlik Listesi</h3>
+                                <p>Seçili ay güncel ay ise sadece bugünün temizlik alanları gösterilir.</p>
                             </div>
                             <div class="temizlik-aylik-controls">
                                 <input type="month" id="temizlikAySecimi" name="temizlikAySecimi">
-                                <button type="button" class="submit-btn" id="temizlikAyYukleBtn">LISTEYI YUKLE</button>
+                                <button type="button" class="submit-btn" id="temizlikAyYukleBtn">LİSTEYİ YÜKLE</button>
                             </div>
                         </div>
-                        <div class="temizlik-summary" id="temizlikAylikOzet">Liste yuklenmedi.</div>
+                        <div class="temizlik-summary" id="temizlikAylikOzet">Liste yüklenmedi.</div>
                         <div class="table-container">
                             <table class="temizlik-table">
                                 <thead>
@@ -293,7 +214,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="temizlikAylikTableBody">
-                                    <!-- Aylik temizlik listesi JavaScript ile doldurulacak -->
+                                    <!-- Temizlik listesi JavaScript ile doldurulacak -->
                                 </tbody>
                             </table>
                         </div>
@@ -301,7 +222,7 @@
 
                     <div class="haftalik-vardiya-kayitlari">
                         <h3 class="subsection-title">Haftalık Vardiya Kayıtları</h3>
-                        
+
                         <!-- Tarih Aralığı Seçici -->
                         <div class="form-row" style="margin-bottom: 20px;">
                             <div class="form-group">
@@ -319,7 +240,7 @@
                                 <button type="button" class="reset-btn" id="tarihSifirlaBtn" style="width: 100%;">SIFIRLA</button>
                             </div>
                         </div>
-                        
+
                         <div class="table-container">
                             <table class="vardiya-kayitlari-table">
                                 <thead>
@@ -341,7 +262,7 @@
                         </div>
                         <div class="islem-detaylari-link">
                             <a href="#" id="islemDetayLink" class="detay-link">
-                                <span class="link-icon">📋</span>
+                                <span class="link-icon"></span>
                                 Tüm İşlem Detaylarını Görüntüle
                             </a>
                         </div>
@@ -351,11 +272,18 @@
         </div>
     </div>
 
-    <script src="js/audit-log.js"></script>
-    <script src="js/vardiya.js"></script>
-    
-    <script src="js/global-duyurular.js"></script>
-    <script src="js/admin-menu-visibility.js"></script>
-    <script src="js/logout-system.js"></script>
+
+<script src="js/app-config.js"></script>
+<script src="js/sidebar-menu.js"></script>
+<script src="js/audit-log.js"></script>
+
+<script src="js/vardiya.js"></script>
+
+
+<script src="js/global-duyurular.js"></script>
+
+<script src="js/admin-menu-visibility.js"></script>
+
+<script src="js/logout-system.js"></script>
 </body>
 </html>

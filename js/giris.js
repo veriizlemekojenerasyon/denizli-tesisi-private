@@ -1,5 +1,5 @@
 // Google Apps Script URL - Global
-const USER_URL = 'https://script.google.com/macros/s/AKfycbxPz61SLIfNe1Or-24t4MK-HdDOOshr4LbbgSuOxSA12tn9QASgdQYov5sl5tgiVprR/exec';
+const USER_URL = window.AppConfig.getScriptUrl('kullanici');
 
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
         passwordInput.setAttribute('type', type);
         
         const eyeIcon = this.querySelector('.eye-icon');
-        eyeIcon.textContent = type === 'password' ? '👁️' : '👁️‍🗨️';
+        eyeIcon.textContent = type === 'password' ? 'Göster' : 'Gizle';
     });
 
     forgotPasswordLink.addEventListener('click', function(e) {
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 📧 Şifremi unuttum - Adım 1: Kod gönder
+    //  Şifremi unuttum - Adım 1: Kod gönder
     forgotPasswordForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // 🔑 Şifremi unuttum - Adım 2: Kod doğrula ve şifreyi sıfırla
+    //  Şifremi unuttum - Adım 2: Kod doğrula ve şifreyi sıfırla
     verifyCodeForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             setTimeout(() => {
                 window.location.href = 'anasayfa.html';
-            }, 1500);
+            }, 250);
         } catch (e) {
             showError('Sunucu hatası: ' + e.message);
             setLoginLoading(false);
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 📧 Şifre sıfırlama kodu gönder (Adım 1)
+    //  Şifre sıfırlama kodu gönder (Adım 1)
     async function sendPasswordResetCode(email) {
         try {
             showSuccess('Kod gönderiliyor...');
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // 🔑 Şifreyi sıfırla (Adım 2 - Kod + Yeni Şifre)
+    //  Şifreyi sıfırla (Adım 2 - Kod + Yeni Şifre)
     async function resetPasswordWithCode(email, code, newPassword) {
         try {
             showSuccess('Şifre güncelleniyor...');

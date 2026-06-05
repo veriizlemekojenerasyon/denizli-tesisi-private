@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bildirim Yonetimi - Kojenerasyon</title>
+    <title>Bildirim Yönetimi - Kojenerasyon</title>
     <link rel="stylesheet" href="css/admin-bildirim.css">
     <link rel="stylesheet" href="css/mobile-system.css">
 </head>
@@ -11,8 +11,8 @@
     <div class="container">
         <header class="page-header">
             <div>
-                <h1>Bildirim Yonetimi</h1>
-                <p>Vardiya duyurularini ana sayfadaki kayan yazida yayinlayin.</p>
+                <h1>Bildirim Yönetimi</h1>
+                <p>Vardiya duyurularını ana sayfadaki kayan yazıda yayınlayın.</p>
             </div>
             <div class="header-actions">
                 <a href="anasayfa.html" class="btn btn-secondary">Ana Sayfa</a>
@@ -27,15 +27,15 @@
                     <input type="hidden" id="announcementId">
 
                     <label for="announcementTitle">Bildirim Metni</label>
-                    <textarea id="announcementTitle" rows="4" required placeholder="Ornek: 08-16 vardiyasi GM-1 yag seviyesi kontrol edilecek"></textarea>
+                    <textarea id="announcementTitle" rows="4" required placeholder="Örnek: 08-16 vardiyası GM-1 yağ seviyesi kontrol edilecek"></textarea>
 
                     <div class="form-grid">
                         <div>
-                            <label for="announcementStartDate">Baslangic Tarihi</label>
+                            <label for="announcementStartDate">Başlangıç Tarihi</label>
                             <input type="date" id="announcementStartDate">
                         </div>
                         <div>
-                            <label for="announcementEndDate">Bitis Tarihi</label>
+                            <label for="announcementEndDate">Bitiş Tarihi</label>
                             <input type="date" id="announcementEndDate">
                         </div>
                     </div>
@@ -44,9 +44,9 @@
                         <div>
                             <label for="announcementCategory">Kategori</label>
                             <select id="announcementCategory">
-                                <option value="operation">Isletme</option>
-                                <option value="maintenance">Bakim</option>
-                                <option value="safety">Guvenlik</option>
+                                <option value="operation">İşletme</option>
+                                <option value="maintenance">Bakım</option>
+                                <option value="safety">Güvenlik</option>
                                 <option value="shift">Vardiya</option>
                                 <option value="general">Genel</option>
                             </select>
@@ -54,7 +54,7 @@
                         <div>
                             <label for="announcementShift">Vardiya</label>
                             <select id="announcementShift">
-                                <option value="">Tum vardiyalar</option>
+                                <option value="">Tüm vardiyalar</option>
                                 <option value="08-16">08-16</option>
                                 <option value="16-24">16-24</option>
                                 <option value="24-08">24-08</option>
@@ -64,7 +64,7 @@
 
                     <div class="form-grid">
                         <div>
-                            <label for="announcementPriority">Oncelik</label>
+                            <label for="announcementPriority">Öncelik</label>
                             <select id="announcementPriority">
                                 <option value="normal">Normal</option>
                                 <option value="medium">Orta</option>
@@ -74,8 +74,8 @@
                         <div>
                             <label for="announcementTarget">Hedef</label>
                             <select id="announcementTarget">
-                                <option value="all">Tum ekip</option>
-                                <option value="operator">Operatorler</option>
+                                <option value="all">Tüm ekip</option>
+                                <option value="operator">Operatörler</option>
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
@@ -83,25 +83,25 @@
 
                     <label for="announcementPageTarget">Sayfa Hedefi</label>
                     <select id="announcementPageTarget">
-                        <option value="all">Tum sayfalar</option>
+                        <option value="all">Tüm sayfalar</option>
                         <option value="anasayfa">Ana sayfa</option>
                         <option value="vardiya">Vardiya takip</option>
-                        <option value="saatlik">Saatlik veri girisi</option>
+                        <option value="saatlik">Saatlik veri girişi</option>
                         <option value="kojen-motor">Kojen motor veri</option>
                         <option value="kojen-enerji">Kojen enerji veri</option>
-                        <option value="bakim">Bakim takibi</option>
+                        <option value="bakim">Bakım takibi</option>
                         <option value="stok">Stok takip</option>
                         <option value="admin">Admin sayfalari</option>
                     </select>
 
-                    <label for="announcementAttachment">Dosya / Fotograf</label>
+                    <label for="announcementAttachment">Dosya / Fotoğraf</label>
                     <input type="file" id="announcementAttachment" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
                     <input type="hidden" id="announcementAttachmentUrl">
                     <input type="hidden" id="announcementAttachmentName">
 
                     <label class="checkbox-row">
                         <input type="checkbox" id="announcementActive" checked>
-                        <span>Aktif olarak yayinla</span>
+                        <span>Aktif olarak yayınla</span>
                     </label>
 
                     <div class="form-actions">
@@ -117,11 +117,11 @@
                         <h2>Yayin Listesi</h2>
                         <p id="announcementCount">0 bildirim</p>
                     </div>
-                    <button type="button" class="btn btn-danger" id="btnClearInactive">Pasifleri Sil</button>
+                        <button type="button" class="btn btn-danger" id="btnClearInactive">Pasifleri Sil</button>
                 </div>
 
                 <div class="ticker-preview">
-                    <span>On izleme</span>
+                    <span>Ön izleme</span>
                     <div id="previewText">Aktif bildirim yok.</div>
                 </div>
 
@@ -130,10 +130,16 @@
         </main>
     </div>
 
-    <script src="js/audit-log.js"></script>
-    <script src="js/bildirim-sheets.js"></script>
-    <script src="js/admin-bildirim.js"></script>
-    <script src="js/global-duyurular.js"></script>
-    <script src="js/logout-system.js"></script>
+
+<script src="js/app-config.js"></script>
+<script src="js/audit-log.js"></script>
+
+<script src="js/bildirim-sheets.js"></script>
+
+<script src="js/admin-bildirim.js"></script>
+
+<script src="js/global-duyurular.js"></script>
+
+<script src="js/logout-system.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-const BildirimSheetsConfig = {
-    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbz9uR24xQeuV85ygxfFiakRRJz601KgaKCgOlHcsuYDjUl5xkR4o3HbIVn-tgVdSnTF/exec'
+﻿const BildirimSheetsConfig = {
+    WEB_APP_URL: window.AppConfig.getScriptUrl('bildirim')
 };
 
 function isBildirimSheetsEnabled() {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Motor Takip - Enerji Yönetim Sistemi</title>
     <link rel="stylesheet" href="css/motor-takip.css">
-    
+
     <link rel="stylesheet" href="css/mobile-system.css">
 </head>
 <body>
@@ -18,86 +18,7 @@
                     <div class="company-name">KOJENERASYON</div>
                 </div>
             </div>
-            <ul class="sidebar-menu">
-                <li class="menu-item">
-                    <a href="anasayfa.html" class="menu-link">
-                        <span class="menu-icon">🏠</span>
-                        <span class="menu-text">Ana Sayfa</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="saatlik-veri-giris.html" class="menu-link">
-                        <span class="menu-icon">📊</span>
-                        <span class="menu-text">Saatlik Veri Girişi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="gunluk-veri-giris.html" class="menu-link">
-                        <span class="menu-icon">📆</span>
-                        <span class="menu-text">Günlük Veri Girişi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="buhar-verisi.html" class="menu-link">
-                        <span class="menu-icon">💨</span>
-                        <span class="menu-text">Buhar Verisi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="vardiya.html" class="menu-link">
-                        <span class="menu-icon">👥</span>
-                        <span class="menu-text">Vardiya Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item active">
-                    <a href="motor-takip.html" class="menu-link">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Motor Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kojen-motor-veri.html" class="menu-link">
-                        <span class="menu-icon">⚙️</span>
-                        <span class="menu-text">Kojen Motor Veri</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kojen-enerji-veri.html" class="menu-link">
-                        <span class="menu-icon">⚡</span>
-                        <span class="menu-text">Kojen Enerji Veri</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="bakim-takibi.html" class="menu-link">
-                        <span class="menu-icon">🔧</span>
-                        <span class="menu-text">Bakım Takibi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="stok-takip.html" class="menu-link">
-                        <span class="menu-icon">📦</span>
-                        <span class="menu-text">Stok Takip</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-menu-item">
-                    <a href="admin-kontrol.html" class="menu-link">
-                        <span class="menu-icon">&#9881;</span>
-                        <span class="menu-text">Merkezi Kontrol</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-menu-item">
-                    <a href="admin-bildirim.html" class="menu-link">
-                        <span class="menu-icon">&#128226;</span>
-                        <span class="menu-text">Bildirim Y&#246;netimi</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="kullanici-yonetimi.html" class="menu-link">
-                        <span class="menu-icon">👤</span>
-                        <span class="menu-text">Kullanıcı Yönetimi</span>
-                    </a>
-                </li>
-            </ul>
+            <ul class="sidebar-menu"></ul>
             <div class="sidebar-footer">
                 <div class="user-info" style="padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
                     <span id="userNameDisplay" style="color: white; font-size: 13px; font-weight: 500;">Yükleniyor...</span>
@@ -116,7 +37,7 @@
                         <h2>KOJENERASYON BÖLÜMÜ</h2>
                     </div>
                     <div class="user-info">
-                        <span class="welcome-text">Hoşgeldin, <span id="userNameDisplay">Y�kleniyor...</span></span>
+                        <span class="welcome-text">Hoşgeldin, <span id="userNameDisplay">Yükleniyor...</span></span>
                         <button class="logout-btn" id="headerLogout">Çıkış Yap</button>
                     </div>
                 </div>
@@ -130,7 +51,7 @@
                         </div>
                         <div class="admin-controls">
                             <button type="button" id="mailToggleBtn" class="mail-toggle-btn" onclick="toggleMotorMailSettings()">
-                                📧 Mail Kapalı
+                                 Mail Kapalı
                             </button>
                         </div>
                     </div>
@@ -146,12 +67,12 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="tracking-date">Tarih</label>
-                                    <input type="date" id="tracking-date" name="tracking-date" 
+                                    <input type="date" id="tracking-date" name="tracking-date"
                                            lang="tr-TR"
                                            value="2026-04-06"
                                            min="2026-01-01"
                                            max="2026-12-31"
-                                           pattern="\d{2}\.\d{2}\.\d{4}" 
+                                           pattern="\d{2}\.\d{2}\.\d{4}"
                                            placeholder="GG.AA.YYYY" required>
                                 </div>
                                 <div class="form-group">
@@ -222,8 +143,8 @@
                     </div>
                 </div>
 
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 
     <!-- Bildirim Modal -->
@@ -248,7 +169,7 @@
                 </div>
                 <div class="notification-item unread">
                     <div class="notification-icon">
-                        🌡️
+
                     </div>
                     <div class="notification-text">
                         <h4>Yüksek Sıcaklık Uyarısı</h4>
@@ -258,7 +179,7 @@
                 </div>
                 <div class="notification-item unread">
                     <div class="notification-icon">
-                        📊
+
                     </div>
                     <div class="notification-text">
                         <h4>Günlük Rapor Hazır</h4>
@@ -270,36 +191,38 @@
         </div>
     </div>
 
+<script src="js/app-config.js"></script>
+<script src="js/sidebar-menu.js"></script>
     <script>
         // Fotoğraf için Google Apps Script URL
-        const FOTO_GAS_URL = 'https://script.google.com/macros/s/AKfycbySQpjSWkHLMppL6lhNTxw0Q1UzM6BAB3Rc4FF3mr3IsDqPUa1vJtA4kexQxkuRoK8Y/exec';
-        
+        const FOTO_GAS_URL = window.AppConfig.getScriptUrl('motorTakip');
+
         // Sayfa yüklendiğinde otomatik tarih ata
         document.addEventListener('DOMContentLoaded', function() {
             setAutoDate();
         });
-        
+
         function setAutoDate() {
             const today = new Date();
             const year = today.getFullYear();
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const day = String(today.getDate()).padStart(2, '0');
             const dateString = `${year}-${month}-${day}`;
-            
+
             const dateInput = document.getElementById('tracking-date');
             if (dateInput) {
                 dateInput.value = dateString;
                 console.log('Otomatik tarih ayarlandı:', dateString);
                 console.log('HTML tarih değeri:', dateInput.value);
                 console.log('Local tarih:', new Date().toLocaleString('tr-TR'));
-                
+
                 // Tarihin değiştirilemesini engelle (isteğe bağlı)
                 dateInput.readOnly = true;
                 dateInput.style.background = '#f8f9fa';
                 dateInput.style.cursor = 'default';
             }
         }
-        
+
         // Form gönderilmeden önce tarih kontrolü
         document.getElementById('motor-tracking-form')?.addEventListener('submit', function(e) {
             // Her gönderimde tarihi güncelle
@@ -307,10 +230,10 @@
             const trackingDate = document.getElementById('tracking-date')?.value;
             console.log('Form gönderilirken tarih:', trackingDate);
         });
-        
+
         let fotoStream = null;
         let isUploading = false;
-        
+
         function showStatus(msg, type) {
             const status = document.getElementById('status');
             status.textContent = msg;
@@ -330,14 +253,14 @@
             const btnLT = document.getElementById('btnLT');
             const btnYag = document.getElementById('btnYag');
             const video = document.getElementById('video');
-            
+
             // Motor seçimi kontrolü
             const motorBtn = document.querySelector('.motor-btn.selected');
             if (!motorBtn) {
                 showStatus('Lütfen önce bir motor seçin!', 'error');
                 return;
             }
-            
+
             try {
                 fotoStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'environment' },
@@ -360,35 +283,35 @@
 
         async function takePhoto(category) {
             if (!fotoStream || isUploading) return;
-            
+
             isUploading = true;
             showStatus(category + ' yükleniyor...', 'success');
-            
+
             const btnHT = document.getElementById('btnHT');
             const btnLT = document.getElementById('btnLT');
             const btnYag = document.getElementById('btnYag');
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
-            
+
             btnHT.disabled = true;
             btnLT.disabled = true;
             btnYag.disabled = true;
-            
+
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
-            
+
             const dataUrl = canvas.toDataURL('image/jpeg', 0.4);
             const timestamp = new Date().toLocaleString('tr-TR');
             const filename = category.replace(/\s+/g, '_') + '_' + Date.now() + '.jpg';
-            
+
             const formData = new FormData();
             formData.append('category', category);
             formData.append('image', dataUrl);
             formData.append('date', timestamp);
             formData.append('filename', filename);
-            
+
             // Form verilerini ekle
             const motorBtn = document.querySelector('.motor-btn.selected');
             const motor = motorBtn ? motorBtn.dataset.motor : '';
@@ -396,56 +319,56 @@
             const shift = document.getElementById('shift')?.value || '';
             const trackingDate = document.getElementById('tracking-date')?.value || '';
             const trackingTime = document.getElementById('tracking-time')?.value || '';
-            
-            // 🔒 ZORUNLU ALAN KONTROLÜ
+
+            //  ZORUNLU ALAN KONTROLÜ
             if (!motor) {
                 alert('⚠️ Lütfen önce motor seçin (GM-1, GM-2 veya GM-3)!');
                 return;
             }
-            
+
             if (!operator) {
                 alert('⚠️ Lütfen operatör seçin!');
                 document.getElementById('operator').focus();
                 return;
             }
-            
+
             if (!shift) {
                 alert('⚠️ Lütfen vardiya seçin!');
                 document.getElementById('shift').focus();
                 return;
             }
-            
+
             // TR formatına çevir (DD.MM.YYYY)
             const [year, month, day] = trackingDate.split('-');
             const trackingDateTR = day && month && year ? `${day}.${month}.${year}` : trackingDate;
-            
+
             formData.append('motor', motor);
             formData.append('operator', operator);
             formData.append('shift', shift);
             formData.append('trackingDate', trackingDateTR);
             formData.append('trackingTime', trackingTime);
-            
+
             // DEBUG: FormData içeriğini göster
             console.log("GÖNDERİLEN DATA DETAYLI:");
             for (let [key, value] of formData.entries()) {
                 console.log(key + ": " + value);
             }
             console.log("GÖNDERİLEN DATA ARRAY:", [...formData.entries()]);
-            
+
             try {
                 const response = await fetch(FOTO_GAS_URL, {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const result = await response.json();
-                
+
                 console.log("GAS'TAN GELEN YANIT:", result);
                 console.log("GAS YANIT SUCCESS:", result.success);
                 console.log("GAS YANIT DUPLICATE:", result.duplicate);
                 console.log("GAS YANIT ERROR:", result.error);
                 console.log("GAS YANIT EXISTING:", result.existingKayitNo);
-                
+
                 if (result.success) {
                     // Sadece Apps Script kaydı - LocalStorage devre dışı
                     const photo = {
@@ -455,7 +378,7 @@
                         date: timestamp,
                         synced: true
                     };
-                    
+
                     showStatus(category + ' başarıyla yüklendi! (Drive/Sheets)', 'success');
                     addToGallery(photo);
                 } else if (result.duplicate) {
@@ -465,7 +388,7 @@
                 } else {
                     showStatus('GAS hatası: ' + (result.message || result.error || 'Bilinmeyen hata'), 'error');
                 }
-                
+
             } catch (err) {
                 showStatus('Yükleme hatası: ' + err.message, 'error');
             } finally {
@@ -491,16 +414,16 @@
 
         function renderGallery() {
             const gallery = document.getElementById('gallery');
-            
+
             if (sessionPhotos.length === 0) {
                 gallery.innerHTML = '<div class="empty" style="text-align: center; color: #666; padding: 40px;">Henüz fotoğraf çekilmedi</div>';
                 return;
             }
-            
+
             gallery.innerHTML = sessionPhotos.map(photo => {
-                const catClass = photo.category === 'HT' ? 'cat-ht' : 
+                const catClass = photo.category === 'HT' ? 'cat-ht' :
                                 photo.category === 'LT' ? 'cat-lt' : 'cat-yag';
-                const bgColor = photo.category === 'HT' ? '#e74c3c' : 
+                const bgColor = photo.category === 'HT' ? '#e74c3c' :
                                photo.category === 'LT' ? '#3498db' : '#f39c12';
                 return `
                     <div class="photo-card" style="background: #16213e; border-radius: 12px; overflow: hidden;">
@@ -517,7 +440,7 @@
 
         // Sayfa yüklendiğinde boş galeri
         window.addEventListener('load', renderGallery);
-        
+
         // HIZLI TEST FONKSİYONU - Console'dan çalıştır: testGAS()
         function testGAS() {
             console.log("Testing GAS...");
@@ -539,7 +462,8 @@
         }
     </script>
 
-    <script src="js/motor-takip.js"></script>
+
+<script src="js/motor-takip.js"></script>
     <script>
         (function displayUserName() {
             const logged = localStorage.getItem('loggedInUser');
@@ -554,9 +478,13 @@
             } else if (display) { display.textContent = 'Misafir'; }
         })();
     </script>
-    <script src="js/global-duyurular.js"></script>
-    <script src="js/auto-refresh.js"></script>
-    <script src="js/admin-menu-visibility.js"></script>
-    <script src="js/logout-system.js"></script>
+
+<script src="js/global-duyurular.js"></script>
+
+<script src="js/auto-refresh.js"></script>
+
+<script src="js/admin-menu-visibility.js"></script>
+
+<script src="js/logout-system.js"></script>
 </body>
 </html>

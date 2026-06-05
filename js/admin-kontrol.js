@@ -1,13 +1,4 @@
-﻿const AdminControlConfig = {
-    saatlik: 'https://script.google.com/macros/s/AKfycbzzpkF4RJJ46d9A9518oxSwGaeuSgw-VHodQ5hjCApqb1H0FuIEnYNsqGOSdWXf9Yc/exec',
-    motor: 'https://script.google.com/macros/s/AKfycbzWnHTk--4bdTxPPTsRco5edkSH0jqnoLEHjhh8zH2TjIQU2YHU--81AGEZnbwnPhcV/exec',
-    enerji: 'https://script.google.com/macros/s/AKfycbwGuDzkg9lZm_YD3dsYq0P9r-CvB-hrOYZta0WWF_8UwFEJphBboJ-OvnAWkHQP1qux/exec',
-    buhar: 'https://script.google.com/macros/s/AKfycbzfyTZBsaswmpE2n-pWQScgnQW3EIqy8oteTXurwK5umzyvGR9YGN30w-XQYqzgyKAG/exec',
-    gunluk: 'https://script.google.com/macros/s/AKfycbxWz5Ea81m_kJ8TybTaowHlNqdAZeK2dQ70pJWPDTVm_ooAwnnO6nOlN5ZBIPnZLRmK/exec',
-    bakim: 'https://script.google.com/macros/s/AKfycbzWnHTk--4bdTxPPTsRco5edkSH0jqnoLEHjhh8zH2TjIQU2YHU--81AGEZnbwnPhcV/exec',
-    vardiya: 'https://script.google.com/macros/s/AKfycbygGjbmXyFU7jzsWpZS8DlyB6JDFTB8KG89wqNoh6Ha5g4bLun5krcgYGkaAEJq2IBV/exec',
-    bildirim: 'https://script.google.com/macros/s/AKfycbz9uR24xQeuV85ygxfFiakRRJz601KgaKCgOlHcsuYDjUl5xkR4o3HbIVn-tgVdSnTF/exec'
-};
+﻿const AdminControlConfig = window.AppConfig ? window.AppConfig.SCRIPT_URLS : {};
 
 const AdminControlLabels = {
     saatlik: 'Saatlik Veri',
@@ -165,18 +156,70 @@ async function loadDeferredAdminData() {
 }
 
 async function fetchJson(baseUrl, params) {
+    let urlText = baseUrl || '';
     try {
+        if (!baseUrl) {
+            return { success: false, error: 'Servis URL tanimli degil' };
+        }
+
         const url = new URL(baseUrl);
         Object.keys(params).forEach(key => url.searchParams.set(key, params[key]));
+        urlText = url.toString();
         const response = await fetch(url);
-        const result = await response.json();
-        if (!result.success) {
-            return { success: false, error: result.error || 'Servis hatasi' };
+        const contentType = response.headers.get('content-type') || '';
+        const text = await response.text();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: `HTTP ${response.status}: ${extractServiceError(text)}`,
+                url: urlText
+            };
         }
-        return result;
+
+        if (contentType.indexOf('application/json') === -1 && text.trim().charAt(0) !== '{' && text.trim().charAt(0) !== '[') {
+            return {
+                success: false,
+                error: extractServiceError(text),
+                url: urlText
+            };
+        }
+
+        const result = JSON.parse(text);
+        if (!result.success) {
+            return { success: false, error: result.error || 'Servis hatasi', url: urlText, service: result.service || '' };
+        }
+        return { ...result, url: urlText };
     } catch (error) {
-        return { success: false, error: error.message || String(error) };
+        return { success: false, error: formatFetchError(error, urlText), url: urlText };
     }
+}
+
+function formatFetchError(error, urlText) {
+    const message = error && error.message ? error.message : String(error);
+    const detail = message === 'Failed to fetch'
+        ? 'Servisten JSON alinamadi. Apps Script deployment hata/izin sayfasi donduruyor olabilir.'
+        : message;
+    return urlText ? `${detail} (${urlText})` : detail;
+}
+
+function extractServiceError(text) {
+    const raw = String(text || '').trim();
+    if (!raw) return 'Bos servis cevabi';
+
+    const referenceMatch = raw.match(/ReferenceError:[^<]+/i);
+    if (referenceMatch) return referenceMatch[0].replace(/&quot;/g, '"');
+
+    const htmlText = raw
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&quot;/g, '"')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    return (htmlText || raw).substring(0, 220);
 }
 
 async function postCentralLog(action, detail, status = 'info') {
