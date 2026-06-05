@@ -13,6 +13,14 @@ function doPost(e) {
 }
 
 function onEdit(e) {
+  return;
+}
+
+function yearlyEnergyInstallableOnEdit(e) {
+  return handleYearlyEnergyEdit(e);
+}
+
+function handleYearlyEnergyEdit(e) {
   try {
     if (!e || !e.range) return;
 
@@ -50,6 +58,38 @@ function onEdit(e) {
     }
   } catch (error) {
     Logger.log('Yillik enerji onEdit guncelleme hatasi: ' + error.toString());
+  }
+}
+
+function installYearlyEnergyEditTrigger() {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var triggers = ScriptApp.getProjectTriggers();
+    var removed = 0;
+
+    for (var i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() === 'yearlyEnergyInstallableOnEdit') {
+        ScriptApp.deleteTrigger(triggers[i]);
+        removed++;
+      }
+    }
+
+    var trigger = ScriptApp.newTrigger('yearlyEnergyInstallableOnEdit')
+      .forSpreadsheet(spreadsheet)
+      .onEdit()
+      .create();
+
+    return {
+      success: true,
+      spreadsheetName: spreadsheet.getName(),
+      spreadsheetId: spreadsheet.getId(),
+      handler: trigger.getHandlerFunction(),
+      eventType: String(trigger.getEventType()),
+      removedExisting: removed,
+      message: 'Yillik enerji edit tetikleyicisi kuruldu.'
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
   }
 }
 
@@ -125,11 +165,20 @@ function handleRequest(e) {
       case 'updateYearlyEnergySummaryFromExistingSheets':
         result = updateYearlyEnergySummaryFromExistingSheets(params.year);
         break;
+      case 'updateMonthlyEnergyMotorReport':
+        result = updateMonthlyEnergyMotorReport(params.year);
+        break;
+      case 'getMonthlyEnergyMotorReportData':
+        result = getMonthlyEnergyMotorReportData(params.year);
+        break;
       case 'getYearlyEnergyReportData':
         result = getYearlyEnergyReportData(params.year);
         break;
       case 'checkYearlyEnergyManualEditSetup':
         result = checkYearlyEnergyManualEditSetup();
+        break;
+      case 'installYearlyEnergyEditTrigger':
+        result = installYearlyEnergyEditTrigger();
         break;
       case 'testYearlyEnergyManualEditUpdate':
         result = testYearlyEnergyManualEditUpdate(params.motor);
@@ -164,7 +213,7 @@ function handleRequest(e) {
 }
 
 function isWriteAction(action) {
-  return ['updateYearlyEnergyForRecords', 'updateYearlyEnergySheet', 'updateYearlyEnergy2026Sheets', 'updateYearlyEnergySummarySheet', 'updateYearlyEnergySummaryFromExistingSheets', 'testYearlyEnergyManualEditUpdate', 'importYearlyEnergyDigitalRecords', 'createYearlyEnergyHistoricalInputTemplate', 'applyYearlyEnergyTotalRows', 'backupYearlyEnergySheets'].indexOf(action) !== -1;
+  return ['updateYearlyEnergyForRecords', 'updateYearlyEnergySheet', 'updateYearlyEnergy2026Sheets', 'updateYearlyEnergySummarySheet', 'updateYearlyEnergySummaryFromExistingSheets', 'updateMonthlyEnergyMotorReport', 'testYearlyEnergyManualEditUpdate', 'importYearlyEnergyDigitalRecords', 'createYearlyEnergyHistoricalInputTemplate', 'applyYearlyEnergyTotalRows', 'backupYearlyEnergySheets', 'installYearlyEnergyEditTrigger'].indexOf(action) !== -1;
 }
 
 function getApiHealth() {
@@ -179,8 +228,11 @@ function getApiHealth() {
       'updateYearlyEnergy2026Sheets',
       'updateYearlyEnergySummarySheet',
       'updateYearlyEnergySummaryFromExistingSheets',
+      'updateMonthlyEnergyMotorReport',
+      'getMonthlyEnergyMotorReportData',
       'getYearlyEnergyReportData',
       'checkYearlyEnergyManualEditSetup',
+      'installYearlyEnergyEditTrigger',
       'testYearlyEnergyManualEditUpdate',
       'previewYearlyEnergyDigitalImport',
       'importYearlyEnergyDigitalRecords',
@@ -498,12 +550,16 @@ function updateYearlyEnergySheet(year, motor) {
     }
 
     var summaryResult = updateYearlyEnergySummarySheet(targetYear);
+    var monthlyResult = typeof updateMonthlyEnergyMotorReport === 'function'
+      ? updateMonthlyEnergyMotorReport(targetYear)
+      : { success: true, skipped: true, message: 'Aylik enerji motor raporu fonksiyonu bulunamadi.' };
 
     return {
       success: true,
       year: targetYear,
       results: results,
       summary: summaryResult,
+      monthly: monthlyResult,
       message: results.length + ' adet yillik enerji sayfasi guncellendi.'
     };
   } catch (error) {
@@ -864,15 +920,24 @@ function updateYearlyEnergyAfterAddedRecords(addedRecords) {
     }
 
     var results = [];
+    var monthlyYears = {};
     for (var key in grouped) {
       var group = grouped[key];
       var dates = Object.keys(group.dates).sort(function(a, b) {
         return parseEnerjiDateOnly(a).getTime() - parseEnerjiDateOnly(b).getTime();
       });
       results.push(updateYearlyEnergyDayBlocksForYear(group.motor, group.year, dates));
+      monthlyYears[group.year] = true;
     }
 
-    return { success: true, results: results };
+    var monthlyResults = [];
+    for (var yearKey in monthlyYears) {
+      if (typeof updateMonthlyEnergyMotorReport === 'function') {
+        monthlyResults.push(updateMonthlyEnergyMotorReport(parseInt(yearKey, 10)));
+      }
+    }
+
+    return { success: true, results: results, monthlyResults: monthlyResults };
   } catch (error) {
     return { success: false, error: error.toString() };
   }

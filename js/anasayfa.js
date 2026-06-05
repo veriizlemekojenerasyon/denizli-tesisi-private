@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Buhar verisi config
     const BUHAR_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('buhar');
     const KOJEN_ENERJI_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('enerji');
+    const YEARLY_ENERGY_REPORT_URL = window.AppConfig.getScriptUrl('yillikEnerjiRapor');
     const KOJEN_MOTOR_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('motor');
     const BAKIM_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('bakim');
     const SAATLIK_APPS_SCRIPT_URL = window.AppConfig.getScriptUrl('saatlik');
@@ -66,6 +67,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let dashboardSummaryRefreshPromise = null;
     let dashboardMotorCardsRefreshPromise = null;
     let maintenanceTotalRefreshPromise = null;
+    let monthlyEnergyReportCache = null;
+    let monthlyEnergyReportPromise = null;
+    let steamRecordsCache = null;
+    let steamRecordsPromise = null;
+    let maintenanceHistoryCache = null;
+    let maintenanceHistoryPromise = null;
     loadCachedMaintenanceTotal();
     loadCachedMotorData();
     loadCachedSummaryValues();
@@ -1254,20 +1261,601 @@ document.addEventListener('DOMContentLoaded', function() {
         renderAnnouncementModalItems(body, announcements);
     }
 
+    async function openMonthlyEnergyModal() {
+        const modal = document.getElementById('monthlyEnergyModal');
+        const body = document.getElementById('monthlyEnergyModalBody');
+        const subtitle = document.getElementById('monthlyEnergyModalSubtitle');
+        if (!modal || !body) return;
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        body.innerHTML = renderEnergyLoadingState('Aylik enerji raporu yukleniyor...');
+        if (subtitle) subtitle.textContent = `${new Date().getFullYear()} yili GM uretim, calisma ve kalkis ozeti`;
+
+        try {
+            const report = await loadMonthlyEnergyReport();
+            renderMonthlyEnergyReport(body, report);
+            if (subtitle) {
+                subtitle.textContent = `${report.year} yili GM uretim, calisma ve kalkis ozeti`;
+            }
+        } catch (error) {
+            console.error('Aylik enerji raporu yuklenemedi:', error);
+            body.innerHTML = `<div class="monthly-energy-state">${escapeHtml(error.message || 'Aylik enerji raporu alinamadi.')}</div>`;
+        }
+    }
+
+    function closeMonthlyEnergyModal() {
+        const modal = document.getElementById('monthlyEnergyModal');
+        if (!modal) return;
+        if (modal.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    async function loadMonthlyEnergyReport() {
+        if (monthlyEnergyReportCache) return monthlyEnergyReportCache;
+        if (monthlyEnergyReportPromise) return monthlyEnergyReportPromise;
+        if (!YEARLY_ENERGY_REPORT_URL) {
+            throw new Error('Yillik enerji rapor API adresi bulunamadi.');
+        }
+
+        monthlyEnergyReportPromise = (async () => {
+            const url = new URL(YEARLY_ENERGY_REPORT_URL);
+            url.searchParams.set('action', 'getMonthlyEnergyMotorReportData');
+            url.searchParams.set('year', String(new Date().getFullYear()));
+
+            const response = await fetch(url.toString(), { method: 'GET', mode: 'cors', cache: 'no-cache' });
+            const result = await response.json();
+            if (!result.success) {
+                if (isInvalidActionError(result.error || result.message)) {
+                    return buildMonthlyEnergyReportFromEnergyRecords(new Date().getFullYear());
+                }
+                throw new Error(result.error || result.message || 'Aylik enerji raporu alinamadi.');
+            }
+            monthlyEnergyReportCache = result;
+            return result;
+        })();
+
+        try {
+            return await monthlyEnergyReportPromise;
+        } finally {
+            monthlyEnergyReportPromise = null;
+        }
+    }
+
+    function isInvalidActionError(message) {
+        const text = normalizeText(message || '');
+        return text.includes('gecersiz') || text.includes('invalid');
+    }
+
+    async function buildMonthlyEnergyReportFromEnergyRecords(year) {
+        const url = new URL(KOJEN_ENERJI_APPS_SCRIPT_URL);
+        url.searchParams.set('action', 'getRecords');
+
+        const response = await fetch(url.toString(), { method: 'GET', mode: 'cors', cache: 'no-cache' });
+        const result = await response.json();
+        if (!result.success || !Array.isArray(result.data)) {
+            throw new Error(result.error || result.message || 'Kojen enerji kayitlari alinamadi.');
+        }
+
+        const motors = ['GM-1', 'GM-2', 'GM-3'];
+        const recordsByMotor = {};
+        motors.forEach(motor => {
+            recordsByMotor[motor] = [];
+        });
+
+        result.data.forEach(record => {
+            const motor = normalizeMotorLabelForReport(record.motor);
+            if (!recordsByMotor[motor]) return;
+            const timestamp = parseDashboardDateTime(record.tarih, record.saat);
+            if (!Number.isFinite(timestamp)) return;
+            const date = new Date(timestamp);
+            if (date.getFullYear() < year - 1 || date.getFullYear() > year) return;
+            recordsByMotor[motor].push({
+                timestamp,
+                tarih: normalizeDashboardDate(record.tarih),
+                saat: normalizeDashboardHour(record.saat),
+                toplamAktifEnerji: parseDashboardNumber(record.toplamAktifEnerji),
+                calismaSaati: parseDashboardNumber(record.calismaSaati),
+                kalkisSayisi: parseDashboardNumber(record.kalkisSayisi)
+            });
+        });
+
+        motors.forEach(motor => {
+            recordsByMotor[motor].sort((a, b) => a.timestamp - b.timestamp);
+        });
+
+        const months = [];
+        for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+            const startDate = new Date(year, monthIndex, 1, 0, 0, 0, 0);
+            const endDate = new Date(year, monthIndex + 1, 1, 0, 0, 0, 0);
+            const month = {
+                monthIndex,
+                monthName: getReportMonthName(monthIndex),
+                startDate: formatDashboardDateTR(startDate),
+                endDate: formatDashboardDateTR(new Date(year, monthIndex + 1, 0)),
+                motors: {},
+                total: { productionMwh: 0, hours: 0, starts: 0, recordCount: 0 }
+            };
+
+            motors.forEach(motor => {
+                const metric = calculateMonthlyMetricFromRecords(recordsByMotor[motor], startDate.getTime(), endDate.getTime());
+                month.motors[motor] = metric;
+                month.total.productionMwh += metric.productionMwh;
+                month.total.hours += metric.hours;
+                month.total.starts += metric.starts;
+                month.total.recordCount += metric.recordCount;
+            });
+
+            months.push(month);
+        }
+
+        return {
+            success: true,
+            source: 'kojen-energy-records',
+            year,
+            generatedAt: formatDashboardDateTR(new Date()),
+            motors,
+            months
+        };
+    }
+
+    function calculateMonthlyMetricFromRecords(records, startTime, endTime) {
+        let baseline = null;
+        let firstInPeriod = null;
+        let lastInPeriod = null;
+        let count = 0;
+
+        (records || []).forEach(record => {
+            if (record.timestamp < startTime) {
+                baseline = record;
+                return;
+            }
+            if (record.timestamp >= endTime) return;
+            if (!firstInPeriod) firstInPeriod = record;
+            lastInPeriod = record;
+            count++;
+        });
+
+        if (!lastInPeriod) {
+            return { productionMwh: 0, hours: 0, starts: 0, recordCount: 0 };
+        }
+
+        const startRecord = baseline || firstInPeriod;
+        return {
+            productionMwh: Math.max(0, lastInPeriod.toplamAktifEnerji - startRecord.toplamAktifEnerji),
+            hours: Math.max(0, lastInPeriod.calismaSaati - startRecord.calismaSaati),
+            starts: Math.max(0, lastInPeriod.kalkisSayisi - startRecord.kalkisSayisi),
+            recordCount: count
+        };
+    }
+
+    function normalizeMotorLabelForReport(value) {
+        const text = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+        const match = text.match(/GM-?(\d+)$/);
+        return match ? `GM-${match[1]}` : text;
+    }
+
+    function parseDashboardDateTime(tarih, saat) {
+        const dateText = normalizeDashboardDate(tarih);
+        const parts = dateText.split('.');
+        if (parts.length !== 3) return NaN;
+        const hourText = normalizeDashboardHour(saat);
+        const hourParts = hourText.split(':');
+        return new Date(
+            parseInt(parts[2], 10),
+            parseInt(parts[1], 10) - 1,
+            parseInt(parts[0], 10),
+            parseInt(hourParts[0] || '0', 10),
+            parseInt(hourParts[1] || '0', 10)
+        ).getTime();
+    }
+
+    function getReportMonthName(monthIndex) {
+        return ['Ocak', 'Subat', 'Mart', 'Nisan', 'Mayis', 'Haziran', 'Temmuz', 'Agustos', 'Eylul', 'Ekim', 'Kasim', 'Aralik'][monthIndex] || '';
+    }
+
+    function renderMonthlyEnergyReport(body, report) {
+        const months = Array.isArray(report.months) ? report.months : [];
+        if (!months.length) {
+            body.innerHTML = '<div class="monthly-energy-state">Aylik rapor verisi bulunamadi.</div>';
+            return;
+        }
+
+        const totals = calculateMonthlyReportTotals(months);
+        body.innerHTML = [
+            '<div class="monthly-energy-summary">',
+            renderMonthlySummaryItem('Yillik Uretim', `${formatDashboardNumber(totals.productionMwh, 1)} MWh`),
+            renderMonthlySummaryItem('Calisma Saati', `${formatDashboardNumber(totals.hours, 1)} saat`),
+            renderMonthlySummaryItem('Kalkis Sayisi', `${formatDashboardNumber(totals.starts, 0)} adet`),
+            '</div>',
+            '<div class="monthly-energy-table-wrap">',
+            '<table class="monthly-energy-table">',
+            '<thead><tr>',
+            '<th>Ay</th>',
+            '<th>GM-1 MWh</th><th>GM-1 Saat</th><th>GM-1 Kalkis</th>',
+            '<th>GM-2 MWh</th><th>GM-2 Saat</th><th>GM-2 Kalkis</th>',
+            '<th>GM-3 MWh</th><th>GM-3 Saat</th><th>GM-3 Kalkis</th>',
+            '<th>Toplam MWh</th><th>Toplam Saat</th><th>Toplam Kalkis</th>',
+            '</tr></thead>',
+            '<tbody>',
+            months.map(renderMonthlyEnergyRow).join(''),
+            '</tbody>',
+            '<tfoot>',
+            renderMonthlyTotalRow(totals),
+            '</tfoot>',
+            '</table>',
+            '</div>'
+        ].join('');
+    }
+
+    function renderMonthlySummaryItem(label, value) {
+        return [
+            '<div class="monthly-energy-summary__item">',
+            `<span class="monthly-energy-summary__label">${escapeHtml(label)}</span>`,
+            `<span class="monthly-energy-summary__value">${escapeHtml(value)}</span>`,
+            '</div>'
+        ].join('');
+    }
+
+    function renderMonthlyEnergyRow(month) {
+        const gm1 = getMonthlyMotorMetric(month, 'GM-1');
+        const gm2 = getMonthlyMotorMetric(month, 'GM-2');
+        const gm3 = getMonthlyMotorMetric(month, 'GM-3');
+        const total = month.total || {};
+        return [
+            '<tr>',
+            `<td>${escapeHtml(month.monthName || '')}</td>`,
+            renderMonthlyMetricCells(gm1),
+            renderMonthlyMetricCells(gm2),
+            renderMonthlyMetricCells(gm3),
+            `<td>${formatDashboardNumber(parseDashboardNumber(total.productionMwh), 1)}</td>`,
+            `<td>${formatDashboardNumber(parseDashboardNumber(total.hours), 1)}</td>`,
+            `<td>${formatDashboardNumber(parseDashboardNumber(total.starts), 0)}</td>`,
+            '</tr>'
+        ].join('');
+    }
+
+    function renderMonthlyMetricCells(metric) {
+        return [
+            `<td>${formatDashboardNumber(parseDashboardNumber(metric.productionMwh), 1)}</td>`,
+            `<td>${formatDashboardNumber(parseDashboardNumber(metric.hours), 1)}</td>`,
+            `<td>${formatDashboardNumber(parseDashboardNumber(metric.starts), 0)}</td>`
+        ].join('');
+    }
+
+    function renderMonthlyTotalRow(totals) {
+        return [
+            '<tr>',
+            '<td>YIL TOPLAMI</td>',
+            renderMonthlyMetricCells(totals.motors['GM-1']),
+            renderMonthlyMetricCells(totals.motors['GM-2']),
+            renderMonthlyMetricCells(totals.motors['GM-3']),
+            `<td>${formatDashboardNumber(totals.productionMwh, 1)}</td>`,
+            `<td>${formatDashboardNumber(totals.hours, 1)}</td>`,
+            `<td>${formatDashboardNumber(totals.starts, 0)}</td>`,
+            '</tr>'
+        ].join('');
+    }
+
+    function calculateMonthlyReportTotals(months) {
+        const totals = {
+            productionMwh: 0,
+            hours: 0,
+            starts: 0,
+            motors: {
+                'GM-1': { productionMwh: 0, hours: 0, starts: 0 },
+                'GM-2': { productionMwh: 0, hours: 0, starts: 0 },
+                'GM-3': { productionMwh: 0, hours: 0, starts: 0 }
+            }
+        };
+
+        months.forEach(month => {
+            ['GM-1', 'GM-2', 'GM-3'].forEach(motor => {
+                const metric = getMonthlyMotorMetric(month, motor);
+                totals.motors[motor].productionMwh += parseDashboardNumber(metric.productionMwh);
+                totals.motors[motor].hours += parseDashboardNumber(metric.hours);
+                totals.motors[motor].starts += parseDashboardNumber(metric.starts);
+            });
+            totals.productionMwh += parseDashboardNumber(month.total?.productionMwh);
+            totals.hours += parseDashboardNumber(month.total?.hours);
+            totals.starts += parseDashboardNumber(month.total?.starts);
+        });
+
+        return totals;
+    }
+
+    function getMonthlyMotorMetric(month, motor) {
+        return month?.motors?.[motor] || { productionMwh: 0, hours: 0, starts: 0 };
+    }
+
+    async function openSteamDataModal() {
+        const modal = document.getElementById('steamDataModal');
+        const body = document.getElementById('steamDataModalBody');
+        const subtitle = document.getElementById('steamDataModalSubtitle');
+        if (!modal || !body) return;
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        body.innerHTML = renderEnergyLoadingState('Buhar kayitlari yukleniyor...');
+        if (subtitle) subtitle.textContent = 'Son 32 buhar kaydi';
+
+        try {
+            const records = await loadSteamRecords();
+            renderSteamDataReport(body, records);
+            if (subtitle) {
+                subtitle.textContent = records.length ? `Son ${records.length} buhar kaydi` : 'Buhar kaydi bulunamadi';
+            }
+        } catch (error) {
+            console.error('Buhar kayitlari yuklenemedi:', error);
+            body.innerHTML = `<div class="monthly-energy-state">${escapeHtml(error.message || 'Buhar kayitlari alinamadi.')}</div>`;
+        }
+    }
+
+    function closeSteamDataModal() {
+        const modal = document.getElementById('steamDataModal');
+        if (!modal) return;
+        if (modal.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    async function loadSteamRecords() {
+        if (steamRecordsCache) return steamRecordsCache;
+        if (steamRecordsPromise) return steamRecordsPromise;
+        if (!BUHAR_APPS_SCRIPT_URL) {
+            throw new Error('Buhar API adresi bulunamadi.');
+        }
+
+        steamRecordsPromise = (async () => {
+            const url = new URL(BUHAR_APPS_SCRIPT_URL);
+            url.searchParams.set('action', 'getLastRecords');
+            url.searchParams.set('count', '32');
+
+            const response = await fetch(url.toString(), { method: 'GET', mode: 'cors', cache: 'no-cache' });
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.error || result.message || 'Buhar kayitlari alinamadi.');
+            }
+            steamRecordsCache = Array.isArray(result.data) ? result.data : [];
+            return steamRecordsCache;
+        })();
+
+        try {
+            return await steamRecordsPromise;
+        } finally {
+            steamRecordsPromise = null;
+        }
+    }
+
+    function renderSteamDataReport(body, records) {
+        const list = Array.isArray(records) ? records : [];
+        if (!list.length) {
+            body.innerHTML = '<div class="monthly-energy-state">Buhar kaydi bulunamadi.</div>';
+            return;
+        }
+
+        const latest = list[0] || {};
+        const total = list.reduce((sum, record) => sum + parseDashboardNumber(record.buharMiktari), 0);
+        const average = list.length ? total / list.length : 0;
+
+        body.innerHTML = [
+            '<div class="steam-data-summary">',
+            renderMonthlySummaryItem('Son Deger', `${formatDashboardNumber(parseDashboardNumber(latest.buharMiktari), 2)} Ton`),
+            renderMonthlySummaryItem('Kayit Sayisi', `${list.length} gun`),
+            renderMonthlySummaryItem('Ortalama', `${formatDashboardNumber(average, 2)} Ton`),
+            '</div>',
+            '<div class="monthly-energy-table-wrap">',
+            '<table class="steam-data-table">',
+            '<thead><tr><th>#</th><th>Tarih</th><th>Buhar (Ton)</th><th>Kaydeden</th><th>Kayit Zamani</th></tr></thead>',
+            '<tbody>',
+            list.map(renderSteamDataRow).join(''),
+            '</tbody>',
+            '</table>',
+            '</div>'
+        ].join('');
+    }
+
+    function renderSteamDataRow(record, index) {
+        return [
+            '<tr>',
+            `<td>${index + 1}</td>`,
+            `<td>${escapeHtml(normalizeDashboardDate(record.tarih || '-'))}</td>`,
+            `<td>${formatDashboardNumber(parseDashboardNumber(record.buharMiktari), 2)}</td>`,
+            `<td>${escapeHtml(record.kaydeden || '-')}</td>`,
+            `<td>${escapeHtml(record.kayitTarihi || record.kayitZamani || '-')}</td>`,
+            '</tr>'
+        ].join('');
+    }
+
+    async function openMaintenanceHistoryModal() {
+        const modal = document.getElementById('maintenanceHistoryModal');
+        const body = document.getElementById('maintenanceHistoryModalBody');
+        const subtitle = document.getElementById('maintenanceHistoryModalSubtitle');
+        if (!modal || !body) return;
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        body.innerHTML = renderEnergyLoadingState('Bakim kayitlari yukleniyor...');
+        if (subtitle) subtitle.textContent = 'Son 100 bakim kaydi';
+
+        try {
+            const report = await loadMaintenanceHistoryReport();
+            renderMaintenanceHistoryReport(body, report);
+            if (subtitle) {
+                const count = Array.isArray(report.records) ? report.records.length : 0;
+                subtitle.textContent = count ? `Son ${count} bakim kaydi` : 'Bakim kaydi bulunamadi';
+            }
+        } catch (error) {
+            console.error('Bakim gecmisi yuklenemedi:', error);
+            body.innerHTML = `<div class="monthly-energy-state">${escapeHtml(error.message || 'Bakim gecmisi alinamadi.')}</div>`;
+        }
+    }
+
+    function closeMaintenanceHistoryModal() {
+        const modal = document.getElementById('maintenanceHistoryModal');
+        if (!modal) return;
+        if (modal.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    async function loadMaintenanceHistoryReport() {
+        if (maintenanceHistoryCache) return maintenanceHistoryCache;
+        if (maintenanceHistoryPromise) return maintenanceHistoryPromise;
+        if (!BAKIM_APPS_SCRIPT_URL) {
+            throw new Error('Bakim API adresi bulunamadi.');
+        }
+
+        maintenanceHistoryPromise = (async () => {
+            const url = new URL(BAKIM_APPS_SCRIPT_URL);
+            url.searchParams.set('action', 'getReport');
+            url.searchParams.set('range', 'all');
+            url.searchParams.set('limit', '100');
+            url.searchParams.set('skipSummary', '1');
+            url.searchParams.set('fast', '1');
+
+            const response = await fetch(url.toString(), { method: 'GET', mode: 'cors', cache: 'no-cache' });
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.error || result.message || 'Bakim gecmisi alinamadi.');
+            }
+            maintenanceHistoryCache = result;
+            return result;
+        })();
+
+        try {
+            return await maintenanceHistoryPromise;
+        } finally {
+            maintenanceHistoryPromise = null;
+        }
+    }
+
+    function renderMaintenanceHistoryReport(body, report) {
+        const records = Array.isArray(report.records) ? report.records : [];
+        if (!records.length) {
+            body.innerHTML = '<div class="monthly-energy-state">Bakim kaydi bulunamadi.</div>';
+            return;
+        }
+
+        const totals = records.reduce((acc, record) => {
+            const type = normalizeText(record.type || '');
+            if (type.includes('ariza')) acc.fault++;
+            else if (type.includes('periyodik')) acc.periodic++;
+            else acc.normal++;
+            return acc;
+        }, { periodic: 0, normal: 0, fault: 0 });
+
+        body.innerHTML = [
+            '<div class="steam-data-summary">',
+            renderMonthlySummaryItem('Toplam Kayit', `${records.length} form`),
+            renderMonthlySummaryItem('Periyodik', `${totals.periodic} form`),
+            renderMonthlySummaryItem('Ariza', `${totals.fault} form`),
+            '</div>',
+            '<div class="monthly-energy-table-wrap">',
+            '<table class="maintenance-history-table">',
+            '<thead><tr><th>Kayıt No</th><th>Tarih</th><th>Saat</th><th>Motor</th><th>Tür</th><th>İşlem</th><th>Sorumlu</th><th>Durum</th><th>Açıklama</th></tr></thead>',
+            '<tbody>',
+            records.map(renderMaintenanceHistoryRow).join(''),
+            '</tbody>',
+            '</table>',
+            '</div>'
+        ].join('');
+    }
+
+    function renderMaintenanceHistoryRow(record) {
+        const typeText = record.type || '-';
+        const typeClass = getMaintenanceHistoryTypeClass(typeText);
+        return [
+            '<tr>',
+            `<td>${escapeHtml(record.recordNo || '-')}</td>`,
+            `<td>${escapeHtml(record.date || '-')}</td>`,
+            `<td>${escapeHtml(record.time || '-')}</td>`,
+            `<td>${escapeHtml(record.motor || '-')}</td>`,
+            `<td><span class="maintenance-history-badge ${typeClass}">${escapeHtml(typeText)}</span></td>`,
+            `<td>${escapeHtml(record.subtype || record.operation || '-')}</td>`,
+            `<td>${escapeHtml(record.technician || '-')}</td>`,
+            `<td>${escapeHtml(record.status || '-')}</td>`,
+            `<td class="maintenance-history-table__note">${escapeHtml(record.notes || '-')}</td>`,
+            '</tr>'
+        ].join('');
+    }
+
+    function getMaintenanceHistoryTypeClass(typeText) {
+        const type = normalizeText(typeText || '');
+        if (type.includes('ariza')) return 'maintenance-history-badge--fault';
+        if (type.includes('periyodik')) return 'maintenance-history-badge--periodic';
+        return '';
+    }
+
+    function renderEnergyLoadingState(message) {
+        return [
+            '<div class="monthly-energy-state monthly-energy-state--loading">',
+            '<div class="energy-loading-icon" aria-hidden="true">⚡</div>',
+            `<div>${escapeHtml(message)}</div>`,
+            '</div>'
+        ].join('');
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     document.querySelectorAll('[data-close-announcements]').forEach(item => {
         item.addEventListener('click', closeAnnouncementModal);
+    });
+
+    document.querySelectorAll('[data-close-monthly-energy]').forEach(item => {
+        item.addEventListener('click', closeMonthlyEnergyModal);
+    });
+
+    document.querySelectorAll('[data-close-steam-data]').forEach(item => {
+        item.addEventListener('click', closeSteamDataModal);
+    });
+
+    document.querySelectorAll('[data-close-maintenance-history]').forEach(item => {
+        item.addEventListener('click', closeMaintenanceHistoryModal);
     });
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeAnnouncementModal();
+            closeMonthlyEnergyModal();
+            closeSteamDataModal();
+            closeMaintenanceHistoryModal();
         }
     });
 
     function openSummaryCard(card) {
+        if (card.dataset.target === 'monthly-energy-report') {
+            openMonthlyEnergyModal();
+            return;
+        }
+
+        if (card.dataset.target === 'steam-records') {
+            openSteamDataModal();
+            return;
+        }
+
         if (card.classList.contains('maintenance') || card.dataset.target === 'maintenance-history') {
-            sessionStorage.setItem('maintenanceHistoryView', '1');
-            window.location.href = 'bakim-takibi.html#detayli-bakim-gecmisi';
+            openMaintenanceHistoryModal();
             return;
         }
 

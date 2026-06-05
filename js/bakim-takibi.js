@@ -7,6 +7,10 @@ function isOperatorHistoryOnlyView() {
     return document.body.classList.contains('operator-history-view');
 }
 
+function shouldUseFastMaintenanceHistory() {
+    return isOperatorHistoryOnlyView() || sessionStorage.getItem('maintenanceHistoryFastOpen') === '1';
+}
+
 // Sistem başlatma fonksiyonu
 async function initializeSystem() {
     try {
@@ -1586,6 +1590,9 @@ class MaintenanceReporter {
             url.searchParams.append('range', dateRange);
             url.searchParams.append('limit', String(recordLimit));
             url.searchParams.append('skipSummary', '1');
+            if (shouldUseFastMaintenanceHistory() && dateRange === 'all' && !motor && !type) {
+                url.searchParams.append('fast', '1');
+            }
             console.log('URL:', url.toString());
             
             const response = await fetch(url, { method: 'GET', cache: 'no-cache' });
@@ -1659,8 +1666,11 @@ class MaintenanceReporter {
         if (!tbody) return;
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="no-data">
-                    <i class="fas fa-spinner fa-spin"></i> Bakim kayitlari yukleniyor...
+                <td colspan="6" class="no-data maintenance-loading-cell">
+                    <div class="maintenance-loading-state">
+                        <div class="energy-loading-icon" aria-hidden="true">⚡</div>
+                        <div>Bakim kayitlari yukleniyor...</div>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1894,7 +1904,7 @@ function openDetailedMaintenanceHistoryFromHash() {
         if (maintenanceReporter) {
             maintenanceReporter.generateReport();
         }
-    }, 500);
+    }, 0);
 }
 
 // Aktif Kayıtlar Yönetimi - Listeleme ve Kapatma

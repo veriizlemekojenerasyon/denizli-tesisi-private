@@ -119,7 +119,8 @@ async function saveEnerjiToSheets(data) {
             saat: data.saat || '',
             motor: data.motor || '',
             kaydeden: data.kaydeden || 'Admin',
-            durum: data.durum || 'NORMAL'
+            durum: data.durum || 'NORMAL',
+            skipYearlyUpdate: 'true'
         });
         // Motor calismiyor durumunda diger veriler 0, ama son degerler korunur
         const durumText = String(data.durum || '').toUpperCase()
@@ -453,7 +454,7 @@ async function addMultipleEnerjiRecords(records) {
         
         const urlParams = new URLSearchParams({
             action: 'addMultipleRecords',
-            data: JSON.stringify(records)
+            data: JSON.stringify(records.map(record => ({ ...record, skipYearlyUpdate: 'true' })))
         });
         
         const response = await fetch(url, {

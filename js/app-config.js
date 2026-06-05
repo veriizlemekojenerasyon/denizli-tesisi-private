@@ -9,7 +9,7 @@
         yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbx07VTw0WJCUnv6ofspEQ7qfeJ9gcQwE70jybV8p13JfI8VaOTxBFiE66-_QfKU0ucn/exec',
         buhar: 'https://script.google.com/macros/s/AKfycbwDlfLp36QguZqRH7_PYtSjWUJihU2dTxodkKiW58rhcK41jtvpS0NKnlw9kBBnZnTJ/exec',
         gunluk: 'https://script.google.com/macros/s/AKfycby-PF0-EVC4PJTNgxm6P09lda_v1DA1SmBGiB4JD3gSg34QKzXN0LT9zKHVXwgDbLB6/exec',
-        bakim: 'https://script.google.com/macros/s/AKfycbz80xKHGXYM358T1QLjT4JNDPFcvZ8UPN0fbsXY9JXD0oZzYVfNxN_xsLdykWFXmCH5/exec',
+        bakim: 'https://script.google.com/macros/s/AKfycbyXhYSqiam0mI-CUXPLdMlZ1nRtJNev1S3sGPXsrz0sE0gTevsxoBsWnBaw77WMmF6p/exec',
         vardiya: 'https://script.google.com/macros/s/AKfycbxZE7LNlZRCbjI0PehXQN8-jhTyj5t735inYQ5b2ti6xN_ZNG23EASAbvf2SQUNCjat/exec',
         bildirim: 'https://script.google.com/macros/s/AKfycbwyDx3x8B28pDAd9ala4WfC40DlNPyqTmc9wUfV8Dxd_Ux7Pvq_PZmE1hTkdUSqR5P-/exec',
         kullanici: 'https://script.google.com/macros/s/AKfycbyUApo62cwpr6dZxOXv-Cyt2deGGiw3Eos_KOZ5I037BErj_qvE-Qa0mRCXgK2pRUjI/exec',

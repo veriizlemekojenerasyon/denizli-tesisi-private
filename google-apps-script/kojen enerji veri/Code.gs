@@ -16,6 +16,7 @@ var window = typeof window === 'undefined' ? {} : window;
  */
 
 var KOJEN_ENERJI_DEPLOY_MARKER = 'kojen-enerji-veri-2026-06-05';
+var KOJEN_ENERJI_YEARLY_REPORT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx07VTw0WJCUnv6ofspEQ7qfeJ9gcQwE70jybV8p13JfI8VaOTxBFiE66-_QfKU0ucn/exec';
 
 // CORS ayarları - tüm origin'lere izin ver
 function doGet(e) {
@@ -28,6 +29,56 @@ function doPost(e) {
 
 function onEdit(e) {
   return;
+}
+
+function notifyYearlyEnergyForRecords(records) {
+  try {
+    if (!KOJEN_ENERJI_YEARLY_REPORT_WEB_APP_URL) {
+      return { success: false, skipped: true, error: 'Yillik enerji rapor URL eksik.' };
+    }
+
+    var payload = [];
+    var seen = {};
+    for (var i = 0; i < (records || []).length; i++) {
+      var record = records[i] || {};
+      var motor = normalizeEnerjiMotorLabel(record.motor || '');
+      var tarih = normalizeDateTR(record.tarih || '');
+      var saat = normalizeEnerjiSaat(record.saat || '');
+      if (!motor || !tarih || !saat) continue;
+
+      var key = motor + '|' + tarih + '|' + saat;
+      if (seen[key]) continue;
+      seen[key] = true;
+      payload.push({ motor: motor, tarih: tarih, saat: saat });
+    }
+
+    if (!payload.length) {
+      return { success: true, skipped: true, message: 'Guncellenecek enerji kaydi yok.' };
+    }
+
+    var response = UrlFetchApp.fetch(KOJEN_ENERJI_YEARLY_REPORT_WEB_APP_URL, {
+      method: 'post',
+      contentType: 'application/x-www-form-urlencoded',
+      payload: {
+        action: 'updateYearlyEnergyForRecords',
+        data: JSON.stringify(payload)
+      },
+      muteHttpExceptions: true
+    });
+
+    var text = response.getContentText();
+    var parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (parseError) {
+      parsed = { success: false, error: 'Yillik enerji cevabi JSON degil: ' + text };
+    }
+
+    parsed.httpCode = response.getResponseCode();
+    return parsed;
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
 }
 
 function handleRequest(e) {
@@ -515,7 +566,11 @@ function addRecord(data) {
     if (durum === 'MOTOR ÇALIŞMIYOR') {
       dataRange.setFontColor('#c62828');
     }
-    return { success: true, message: motor + ' motoru için enerji kaydı başarıyla eklendi!', record: mapEnerjiRow(values), row: newRow };
+    var result = { success: true, message: motor + ' motoru için enerji kaydı başarıyla eklendi!', record: mapEnerjiRow(values), row: newRow };
+    if (String(data.skipYearlyUpdate || '').toLowerCase() !== 'true') {
+      result.yearlyUpdate = notifyYearlyEnergyForRecords([result.record]);
+    }
+    return result;
     
   } catch (error) {
     return { success: false, error: error.toString() };
@@ -1374,7 +1429,13 @@ function addMultipleRecords(dataString) {
           dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
           dataRange.setFontColor('#c62828');
           sheet.getRange(appendStartRow, 5, rowsToAdd.length, 11).setNumberFormat('0.00');
-          colorizeDates(sheet, groupAddedRecords);
+          sortEnerjiSheetRowsByDateTime(sheet, motor);
+          colorizeDates(sheet, groupAddedRecords.map(function(record) {
+            return {
+              tarih: record.tarih,
+              saat: record.saat
+            };
+          }));
           addedRecords = addedRecords.concat(groupAddedRecords);
         }
       } catch (recordError) {
@@ -1386,12 +1447,17 @@ function addMultipleRecords(dataString) {
     });
     
     console.log('📊 Çoklu enerji kayıt sonucu: ' + addedRecords.length + ' eklendi, ' + errors.length + ' hata');
+    var yearlyUpdate = String((records[0] || {}).skipYearlyUpdate || '').toLowerCase() === 'true'
+      ? { success: true, skipped: true, message: 'Istemci yillik guncellemeyi ayri tetikleyecek.' }
+      : notifyYearlyEnergyForRecords(addedRecords);
 return {
       success: true,
       addedCount: addedRecords.length,
       totalCount: records.length,
       addedRecords: addedRecords,
-      errors: errors,      durationMs: new Date().getTime() - startedAt
+      errors: errors,
+      yearlyUpdate: yearlyUpdate,
+      durationMs: new Date().getTime() - startedAt
     };
     
   } catch (error) {
@@ -1406,18 +1472,54 @@ function checkHourlyMissingRecords() {
   try {
     lock.waitLock(30000);
 
-    var now = new Date();
-    var target = getHourlyCheckTarget(now);
+    var targets = getHourlyCheckTargets(new Date(), 3);
+    var results = [];
+    var totalMissing = 0;
+    var totalAdded = 0;
+    var allErrors = [];
+
+    for (var i = 0; i < targets.length; i++) {
+      var result = checkHourlyMissingRecordTarget(targets[i]);
+      results.push(result);
+      totalMissing += result.missingCount || 0;
+      totalAdded += result.addedCount || 0;
+      if (result.errors && result.errors.length) {
+        allErrors = allErrors.concat(result.errors);
+      }
+    }
+
+    return {
+      success: true,
+      checkedCount: targets.length,
+      missingCount: totalMissing,
+      addedCount: totalAdded,
+      results: results,
+      errors: allErrors
+    };
+  } catch (error) {
+    addSystemLog({
+      modul: 'Kojen Enerji',
+      otomatikKayitSonucu: 'Hata',
+      mailSonucu: 'Bilinmiyor',
+      hataMesaji: error.toString(),
+      detay: 'checkHourlyMissingRecords'
+    });
+    return { success: false, error: error.toString() };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (ignore) {}
+  }
+}
+
+function checkHourlyMissingRecordTarget(target) {
+  try {
     var hour = target.hour;
     var saat = target.saat;
     var tarih = target.tarih;
     var vardiya = getVardiyaByHour(hour);
     var sentKey = 'kojenEnerjiHourlyCheck:' + tarih + ':' + saat;
     var props = PropertiesService.getScriptProperties();
-
-    if (props.getProperty(sentKey)) {
-      return { success: true, skipped: true, message: 'Bu saat daha once kontrol edildi' };
-    }
 
     var motors = ['GM-1', 'GM-2', 'GM-3'];
     var missing = [];
@@ -1432,6 +1534,10 @@ function checkHourlyMissingRecords() {
       }
     }
 
+    if (props.getProperty(sentKey) && missing.length === 0) {
+      return { success: true, skipped: true, tarih: tarih, saat: saat, missingCount: 0, addedCount: 0, message: 'Bu saat daha once kontrol edildi' };
+    }
+
     if (missing.length === 0) {
       props.setProperty(sentKey, new Date().toISOString());
       addSystemLog({
@@ -1443,7 +1549,7 @@ function checkHourlyMissingRecords() {
         mailSonucu: 'Gonderilmedi',
         detay: 'Eksik enerji kaydi yok'
       });
-      return { success: true, missingCount: 0, addedCount: 0, message: 'Eksik enerji kaydi yok' };
+      return { success: true, tarih: tarih, saat: saat, missingCount: 0, addedCount: 0, message: 'Eksik enerji kaydi yok' };
     }
 
     var added = [];
@@ -1525,6 +1631,8 @@ function checkHourlyMissingRecords() {
 
     return {
       success: true,
+      tarih: tarih,
+      saat: saat,
       missingCount: missing.length,
       addedCount: added.length,
       missing: missing,
@@ -1535,17 +1643,15 @@ function checkHourlyMissingRecords() {
     };
   } catch (error) {
     addSystemLog({
+      tarih: target && target.tarih ? target.tarih : '',
+      saat: target && target.saat ? target.saat : '',
       modul: 'Kojen Enerji',
       otomatikKayitSonucu: 'Hata',
       mailSonucu: 'Bilinmiyor',
       hataMesaji: error.toString(),
-      detay: 'checkHourlyMissingRecords'
+      detay: 'checkHourlyMissingRecordTarget'
     });
     return { success: false, error: error.toString() };
-  } finally {
-    try {
-      lock.releaseLock();
-    } catch (ignore) {}
   }
 }
 
@@ -1986,6 +2092,31 @@ function getHourlyCheckTarget(date) {
     saat: pad2(target.getHours()) + ':00',
     tarih: Utilities.formatDate(target, Session.getScriptTimeZone(), 'dd.MM.yyyy')
   };
+}
+
+function getHourlyCheckTargets(date, lookbackHours) {
+  var baseTarget = getHourlyCheckTarget(date);
+  var baseDateTime = parseDateTimeTR(baseTarget.tarih, baseTarget.saat);
+  var count = Math.max(1, parseInt(lookbackHours, 10) || 1);
+  var targets = [];
+  var seen = {};
+
+  for (var i = 0; i < count; i++) {
+    var targetDate = new Date(baseDateTime.getTime());
+    targetDate.setHours(targetDate.getHours() - i);
+
+    var target = {
+      hour: targetDate.getHours(),
+      saat: pad2(targetDate.getHours()) + ':00',
+      tarih: Utilities.formatDate(targetDate, Session.getScriptTimeZone(), 'dd.MM.yyyy')
+    };
+    var key = target.tarih + '|' + target.saat;
+    if (seen[key]) continue;
+    seen[key] = true;
+    targets.push(target);
+  }
+
+  return targets;
 }
 
 function getLastNormalRecordBefore(motor, tarih, saat) {

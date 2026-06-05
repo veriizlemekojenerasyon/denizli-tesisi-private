@@ -1312,6 +1312,10 @@ function getMaintenanceReport(ss, params) {
     String(getParam(params, 'skipSummary') || '').toLowerCase() === '1' ||
     String(getParam(params, 'skipSummary') || '').toLowerCase() === 'true'
   );
+  const fast = !summaryOnly && (
+    String(getParam(params, 'fast') || '').toLowerCase() === '1' ||
+    String(getParam(params, 'fast') || '').toLowerCase() === 'true'
+  );
   const hasDateLimit = rawRange !== '' && rawRange !== 'all' && rawRange !== 'tum' && rawRange !== 'tumu' && !isNaN(range);
   const start = hasDateLimit ? new Date() : null;
   if (start) start.setDate(start.getDate() - range);
@@ -1331,7 +1335,9 @@ function getMaintenanceReport(ss, params) {
 
   let records = [];
   if (!summaryOnly) {
-    records = limit > 0
+    records = fast && limit > 0
+      ? readFastMaintenanceRecords(ss, filters, limit, offset)
+      : limit > 0
       ? readLimitedMaintenanceRecords(ss, filters, limit, offset)
       : readAllRecords(ss).filter(function(record) {
         return recordMatchesMaintenanceFilters(record, filters);
@@ -1354,6 +1360,7 @@ function getMaintenanceReport(ss, params) {
     limit: limit,
     offset: offset,
     summarySkipped: skipSummary,
+    fast: fast,
     durationMs: new Date().getTime() - startedAt
   });
 }
@@ -1405,6 +1412,38 @@ function readLimitedMaintenanceRecords(ss, options, limit, offset) {
       }
 
       cursor = startRow - 1;
+    }
+  });
+
+  records.sort(function(a, b) {
+    return parseDateTimeTR(b.date, b.time) - parseDateTimeTR(a.date, a.time);
+  });
+
+  return records.slice(offset || 0, (offset || 0) + (limit || records.length));
+}
+
+function readFastMaintenanceRecords(ss, options, limit, offset) {
+  const records = [];
+  const targetCount = Math.max(1, (limit || 0) + (offset || 0));
+  const perSheetLimit = Math.max(12, Math.ceil(targetCount / 4));
+
+  getSheetDefinitions().forEach(function(definition) {
+    const sheet = ss.getSheetByName(definition.name);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    const headers = getSheetHeaders(sheet);
+    const columnCount = headers.length;
+    if (!columnCount) return;
+
+    const rowCount = Math.min(perSheetLimit, sheet.getLastRow() - 1);
+    const startRow = Math.max(2, sheet.getLastRow() - rowCount + 1);
+    const rows = sheet.getRange(startRow, 1, rowCount, columnCount).getDisplayValues();
+
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const record = buildMaintenanceRecordFromRow(headers, rows[i], definition);
+      if (!record.recordNo) continue;
+      if (!recordMatchesMaintenanceFilters(record, options)) continue;
+      records.push(record);
     }
   });
 

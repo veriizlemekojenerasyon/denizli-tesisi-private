@@ -171,7 +171,7 @@
                 <section class="daily-summary-section">
                     <h2 class="section-title">Günlük Özet</h2>
                     <div class="summary-cards">
-                        <div class="summary-card production">
+                        <div class="summary-card production" data-target="monthly-energy-report" role="button" tabindex="0" aria-label="Aylik enerji motor raporunu ac">
                             <div class="card-icon">⚡</div>
                             <div class="card-content">
                                 <h3>GÜNLÜK ÜRETİM</h3>
@@ -179,7 +179,7 @@
                             </div>
                         </div>
 
-                        <div class="summary-card steam">
+                        <div class="summary-card steam" data-target="steam-records" role="button" tabindex="0" aria-label="Buhar kayitlarini ac">
                             <div class="card-icon">💨</div>
                             <div class="card-content">
                                 <h3>GÜNLÜK BUHAR</h3>
@@ -216,6 +216,48 @@
                 <button type="button" class="announcement-modal__close" data-close-announcements aria-label="Kapat">×</button>
             </div>
             <div class="announcement-modal__body" id="announcementModalBody"></div>
+        </div>
+    </div>
+
+    <div class="energy-report-modal" id="monthlyEnergyModal" aria-hidden="true">
+        <div class="energy-report-modal__backdrop" data-close-monthly-energy></div>
+        <div class="energy-report-modal__panel" role="dialog" aria-modal="true" aria-labelledby="monthlyEnergyModalTitle">
+            <div class="energy-report-modal__header">
+                <div>
+                    <h2 id="monthlyEnergyModalTitle">Aylık Enerji Motor Raporu</h2>
+                    <p id="monthlyEnergyModalSubtitle">GM üretim, çalışma saati ve kalkış özeti</p>
+                </div>
+                <button type="button" class="energy-report-modal__close" data-close-monthly-energy aria-label="Kapat">×</button>
+            </div>
+            <div class="energy-report-modal__body" id="monthlyEnergyModalBody"></div>
+        </div>
+    </div>
+
+    <div class="energy-report-modal" id="steamDataModal" aria-hidden="true">
+        <div class="energy-report-modal__backdrop" data-close-steam-data></div>
+        <div class="energy-report-modal__panel steam-data-modal__panel" role="dialog" aria-modal="true" aria-labelledby="steamDataModalTitle">
+            <div class="energy-report-modal__header">
+                <div>
+                    <h2 id="steamDataModalTitle">Buhar Verileri</h2>
+                    <p id="steamDataModalSubtitle">Son buhar kayitlari</p>
+                </div>
+                <button type="button" class="energy-report-modal__close" data-close-steam-data aria-label="Kapat">×</button>
+            </div>
+            <div class="energy-report-modal__body" id="steamDataModalBody"></div>
+        </div>
+    </div>
+
+    <div class="energy-report-modal" id="maintenanceHistoryModal" aria-hidden="true">
+        <div class="energy-report-modal__backdrop" data-close-maintenance-history></div>
+        <div class="energy-report-modal__panel maintenance-history-modal__panel" role="dialog" aria-modal="true" aria-labelledby="maintenanceHistoryModalTitle">
+            <div class="energy-report-modal__header">
+                <div>
+                    <h2 id="maintenanceHistoryModalTitle">Detaylı Bakım Geçmişi</h2>
+                    <p id="maintenanceHistoryModalSubtitle">Son bakım kayıtları</p>
+                </div>
+                <button type="button" class="energy-report-modal__close" data-close-maintenance-history aria-label="Kapat">×</button>
+            </div>
+            <div class="energy-report-modal__body" id="maintenanceHistoryModalBody"></div>
         </div>
     </div>
 
