@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motor Enerji Karsilastirma | Kojenerasyon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/enerji-rapor.css">
+    <link rel="stylesheet" href="css/motor-enerji-karsilastirma.css">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body data-active-page="motor-enerji-karsilastirma">
+    <div class="dashboard-container">
+        <nav class="sidebar" aria-label="Ana menu">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Koruma logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu"></ul>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <span id="sidebarUserNameDisplay">Yukleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout" type="button">Cikis Yap</button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <header class="report-header">
+                <div>
+                    <p class="eyebrow">Admin Teknik Analiz</p>
+                    <h1>Motor Enerji Karsilastirma</h1>
+                    <p class="header-subtitle">GM motor olcumleri, enerji uretimi ve durum tutarliligi.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn ghost" type="button" id="exportCsvBtn">
+                        <span class="btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                        </span>
+                        CSV
+                    </button>
+                    <button class="btn primary" type="button" id="refreshReportBtn">
+                        <span class="btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.6 6.1"/><path d="M3 12A9 9 0 0 1 18.6 5.9"/><path d="M18 2v4h4"/><path d="M6 22v-4H2"/></svg>
+                        </span>
+                        Yenile
+                    </button>
+                    <div class="current-user" id="userNameDisplay">Admin</div>
+                </div>
+            </header>
+
+            <main class="report-content" id="comparisonApp">
+                <section class="toolbar comparison-toolbar" aria-label="Motor enerji karsilastirma filtreleri">
+                    <div class="segmented" role="tablist" aria-label="Rapor donemi">
+                        <button type="button" class="segment" data-period="daily">Gunluk</button>
+                        <button type="button" class="segment active" data-period="weekly">Haftalik</button>
+                        <button type="button" class="segment" data-period="monthly">Aylik</button>
+                    </div>
+
+                    <div class="field-row">
+                        <label class="field">
+                            <span>Baslangic</span>
+                            <input type="date" id="startDateInput">
+                        </label>
+                        <label class="field">
+                            <span>Bitis</span>
+                            <input type="date" id="endDateInput">
+                        </label>
+                        <label class="field">
+                            <span>Motor</span>
+                            <select id="motorFilter">
+                                <option value="all">Tum Motorlar</option>
+                                <option value="GM-1">GM-1</option>
+                                <option value="GM-2">GM-2</option>
+                                <option value="GM-3">GM-3</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Risk</span>
+                            <select id="riskFilter">
+                                <option value="all">Tum Riskler</option>
+                                <option value="critical">Kritik</option>
+                                <option value="warn">Uyari</option>
+                                <option value="good">Normal</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="notice" id="comparisonNotice" hidden></section>
+
+                <section class="kpi-grid comparison-kpis" aria-label="Motor enerji karsilastirma ozeti">
+                    <article class="kpi-card">
+                        <span class="kpi-label">Eslesen Kayit</span>
+                        <strong id="kpiMatched">--</strong>
+                        <span class="kpi-note" id="kpiMatchRate">--</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Saglik Puani</span>
+                        <strong id="kpiHealthScore">--</strong>
+                        <span class="kpi-note">100 uzerinden</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Kritik Sinyal</span>
+                        <strong id="kpiCriticalCount">--</strong>
+                        <span class="kpi-note">kontrol gerektirir</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Uretim</span>
+                        <strong id="kpiProduction">--</strong>
+                        <span class="kpi-note">secilen aralik</span>
+                    </article>
+                </section>
+
+                <section class="comparison-layout">
+                    <article class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Motor Bazli Durum</h2>
+                                <p id="motorCardsSubtitle">Secili tarih araligi</p>
+                            </div>
+                            <span class="panel-chip" id="motorCountChip">3 motor</span>
+                        </div>
+                        <div class="motor-analysis-grid" id="motorCards"></div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Teknik Sinyaller</h2>
+                                <p>En cok tekrar eden anormallikler</p>
+                            </div>
+                        </div>
+                        <div class="signal-stack" id="signalPanel"></div>
+                    </article>
+                </section>
+
+                <section class="comparison-layout lower">
+                    <article class="panel table-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Saatlik Eslesme Tablosu</h2>
+                                <p id="tableSubtitle">Motor veri ve enerji veri birlikte degerlendirildi</p>
+                            </div>
+                        </div>
+                        <div class="table-wrap comparison-table-wrap">
+                            <table class="report-table comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Saat</th>
+                                        <th>Motor</th>
+                                        <th>Durum</th>
+                                        <th>Aktif Guc</th>
+                                        <th>Cos Phi</th>
+                                        <th>Uretim</th>
+                                        <th>Calisma</th>
+                                        <th>Sargi Ort.</th>
+                                        <th>Sarj Sic.</th>
+                                        <th>Sarj Bas.</th>
+                                        <th>Yag</th>
+                                        <th>Sogutma</th>
+                                        <th>Puan</th>
+                                        <th>Analiz</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="comparisonTableBody"></tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Oncelikli Inceleme</h2>
+                                <p>Risk siralamasina gore otomatik yorum</p>
+                            </div>
+                        </div>
+                        <div class="issue-list" id="issueList"></div>
+                        <div class="unmatched-box" id="unmatchedList"></div>
+                    </article>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/app-config.js"></script>
+    <script src="js/sidebar-menu.js"></script>
+    <script src="js/motor-enerji-karsilastirma.js?v=20260608-1"></script>
+    <script src="js/logout-system.js"></script>
+</body>
+</html>

@@ -15,6 +15,7 @@
         wrench: '<path d="M14.5 5.5a5 5 0 0 0-6.4 6.4L3 17l4 4 5.1-5.1a5 5 0 0 0 6.4-6.4l-3 3-3-3 3-3Z"/>',
         box: '<path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
         chart: '<path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="5"/><rect x="12" y="7" width="3" height="9"/><rect x="17" y="9" width="3" height="7"/>',
+        compare: '<path d="M4 7h12"/><path d="m13 4 3 3-3 3"/><path d="M20 17H8"/><path d="m11 14-3 3 3 3"/>',
         control: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
         bell: '<path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/>',
         users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>'
@@ -30,6 +31,7 @@
         { id: 'kojen-motor', icon: 'engine', text: 'Kojen Motor Veri', href: 'kojen-motor-veri.html' },
         { id: 'kojen-enerji', icon: 'bolt', text: 'Kojen Enerji Veri', href: 'kojen-enerji-veri.html' },
         { id: 'enerji-rapor', icon: 'chart', text: 'Enerji Raporlari', href: 'enerji-rapor.html', adminOnly: true },
+        { id: 'motor-enerji-karsilastirma', icon: 'compare', text: 'Motor Enerji Analiz', href: 'motor-enerji-karsilastirma.html', adminOnly: true },
         { id: 'operator-verimlilik', icon: 'chart', text: 'Operator Verimlilik', href: 'operator-verimlilik.html', adminOnly: true },
         { id: 'bakim', icon: 'wrench', text: 'Bakım Takibi', href: 'bakim-takibi.html' },
         { id: 'stok', icon: 'box', text: 'Stok Takip', href: 'stok-takip.html' },
@@ -48,6 +50,7 @@
         'kojen-motor-veri.html': 'kojen-motor',
         'kojen-enerji-veri.html': 'kojen-enerji',
         'enerji-rapor.html': 'enerji-rapor',
+        'motor-enerji-karsilastirma.html': 'motor-enerji-karsilastirma',
         'operator-verimlilik.html': 'operator-verimlilik',
         'bakim-takibi.html': 'bakim',
         'stok-takip.html': 'stok',
@@ -64,6 +67,41 @@
         }
     }
 
+    function normalizeAdminValue(value) {
+        return String(value || '')
+            .trim()
+            .toUpperCase()
+            .replace(/Ä°/g, 'I')
+            .replace(/İ/g, 'I')
+            .replace(/Ã‡/g, 'C')
+            .replace(/Ç/g, 'C')
+            .replace(/Äž/g, 'G')
+            .replace(/Ğ/g, 'G')
+            .replace(/Ã–/g, 'O')
+            .replace(/Ö/g, 'O')
+            .replace(/Åž/g, 'S')
+            .replace(/Ş/g, 'S')
+            .replace(/Ãœ/g, 'U')
+            .replace(/Ü/g, 'U');
+    }
+
+    function isAdminUser(user) {
+        if (!user) return false;
+        const role = normalizeAdminValue(user.role || user.yetki || user.userRole || '');
+        const type = normalizeAdminValue(user.type || user.kullaniciTipi || '');
+        const status = normalizeAdminValue(user.status || user.durum || '');
+        const fullName = [user.firstName || user.ad || user.name || '', user.lastName || user.soyad || '']
+            .join(' ')
+            .trim();
+        return role === 'ADMIN' ||
+            role === 'YONETICI' ||
+            type === 'ADMIN' ||
+            status === 'ADMIN' ||
+            user.isAdmin === true ||
+            user.admin === true ||
+            normalizeAdminValue(fullName || user.email || '') === 'MURAT COSKUN';
+    }
+
     function getActivePage() {
         const fileName = (window.location.pathname.split('/').pop() || 'anasayfa.html').toLowerCase();
         return document.body.dataset.activePage || pageByFile[fileName] || '';
@@ -76,7 +114,7 @@
 
     function generateMenuHTML(activePage) {
         const user = getMenuUser();
-        const isAdmin = user && user.role === 'admin';
+        const isAdmin = isAdminUser(user);
 
         return standardMenu
             .filter(item => !item.adminOnly || isAdmin)

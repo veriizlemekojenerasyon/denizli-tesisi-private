@@ -1,0 +1,336 @@
+.comparison-toolbar {
+    grid-template-columns: auto minmax(0, 1fr);
+}
+
+.field select {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 10px;
+    color: var(--text);
+    background: #ffffff;
+    font: inherit;
+    font-weight: 700;
+}
+
+.comparison-kpis {
+    grid-template-columns: repeat(4, minmax(170px, 1fr));
+}
+
+.comparison-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.55fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.comparison-layout.lower {
+    grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.5fr);
+}
+
+.motor-analysis-grid,
+.signal-stack,
+.issue-list,
+.unmatched-box {
+    display: grid;
+    gap: 10px;
+}
+
+.motor-card {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.motor-card.critical {
+    border-color: #fecaca;
+    background: #fff5f5;
+}
+
+.motor-card.warn {
+    border-color: #fed7aa;
+    background: #fffbeb;
+}
+
+.motor-card.good {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.motor-card-head,
+.signal-head,
+.issue-head,
+.unmatched-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.motor-card h3,
+.signal-card h3,
+.issue-card h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.risk-pill,
+.status-pill {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.risk-pill.good,
+.status-pill.good {
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+.risk-pill.warn,
+.status-pill.warn {
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+
+.risk-pill.critical,
+.status-pill.critical {
+    background: #fee2e2;
+    color: var(--red);
+}
+
+.motor-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.motor-metrics span {
+    min-height: 54px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #ffffff;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.motor-metrics b {
+    color: var(--text);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.score-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.score-fill {
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: var(--green);
+}
+
+.motor-card.warn .score-fill {
+    background: var(--amber);
+}
+
+.motor-card.critical .score-fill {
+    background: var(--red);
+}
+
+.motor-notes,
+.row-issues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.note-chip {
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.note-chip.critical {
+    border-color: #fecaca;
+    background: #fee2e2;
+    color: var(--red);
+}
+
+.note-chip.warn {
+    border-color: #fed7aa;
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+
+.signal-card,
+.issue-card,
+.unmatched-card {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.signal-card {
+    display: grid;
+    gap: 8px;
+}
+
+.signal-meta,
+.issue-meta,
+.unmatched-meta {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.signal-bar {
+    height: 9px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.signal-bar span {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: var(--blue);
+}
+
+.signal-card.critical .signal-bar span {
+    background: var(--red);
+}
+
+.signal-card.warn .signal-bar span {
+    background: var(--amber);
+}
+
+.comparison-table-wrap {
+    max-height: 620px;
+}
+
+.comparison-table {
+    min-width: 1500px;
+}
+
+.comparison-table td {
+    vertical-align: top;
+}
+
+.comparison-table .score-cell {
+    font-weight: 900;
+}
+
+.comparison-table tr.critical-row td {
+    background: #fff5f5;
+}
+
+.comparison-table tr.warn-row td {
+    background: #fffbeb;
+}
+
+.analysis-cell {
+    min-width: 280px;
+}
+
+.empty-line {
+    min-height: 120px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-weight: 800;
+    text-align: center;
+}
+
+.locked-state {
+    min-height: 420px;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.locked-card {
+    width: min(460px, 100%);
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.locked-card h2 {
+    margin: 0 0 8px;
+    color: var(--text);
+}
+
+.locked-card p {
+    margin: 0;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+@media (max-width: 1220px) {
+    .comparison-toolbar,
+    .comparison-layout,
+    .comparison-layout.lower {
+        grid-template-columns: 1fr;
+    }
+
+    .comparison-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .motor-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .comparison-kpis,
+    .motor-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .motor-card-head,
+    .signal-head,
+    .issue-head,
+    .unmatched-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
