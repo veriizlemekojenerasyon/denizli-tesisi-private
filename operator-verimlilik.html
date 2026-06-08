@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Verimlilik | Kojenerasyon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/enerji-rapor.css">
+    <link rel="stylesheet" href="css/operator-verimlilik.css">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body data-active-page="operator-verimlilik">
+    <div class="dashboard-container">
+        <nav class="sidebar" aria-label="Ana menu">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Koruma logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu"></ul>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <span id="sidebarUserNameDisplay">Yukleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout" type="button">Cikis Yap</button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <header class="report-header">
+                <div>
+                    <p class="eyebrow">Admin Operasyon Analitigi</p>
+                    <h1>Operator Verimlilik</h1>
+                    <p class="header-subtitle">Veri giris disiplini, eksik kayit etkisi ve GM motor calisma verimi.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn ghost" type="button" id="exportCsvBtn">
+                        <span class="btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                        </span>
+                        CSV
+                    </button>
+                    <button class="btn primary" type="button" id="refreshReportBtn">
+                        <span class="btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.6 6.1"/><path d="M3 12A9 9 0 0 1 18.6 5.9"/><path d="M18 2v4h4"/><path d="M6 22v-4H2"/></svg>
+                        </span>
+                        Yenile
+                    </button>
+                    <div class="current-user" id="userNameDisplay">Admin</div>
+                </div>
+            </header>
+
+            <main class="report-content" id="operatorApp">
+                <section class="toolbar operator-toolbar" aria-label="Operator verimlilik filtreleri">
+                    <div class="segmented" role="tablist" aria-label="Rapor donemi">
+                        <button type="button" class="segment" data-period="daily">Gunluk</button>
+                        <button type="button" class="segment active" data-period="weekly">Haftalik</button>
+                        <button type="button" class="segment" data-period="monthly">Aylik</button>
+                    </div>
+
+                    <div class="field-row">
+                        <label class="field">
+                            <span>Baslangic</span>
+                            <input type="date" id="startDateInput">
+                        </label>
+                        <label class="field">
+                            <span>Bitis</span>
+                            <input type="date" id="endDateInput">
+                        </label>
+                        <label class="field">
+                            <span>Veri Tipi</span>
+                            <select id="moduleFilter">
+                                <option value="all">Tum Kayitlar</option>
+                                <option value="hourly">Saatlik</option>
+                                <option value="motor">Kojen Motor</option>
+                                <option value="energy">Kojen Enerji</option>
+                                <option value="daily">Gunluk</option>
+                                <option value="steam">Buhar</option>
+                                <option value="shift">Vardiya</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="notice" id="operatorNotice" hidden></section>
+
+                <section class="kpi-grid" aria-label="Operator verimlilik ozeti">
+                    <article class="kpi-card">
+                        <span class="kpi-label">Manuel Kayit</span>
+                        <strong id="kpiManualData">--</strong>
+                        <span class="kpi-note">operator girisi</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Eksik / Otomatik</span>
+                        <strong id="kpiMissingData">--</strong>
+                        <span class="kpi-note">kayit etkisi</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Ortalama Puan</span>
+                        <strong id="kpiAverageScore">--</strong>
+                        <span class="kpi-note">100 uzerinden</span>
+                    </article>
+                    <article class="kpi-card">
+                        <span class="kpi-label">Motor Verimi</span>
+                        <strong id="kpiMotorEfficiency">--</strong>
+                        <span class="kpi-note">ortalama yuk</span>
+                    </article>
+                </section>
+
+                <section class="report-grid operator-grid">
+                    <article class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Operator Puan Siralamasi</h2>
+                                <p id="scoreSubtitle">Secili tarih araligi</p>
+                            </div>
+                            <span class="panel-chip" id="operatorCountChip">0 operator</span>
+                        </div>
+                        <div class="score-board" id="scoreBoard"></div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>GM Motor Calisma Verimi</h2>
+                                <p>Uretim, calisma saati ve ortalama yuk</p>
+                            </div>
+                        </div>
+                        <div class="motor-efficiency" id="motorEfficiency"></div>
+                    </article>
+                </section>
+
+                <section class="report-grid lower-grid operator-lower-grid">
+                    <article class="panel table-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Operator Veri Giris Tablosu</h2>
+                                <p id="tableSubtitle">Manuel kayit ve eksik kayit etkisi</p>
+                            </div>
+                        </div>
+                        <div class="table-wrap operator-table-wrap">
+                            <table class="report-table operator-table">
+                                <thead>
+                                    <tr>
+                                        <th>Operator</th>
+                                        <th>Saatlik</th>
+                                        <th>Motor</th>
+                                        <th>Enerji</th>
+                                        <th>Gunluk</th>
+                                        <th>Buhar</th>
+                                        <th>Vardiya</th>
+                                        <th>Manuel Toplam</th>
+                                        <th>Sorumlu Slot</th>
+                                        <th>Eksik/Oto</th>
+                                        <th>Veri Tamligi</th>
+                                        <th>Ekstra Is</th>
+                                        <th>Tamamlanma</th>
+                                        <th>Puan</th>
+                                        <th>Seviye</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="operatorTableBody"></tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Veri Kalitesi</h2>
+                                <p>Kayit kaynaklari ve dikkat sinyalleri</p>
+                            </div>
+                        </div>
+                        <div class="module-summary" id="moduleSummary"></div>
+                        <div class="insight-list operator-insights" id="insightList"></div>
+                    </article>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/app-config.js"></script>
+    <script src="js/sidebar-menu.js"></script>
+    <script src="js/operator-verimlilik.js?v=20260608-4"></script>
+    <script src="js/logout-system.js"></script>
+</body>
+</html>

@@ -216,6 +216,7 @@ async function saveMaintenanceData(formType, formElement) {
             ltTemperature: ltTemperature || '',
             jacketTemperature: jacketTemperature || ''
         };
+        params.skipStatsUpdate = 'true';
         
         // DEBUG: Params kontrol
         console.log('=== PARAMS DEBUG ===');
@@ -1996,6 +1997,7 @@ async function closeRecord(recordNo) {
         const params = new URLSearchParams();
         params.append('action', 'closeRecord');
         params.append('recordNo', recordNo);
+        params.append('skipStatsUpdate', 'true');
         
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',

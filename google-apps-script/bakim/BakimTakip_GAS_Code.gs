@@ -174,6 +174,11 @@ function getParam(params, key) {
   return String(value);
 }
 
+function isTruthyValue(value) {
+  const text = String(value || '').trim().toLowerCase();
+  return text === 'true' || text === '1' || text === 'evet' || text === 'yes';
+}
+
 function getSpreadsheet() {
   if (SPREADSHEET_ID) return SpreadsheetApp.openById(SPREADSHEET_ID);
 
@@ -368,7 +373,10 @@ function saveMaintenanceRecordV2(ss, params) {
   const newRow = sheet.getLastRow();
   sheet.getRange(newRow, 1, 1, row.length).setFontFamily('Arial').setFontSize(10);
   updateLastRecordNo(ss, recordNo);
-  updateStatsSheet(ss);
+  const statsUpdateSkipped = isTruthyValue(getParam(params, 'skipStatsUpdate'));
+  if (!statsUpdateSkipped) {
+    updateStatsSheet(ss);
+  }
 
   const alternatorPlan = getSheetKind(sheetName) === 'alternator'
     ? calculateAlternatorGreasePlan(effectiveCurrentHours, recordMotorHours)
@@ -381,7 +389,8 @@ function saveMaintenanceRecordV2(ss, params) {
     recordMotorHours: recordMotorHours,
     periodicPlan: periodicPlan,
     alternatorPlan: alternatorPlan,
-    nextAlternatorGrease: alternatorPlan ? alternatorPlan.nextHours : ''
+    nextAlternatorGrease: alternatorPlan ? alternatorPlan.nextHours : '',
+    statsUpdateSkipped: statsUpdateSkipped
   });
 }
 
@@ -1596,7 +1605,9 @@ function closeRecord(ss, params) {
         const row = r + 2;
         sheet.getRange(row, statusColumn).setValue('Kapali');
         sheet.getRange(row, closedAtColumn).setValue(formatDateTime(new Date()));
-        updateStatsSheet(ss);
+        if (!isTruthyValue(getParam(params, 'skipStatsUpdate'))) {
+          updateStatsSheet(ss);
+        }
         return jsonResponse(true, 'Kayit kapatildi', { recordNo: recordNo });
       }
     }

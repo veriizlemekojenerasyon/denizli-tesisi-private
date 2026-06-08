@@ -2,6 +2,33 @@
 
 // Google Apps Script URL
 const SCRIPT_URL = window.AppConfig.getScriptUrl('stok');
+let stockMaterialsCache = null;
+let stockMaterialsPromise = null;
+
+async function fetchStockMaterials(forceRefresh = false) {
+    if (!forceRefresh && Array.isArray(stockMaterialsCache)) {
+        return stockMaterialsCache;
+    }
+    if (!forceRefresh && stockMaterialsPromise) {
+        return stockMaterialsPromise;
+    }
+
+    stockMaterialsPromise = fetch(SCRIPT_URL + '?action=getMaterials')
+        .then(response => response.json())
+        .then(result => {
+            if (!result.success) {
+                throw new Error(result.error || 'Malzemeler alinamadi');
+            }
+            stockMaterialsCache = result.data || [];
+            localStorage.setItem('stockMaterials', JSON.stringify(stockMaterialsCache));
+            return stockMaterialsCache;
+        })
+        .finally(() => {
+            stockMaterialsPromise = null;
+        });
+
+    return stockMaterialsPromise;
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Başlangıç değerlerini ayarla
@@ -117,8 +144,8 @@ async function handleStockSubmit(e) {
             
             // Formu temizle ve listeyi güncelle
             e.target.reset();
-            await loadStockList();
-            await populateMaterialSelect();
+            await loadStockList(true);
+            populateMaterialSelect(stockMaterialsCache);
             // await updateSummaryCards(); // Fonksiyon tanımlı değil
         } else {
             showNotification('error', 'Hata', result.error || 'Malzeme eklenemedi!');
@@ -164,8 +191,8 @@ async function handleTransactionSubmit(e) {
             // Formu temizle ve listeleri güncelle
             e.target.reset();
             document.getElementById('transaction-date').value = new Date().toISOString().split('T')[0];
-            await loadStockList();
-            await populateMaterialSelect();
+            await loadStockList(true);
+            populateMaterialSelect(stockMaterialsCache);
             await loadRecentTransactions();
             // await updateSummaryCards(); // Fonksiyon tanımlı değil
         } else {
@@ -179,25 +206,21 @@ async function handleTransactionSubmit(e) {
 }
 
 // Malzeme select'ini doldur
-async function populateMaterialSelect() {
+async function populateMaterialSelect(materials) {
     const select = document.getElementById('transaction-material');
     if (!select) return;
     
     try {
-        // Backend'den malzemeleri getir
-        const response = await fetch(SCRIPT_URL + '?action=getMaterials');
-        const result = await response.json();
+        const items = Array.isArray(materials) ? materials : await fetchStockMaterials(false);
         
         select.innerHTML = '<option value="">Malzeme seçin</option>';
         
-        if (result.success && result.data) {
-            result.data.forEach(material => {
-                const option = document.createElement('option');
-                option.value = material.id;
-                option.textContent = `${material.code} - ${material.name} (${material.quantity} ${material.unit})`;
-                select.appendChild(option);
-            });
-        }
+        items.forEach(material => {
+            const option = document.createElement('option');
+            option.value = material.id;
+            option.textContent = `${material.code} - ${material.name} (${material.quantity} ${material.unit})`;
+            select.appendChild(option);
+        });
         
     } catch (error) {
         console.error('Malzeme select doldurma hatası:', error);
@@ -226,19 +249,15 @@ function populatePersonnelSelect() {
 }
 
 // Stok listesini yükle
-async function loadStockList() {
+async function loadStockList(forceRefresh = false) {
     const tbody = document.getElementById('stock-tbody');
     if (!tbody) return;
     
     try {
         // Backend'den malzemeleri getir
-        const response = await fetch(SCRIPT_URL + '?action=getMaterials');
-        const result = await response.json();
+        const materials = await fetchStockMaterials(forceRefresh);
         
-        if (result.success) {
-            const materials = result.data || [];
-            
-            if (materials.length === 0) {
+        if (materials.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #7f8c8d;">Henüz malzeme eklenmemiş</td></tr>';
                 return;
             }
@@ -248,9 +267,6 @@ async function loadStockList() {
                 const row = createStockRow(material);
                 tbody.appendChild(row);
             });
-        } else {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #e74c3c;">Malzemeler yüklenemedi: ' + (result.error || 'Bilinmeyen hata') + '</td></tr>';
-        }
         
     } catch (error) {
         console.error('Stok listesi yükleme hatası:', error);
@@ -432,6 +448,7 @@ function deleteMaterial(id, showConfirm = true) {
     
     let materials = getMaterials();
     materials = materials.filter(m => m.id !== id);
+    stockMaterialsCache = materials;
     localStorage.setItem('stockMaterials', JSON.stringify(materials));
     
     if (showConfirm) {
@@ -524,6 +541,9 @@ function displayUserName() {
 
 // Yardımcı fonksiyonlar
 function getMaterials() {
+    if (Array.isArray(stockMaterialsCache)) {
+        return stockMaterialsCache;
+    }
     return JSON.parse(localStorage.getItem('stockMaterials') || '[]');
 }
 

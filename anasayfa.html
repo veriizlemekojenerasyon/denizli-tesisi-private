@@ -167,6 +167,36 @@
                     </div>
                 </section>
 
+                <!-- Elektroliz Ana Sayfa Bölümü -->
+                <section class="elz-mainpage-section" aria-labelledby="elzMainpageTitle">
+                    <div class="elz-section-header">
+                        <h2 class="section-title" id="elzMainpageTitle">Elektroliz Ana Sayfa Degerleri</h2>
+                        <span class="elz-refresh-status is-idle" id="elzRefreshStatus">Bekleniyor</span>
+                    </div>
+                    <div class="elz-mainpage-cards">
+                        <article class="elz-mainpage-card">
+                            <span class="elz-card-badge">ELZ</span>
+                            <h3>ELZ 116-117</h3>
+                            <p class="elz-card-value" id="elz116117Value">--</p>
+                            <div class="elz-card-meta elz-card-rows" id="elz116117Meta">Kaynak bekleniyor</div>
+                        </article>
+
+                        <article class="elz-mainpage-card">
+                            <span class="elz-card-badge">ELZ</span>
+                            <h3>ELZ 119/121</h3>
+                            <p class="elz-card-value" id="elz119121Value">--</p>
+                            <div class="elz-card-meta elz-card-rows" id="elz119121Meta">Kaynak bekleniyor</div>
+                        </article>
+
+                        <article class="elz-mainpage-card elz-mainpage-card--refresh">
+                            <span class="elz-card-badge">5 dk</span>
+                            <h3>Son Guncelleme</h3>
+                            <p class="elz-card-value elz-card-value--time" id="elzLastUpdate">--</p>
+                            <span class="elz-card-meta" id="elzSourceMeta">Otomatik yenilenir</span>
+                        </article>
+                    </div>
+                </section>
+
                 <!-- Günlük Özet Bölümü -->
                 <section class="daily-summary-section">
                     <h2 class="section-title">Günlük Özet</h2>
@@ -303,6 +333,8 @@
 <script src="js/bildirim-sheets.js"></script>
 
 <script src="js/anasayfa.js"></script>
+
+<script src="js/elz-mainpage-reader.js?v=20260608-2"></script>
 
 <script src="js/global-duyurular.js"></script>
 

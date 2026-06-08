@@ -6,7 +6,7 @@
 var GUNLUK_EMAIL_TO = 'mrtcsk0320@gmail.com';
 var GUNLUK_SHIFT_NOTIFICATION_HOUR = 15;
 var GUNLUK_SHIFT_NOTIFICATION_MINUTE = 50;
-var GUNLUK_BILDIRIM_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwyDx3x8B28pDAd9ala4WfC40DlNPyqTmc9wUfV8Dxd_Ux7Pvq_PZmE1hTkdUSqR5P-/exec';
+var GUNLUK_BILDIRIM_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz8I8Jk1mZQaWZtJe4eXgVaM2vrVcFbiPndZYQj0NWvZt__wgYKwFJsRndCc1hToRBM/exec';
 var ANNOUNCEMENTS_SHEET_NAME = 'VardiyaBildirimleri';
 var ANNOUNCEMENT_HEADERS = [
   'ID', 'Baslangic Tarihi', 'Bitis Tarihi', 'Vardiya', 'Metin', 'Kategori',

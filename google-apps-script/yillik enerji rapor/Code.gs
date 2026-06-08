@@ -141,7 +141,7 @@ function handleRequest(e) {
   try {
     if (isWriteAction(action)) {
       lock = LockService.getScriptLock();
-      lock.waitLock(5000);
+      lock.waitLock(30000);
     }
 
     var result;

@@ -23,7 +23,7 @@ function doPost(e) {
 }
 
 var KOJEN_MOTOR_API_VERSION = 'motor-fast-bulk-2026-06-03-v3';
-var KOJEN_MOTOR_WRITE_LOCK_WAIT_MS = 28000;
+var KOJEN_MOTOR_WRITE_LOCK_WAIT_MS = 5000;
 
 function handleRequest(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -75,17 +75,16 @@ function handleRequest(e) {
         result = checkHourlyMissingRecords();
         break;
       case 'fillMissingFullDay':
-        result = fillMissingFullDay(params.tarih, params.motor, params.startSaat, params.endSaat);
+      case 'fillMissingMotorFullDay':
+        result = fillMissingMotorFullDay(params.tarih, params.motor, params.startSaat, params.endSaat);
         break;
       case 'normalizeMotorSheetNames':
         result = normalizeMotorSheetNames();
         break;
       case 'sortMotorSheet':
-      case 'sortEnergySheet':
         result = sortMotorSheet(params.motor);
         break;
       case 'colorizeMotorSheet':
-      case 'colorizeEnergySheet':
         result = colorizeMotorSheet(params.motor);
         break;
       case 'installHourlyMissingRecordTrigger':
@@ -132,7 +131,9 @@ function handleRequest(e) {
 }
 
 function isWriteAction(action) {
-  return ['addRecord', 'addMultipleRecords', 'checkHourlyMissingRecords', 'fillMissingFullDay', 'normalizeMotorSheetNames', 'sortMotorSheet', 'sortEnergySheet', 'colorizeMotorSheet', 'colorizeEnergySheet', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
+  // checkHourlyMissingRecords kendi lock'unu aliyor. Web handler'da tekrar lock almak
+  // Apps Script'te ayni kilide ikinci kez girip zaman asimina neden olabilir.
+  return ['addRecord', 'addMultipleRecords', 'fillMissingFullDay', 'fillMissingMotorFullDay', 'normalizeMotorSheetNames', 'sortMotorSheet', 'colorizeMotorSheet', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
 }
 
 function getApiHealth() {
@@ -154,6 +155,7 @@ function getApiHealth() {
       'sendEmail',
       'checkHourlyMissingRecords',
       'fillMissingFullDay',
+      'fillMissingMotorFullDay',
       'normalizeMotorSheetNames',
       'sortMotorSheet',
       'colorizeMotorSheet',
@@ -192,11 +194,44 @@ function isMotorDataSheetName(sheetName) {
   return /^Motor\s+GM-/i.test(String(sheetName || ''));
 }
 
+function normalizeMotorHeaderText(value) {
+  return String(value || '').toUpperCase()
+    .replace(/\u00C7/g, 'C')
+    .replace(/\u011E/g, 'G')
+    .replace(/\u0130/g, 'I')
+    .replace(/\u0049\u0307/g, 'I')
+    .replace(/\u00D6/g, 'O')
+    .replace(/\u015E/g, 'S')
+    .replace(/\u00DC/g, 'U')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isMotorDataSheet(sheet) {
+  if (!sheet || !isMotorDataSheetName(sheet.getName())) {
+    return false;
+  }
+
+  if (sheet.getLastColumn() < 22 || sheet.getLastRow() < 1) {
+    return false;
+  }
+
+  var headers = sheet.getRange(1, 1, 1, 22).getDisplayValues()[0].map(normalizeMotorHeaderText);
+  return headers[0].indexOf('TARIH') !== -1 &&
+    headers[1].indexOf('VARDIYA') !== -1 &&
+    headers[2].indexOf('SAAT') !== -1 &&
+    headers[3].indexOf('MOTOR') !== -1 &&
+    headers[4].indexOf('JEN') !== -1 &&
+    headers[12].indexOf('GAZ') !== -1 &&
+    headers[16].indexOf('SARGI') !== -1 &&
+    headers[19].indexOf('DURUM') !== -1;
+}
+
 function getCanonicalMotorFromSheet(sheet) {
   if (!sheet) return '';
 
   var sheetName = sheet.getName();
-  if (!isMotorDataSheetName(sheetName)) {
+  if (!isMotorDataSheet(sheet)) {
     return '';
   }
 
@@ -377,7 +412,7 @@ function getMotorSheetIfExists(motor) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var targetMotor = normalizeMotorLabel(motor);
   var exactSheet = spreadsheet.getSheetByName(getMotorSheetName(targetMotor));
-  if (exactSheet) {
+  if (exactSheet && isMotorDataSheet(exactSheet)) {
     return exactSheet;
   }
 
@@ -389,7 +424,7 @@ function getMotorSheetIfExists(motor) {
   for (var i = 0; i < sheets.length; i++) {
     var currentSheet = sheets[i];
     var sheetName = currentSheet.getName();
-    if (!isMotorDataSheetName(sheetName)) {
+    if (!isMotorDataSheet(currentSheet)) {
       continue;
     }
 
@@ -426,7 +461,7 @@ function getMotorSheetIfExists(motor) {
     return bestSheet;
   }
 
-  return spreadsheet.getSheetByName(getMotorSheetName(targetMotor));
+  return null;
 }
 
 function normalizeMotorDurum(durum) {
@@ -487,7 +522,10 @@ function getOrCreateSheet(motor) {
   // Motor bazlı sayfa adı
   var sheetName = getMotorSheetName(motor);
   var sheet = spreadsheet.getSheetByName(sheetName);
-  
+  if (sheet && !isMotorDataSheet(sheet)) {
+    throw new Error(sheetName + ' adli sayfa motor veri baslik yapisinda degil. Enerji sayfasi olabilir; motor islemi iptal edildi.');
+  }
+
   if (!sheet) {
     sheet = spreadsheet.insertSheet(sheetName);
     
@@ -654,7 +692,7 @@ function getRecords() {
       var sheetName = sheet.getName();
       
       // Sadece motor sayfalarını işle
-      if (!sheetName.startsWith('Motor GM-')) {
+      if (!isMotorDataSheet(sheet)) {
         continue;
       }
       
@@ -936,7 +974,7 @@ function getLastRecords(count) {
 
     for (var i = 0; i < sheets.length; i++) {
       var sheet = sheets[i];
-      if (!sheet.getName().startsWith('Motor GM-')) continue;
+      if (!isMotorDataSheet(sheet)) continue;
       var lastRow = sheet.getLastRow();
       if (lastRow < 2) continue;
 
@@ -1469,7 +1507,7 @@ function checkHourlyMissingRecords() {
   }
 }
 
-function fillMissingFullDay(tarih, motor, startSaat, endSaat) {
+function fillMissingMotorFullDay(tarih, motor, startSaat, endSaat) {
   try {
     var targetTarih = normalizeDateTR(tarih || '');
     var motors = motor ? [normalizeMotorLabel(motor)] : ['GM-1', 'GM-2', 'GM-3'];

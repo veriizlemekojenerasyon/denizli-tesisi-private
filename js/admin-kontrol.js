@@ -4,6 +4,7 @@ const AdminControlLabels = {
     saatlik: 'Saatlik Veri',
     motor: 'Kojen Motor',
     enerji: 'Kojen Enerji',
+    enerjiGunSonu: 'Enerji Gun Sonu',
     buhar: 'Buhar',
     gunluk: 'Gunluk Veri',
     bakim: 'Bakim Takip',
@@ -29,6 +30,12 @@ const AdminTriggerModules = {
         healthAction: 'getTriggerHealth',
         installAction: 'installHourlyMissingRecordTrigger',
         testAction: 'checkHourlyMissingRecords'
+    },
+    enerjiGunSonu: {
+        title: 'Enerji Gun Sonu',
+        healthAction: 'getEndOfDayAutoTriggerHealth',
+        installAction: 'installEndOfDayAutoTrigger',
+        testAction: 'autoCreateMissingEndOfDayValues'
     },
     buhar: {
         title: 'Buhar',

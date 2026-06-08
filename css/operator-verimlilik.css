@@ -1,0 +1,244 @@
+.operator-toolbar {
+    grid-template-columns: auto minmax(0, 1fr);
+}
+
+.field select {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 10px;
+    color: var(--text);
+    background: #ffffff;
+    font: inherit;
+    font-weight: 700;
+}
+
+.operator-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.6fr);
+}
+
+.operator-lower-grid {
+    grid-template-columns: minmax(0, 1.6fr) minmax(340px, 0.5fr);
+}
+
+.score-board,
+.motor-efficiency,
+.module-summary {
+    display: grid;
+    gap: 10px;
+}
+
+.score-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 66px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.score-rank {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 8px;
+    background: var(--blue-soft);
+    color: var(--blue);
+    font-weight: 900;
+}
+
+.score-main {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.score-main strong,
+.motor-row strong,
+.module-row strong {
+    min-width: 0;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.score-main span,
+.motor-row span,
+.module-row span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.score-pill,
+.level-pill {
+    min-width: 58px;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-weight: 900;
+}
+
+.score-pill {
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+.score-pill.warn,
+.level-pill.warn {
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+
+.score-pill.risk,
+.level-pill.risk {
+    background: #fee2e2;
+    color: var(--red);
+}
+
+.level-pill.good {
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+.level-pill.watch {
+    background: var(--blue-soft);
+    color: var(--blue);
+}
+
+.motor-row,
+.module-row {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.motor-top,
+.module-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 900;
+}
+
+.motor-meta,
+.module-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.module-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.motor-meta span,
+.module-meta span {
+    min-height: 48px;
+    display: grid;
+    align-content: center;
+    gap: 2px;
+    padding: 8px;
+    border-radius: 7px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+}
+
+.motor-meta b,
+.module-meta b {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.efficiency-track,
+.module-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.efficiency-fill,
+.module-fill {
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: var(--blue);
+}
+
+.motor-row:nth-child(2) .efficiency-fill,
+.module-row:nth-child(2) .module-fill {
+    background: var(--green);
+}
+
+.motor-row:nth-child(3) .efficiency-fill,
+.module-row:nth-child(3) .module-fill {
+    background: var(--amber);
+}
+
+.operator-table-wrap {
+    max-height: 560px;
+}
+
+.operator-table {
+    min-width: 1400px;
+}
+
+.operator-table td:first-child {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.operator-table td.score-cell {
+    font-weight: 900;
+}
+
+.operator-insights {
+    margin-top: 12px;
+}
+
+.empty-line {
+    min-height: 120px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-weight: 800;
+}
+
+@media (max-width: 1180px) {
+    .operator-toolbar,
+    .operator-grid,
+    .operator-lower-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 620px) {
+    .score-row {
+        grid-template-columns: 34px minmax(0, 1fr);
+    }
+
+    .score-pill {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    .motor-meta,
+    .module-meta {
+        grid-template-columns: 1fr;
+    }
+}

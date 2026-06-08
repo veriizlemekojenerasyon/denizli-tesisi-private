@@ -69,6 +69,24 @@ function handleRequest(e) {
       case 'getSystemLogs':
         result = getSystemLogs(parseInt(e.parameter.count, 10) || 100);
         break;
+      case 'checkVgenPlanSetup':
+        result = runOptionalVgenFunction_('checkVgenPlanSetup');
+        break;
+      case 'setupVgenPlanAllDayNotification':
+        result = runOptionalVgenFunction_('setupVgenPlanAllDayNotification');
+        break;
+      case 'makeExistingVgenPlanAnnouncementsAllDay':
+        result = runOptionalVgenFunction_('makeExistingVgenPlanAnnouncementsAllDay');
+        break;
+      case 'testVgenAccessTokenRefresh':
+        result = runOptionalVgenFunction_('testVgenAccessTokenRefresh');
+        break;
+      case 'testVgenPlanFetchOnly':
+        result = runOptionalVgenFunction_('testVgenPlanFetchOnly');
+        break;
+      case 'runVgenTomorrowPlanNotification':
+        result = runOptionalVgenFunction_('runVgenTomorrowPlanNotification');
+        break;
       default:
         result = { success: false, error: 'Gecersiz islem' };
     }
@@ -83,6 +101,21 @@ function handleRequest(e) {
       success: false,
       error: error.toString()
     })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function runOptionalVgenFunction_(functionName) {
+  try {
+    var fn = (typeof globalThis !== 'undefined' && globalThis[functionName]) || this[functionName];
+    if (typeof fn !== 'function') {
+      return {
+        success: false,
+        error: functionName + ' fonksiyonu bu Apps Script projesinde bulunamadi. VGenPlanBildirimi.gs dosyasini projeye ekleyin.'
+      };
+    }
+    return fn();
+  } catch (error) {
+    return { success: false, error: error.toString() };
   }
 }
 

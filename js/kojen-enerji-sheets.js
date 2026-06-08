@@ -38,7 +38,7 @@ function dedupeYearlyEnergyRecords(records) {
     return unique;
 }
 
-function scheduleYearlyEnergyUpdateForRecords(records, delayMs = 900) {
+function scheduleYearlyEnergyUpdateForRecords(records, delayMs = 4000) {
     const payload = dedupeYearlyEnergyRecords(records);
     if (!payload.length) return;
 

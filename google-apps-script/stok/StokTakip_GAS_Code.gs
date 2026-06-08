@@ -7,6 +7,8 @@
  */
 
 // CORS ayarları
+var STOK_WRITE_LOCK_WAIT_MS = 5000;
+
 function doGet(e) {
   return handleRequest(e);
 }
@@ -15,12 +17,24 @@ function doPost(e) {
   return handleRequest(e);
 }
 
+function isStockWriteAction(action) {
+  return [
+    'addMaterial',
+    'updateMaterial',
+    'deleteMaterial',
+    'addTransaction'
+  ].indexOf(action) !== -1;
+}
+
 function handleRequest(e) {
-  var lock = LockService.getScriptLock();
+  var action = e && e.parameter ? e.parameter.action : '';
+  var lock = null;
   try {
-    lock.waitLock(30000);
+    if (isStockWriteAction(action)) {
+      lock = LockService.getScriptLock();
+      lock.waitLock(STOK_WRITE_LOCK_WAIT_MS);
+    }
     
-    var action = e.parameter.action;
     var result = {};
     
     switch(action) {
@@ -55,13 +69,20 @@ function handleRequest(e) {
         result = { success: false, error: 'Geçersiz işlem' };
     }
     
-    lock.releaseLock();
+    if (lock) {
+      lock.releaseLock();
+      lock = null;
+    }
     
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
-    lock.releaseLock();
+    if (lock) {
+      try {
+        lock.releaseLock();
+      } catch (releaseError) {}
+    }
     return ContentService.createTextOutput(JSON.stringify({ 
       success: false, 
       error: error.toString() 

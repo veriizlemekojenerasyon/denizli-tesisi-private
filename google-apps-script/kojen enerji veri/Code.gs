@@ -16,7 +16,8 @@ var window = typeof window === 'undefined' ? {} : window;
  */
 
 var KOJEN_ENERJI_DEPLOY_MARKER = 'kojen-enerji-veri-2026-06-05';
-var KOJEN_ENERJI_YEARLY_REPORT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx07VTw0WJCUnv6ofspEQ7qfeJ9gcQwE70jybV8p13JfI8VaOTxBFiE66-_QfKU0ucn/exec';
+var KOJEN_ENERJI_YEARLY_REPORT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxTOJuZuGXKTy2JoICtsgXMXjntSmkkWJAaUsiZg8pIwRWeDLjl027KzBTRTMYpsn8r/exec';
+var KOJEN_ENERJI_WRITE_LOCK_WAIT_MS = 5000;
 
 // CORS ayarları - tüm origin'lere izin ver
 function doGet(e) {
@@ -81,6 +82,20 @@ function notifyYearlyEnergyForRecords(records) {
   }
 }
 
+function shouldSyncYearlyEnergyUpdate(data) {
+  var value = String((data && (data.syncYearlyUpdate || data.waitYearlyUpdate)) || '').toLowerCase();
+  return value === 'true' || value === '1';
+}
+
+function skippedYearlyEnergyUpdateMessage() {
+  return {
+    success: true,
+    skipped: true,
+    async: true,
+    message: 'Yillik enerji guncellemesi kayit hizli donsun diye istemci/manuel islem tarafindan ayri tetiklenecek.'
+  };
+}
+
 function handleRequest(e) {
   var params = (e && e.parameter) ? e.parameter : {};
   var action = String(params.action || '').trim();
@@ -88,7 +103,7 @@ function handleRequest(e) {
   try {
     if (isWriteAction(action)) {
       lock = LockService.getScriptLock();
-      lock.waitLock(5000);
+      lock.waitLock(KOJEN_ENERJI_WRITE_LOCK_WAIT_MS);
     }
     
     var result = {};
@@ -567,8 +582,10 @@ function addRecord(data) {
       dataRange.setFontColor('#c62828');
     }
     var result = { success: true, message: motor + ' motoru için enerji kaydı başarıyla eklendi!', record: mapEnerjiRow(values), row: newRow };
-    if (String(data.skipYearlyUpdate || '').toLowerCase() !== 'true') {
+    if (shouldSyncYearlyEnergyUpdate(data)) {
       result.yearlyUpdate = notifyYearlyEnergyForRecords([result.record]);
+    } else {
+      result.yearlyUpdate = skippedYearlyEnergyUpdateMessage();
     }
     return result;
     
@@ -1100,9 +1117,9 @@ function getDashboardMaintenanceSummary(records) {
 
 function fetchDashboardExternalData() {
   var urls = {
-    motor: 'https://script.google.com/macros/s/AKfycby22gILvlrEBZNCDqaRGDssA6sytZidDVJoxkn4YXaGiWXjW3U8M3uRaXpMwo-JB9gZ/exec?action=getLastRecords&count=100',
+    motor: 'https://script.google.com/macros/s/AKfycbxJFAATa4R2kD3T8i0c57JoA_pIryNJGJgCZ7P3WF5SFldswf2pcLd0jnYr4zbOCFCn/exec?action=getLastRecords&count=100',
     buhar: 'https://script.google.com/macros/s/AKfycbwDlfLp36QguZqRH7_PYtSjWUJihU2dTxodkKiW58rhcK41jtvpS0NKnlw9kBBnZnTJ/exec?action=getLastRecords&count=1',
-    announcements: 'https://script.google.com/macros/s/AKfycbwyDx3x8B28pDAd9ala4WfC40DlNPyqTmc9wUfV8Dxd_Ux7Pvq_PZmE1hTkdUSqR5P-/exec?action=getAnnouncements&active=true'
+    announcements: 'https://script.google.com/macros/s/AKfycbz8I8Jk1mZQaWZtJe4eXgVaM2vrVcFbiPndZYQj0NWvZt__wgYKwFJsRndCc1hToRBM/exec?action=getAnnouncements&active=true'
   };
 
   var keys = ['motor', 'buhar', 'announcements'];
@@ -1310,6 +1327,8 @@ function addMultipleRecords(dataString) {
         var existingCounterRows = lastRow >= 2 ? sheet.getRange(2, 13, lastRow - 1, 3).getDisplayValues() : [];
         var counterRecords = [];
         var existingKeys = {};
+        var maxExistingTimestamp = -1;
+        var needsSortAfterAppend = false;
 
         for (var rowIndex = 0; rowIndex < existingMetaRows.length; rowIndex++) {
           var existingDate = normalizeDateTR(existingMetaRows[rowIndex][0] || '');
@@ -1320,6 +1339,7 @@ function addMultipleRecords(dataString) {
 
           var recordTime = parseDateTimeTR(existingDate, existingSaat).getTime();
           if (isNaN(recordTime)) continue;
+          if (recordTime > maxExistingTimestamp) maxExistingTimestamp = recordTime;
 
           var energy = parseEnerjiNumber(existingCounterRows[rowIndex][0]);
           var hours = parseEnerjiNumber(existingCounterRows[rowIndex][1]);
@@ -1355,6 +1375,9 @@ function addMultipleRecords(dataString) {
           }
 
           var targetTime = parseDateTimeTR(tarih, saat).getTime();
+          if (!isNaN(targetTime) && maxExistingTimestamp !== -1 && targetTime < maxExistingTimestamp) {
+            needsSortAfterAppend = true;
+          }
           var rowData = [
             tarih || '',
             record.vardiya || '',
@@ -1429,11 +1452,17 @@ function addMultipleRecords(dataString) {
           dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
           dataRange.setFontColor('#c62828');
           sheet.getRange(appendStartRow, 5, rowsToAdd.length, 11).setNumberFormat('0.00');
-          sortEnerjiSheetRowsByDateTime(sheet, motor);
+          if (needsSortAfterAppend) {
+            sortEnerjiSheetRowsByDateTime(sheet, motor);
+            for (var addedIndex = 0; addedIndex < groupAddedRecords.length; addedIndex++) {
+              delete groupAddedRecords[addedIndex].row;
+            }
+          }
           colorizeDates(sheet, groupAddedRecords.map(function(record) {
             return {
               tarih: record.tarih,
-              saat: record.saat
+              saat: record.saat,
+              row: record.row
             };
           }));
           addedRecords = addedRecords.concat(groupAddedRecords);
@@ -1447,9 +1476,9 @@ function addMultipleRecords(dataString) {
     });
     
     console.log('📊 Çoklu enerji kayıt sonucu: ' + addedRecords.length + ' eklendi, ' + errors.length + ' hata');
-    var yearlyUpdate = String((records[0] || {}).skipYearlyUpdate || '').toLowerCase() === 'true'
-      ? { success: true, skipped: true, message: 'Istemci yillik guncellemeyi ayri tetikleyecek.' }
-      : notifyYearlyEnergyForRecords(addedRecords);
+    var yearlyUpdate = shouldSyncYearlyEnergyUpdate(records[0] || {})
+      ? notifyYearlyEnergyForRecords(addedRecords)
+      : skippedYearlyEnergyUpdateMessage();
 return {
       success: true,
       addedCount: addedRecords.length,
@@ -2203,15 +2232,58 @@ function colorizeDates(sheet, addedRecords) {
 
     var directRowKeys = Object.keys(rowTargets);
     if (directRowKeys.length && directRowKeys.length === addedRecords.length && directRowKeys.length <= 100) {
+      var directRows = [];
       for (var directIndex = 0; directIndex < directRowKeys.length; directIndex++) {
         var directRow = parseInt(directRowKeys[directIndex], 10);
         if (!directRow || directRow < 2) continue;
-        sheet.getRange(directRow, 1, 1, 18).setBackground(getDateColor(rowTargets[directRowKeys[directIndex]]));
+        directRows.push({
+          row: directRow,
+          color: getDateColor(rowTargets[directRowKeys[directIndex]])
+        });
       }
+
+      directRows.sort(function(a, b) {
+        return a.row - b.row;
+      });
+
+      var runStartRow = 0;
+      var runBackgrounds = [];
+      var coloredDirectCount = 0;
+
+      function flushDirectBackgroundRun() {
+        if (!runStartRow || !runBackgrounds.length) return;
+        sheet.getRange(runStartRow, 1, runBackgrounds.length, 18).setBackgrounds(runBackgrounds);
+        coloredDirectCount += runBackgrounds.length;
+        runStartRow = 0;
+        runBackgrounds = [];
+      }
+
+      for (var rowIndex = 0; rowIndex < directRows.length; rowIndex++) {
+        var item = directRows[rowIndex];
+        var rowBackground = [];
+        for (var colIndex = 0; colIndex < 18; colIndex++) {
+          rowBackground.push(item.color);
+        }
+
+        if (!runStartRow) {
+          runStartRow = item.row;
+          runBackgrounds = [rowBackground];
+          continue;
+        }
+
+        if (item.row === runStartRow + runBackgrounds.length) {
+          runBackgrounds.push(rowBackground);
+        } else {
+          flushDirectBackgroundRun();
+          runStartRow = item.row;
+          runBackgrounds = [rowBackground];
+        }
+      }
+      flushDirectBackgroundRun();
 
       return {
         success: true,
-        coloredCount: directRowKeys.length,
+        coloredCount: coloredDirectCount,
         dateCount: Object.keys(dateGroups).length,
         direct: true
       };

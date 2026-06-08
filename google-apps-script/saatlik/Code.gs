@@ -18,6 +18,11 @@ function doPost(e) {
   return saatlikHandleRequest(e);
 }
 
+var SAATLIK_DIFF_COLOR_RED = '#f4cccc';
+var SAATLIK_DIFF_COLOR_YELLOW = '#fff2cc';
+var SAATLIK_DIFF_COLOR_ZERO = '#d9ead3';
+var SAATLIK_DIFF_COLOR_CLEAR = '#ffffff';
+
 function saatlikHandleRequest(e) {
   var startedAt = new Date().getTime();
   var params = (e && e.parameter) ? e.parameter : {};
@@ -65,6 +70,11 @@ function saatlikHandleRequest(e) {
       case 'fillMissingFullDay':
         result = saatlikFillMissingFullDay(params.tarih, params.startSaat, params.endSaat);
         break;
+      case 'applyDifferenceColors':
+      case 'colorizeDifferenceCells':
+      case 'colorizeSaatlikDifferenceCells':
+        result = saatlikApplyDifferenceColors(params);
+        break;
       case 'installHourlyMissingRecordTrigger':
         result = saatlikInstallHourlyMissingRecordTrigger();
         break;
@@ -100,7 +110,7 @@ function saatlikHandleRequest(e) {
 }
 
 function saatlikIsWriteAction(action) {
-  return ['saveRecord', 'addRecord', 'updateRecord', 'sendEmail', 'fillMissingRecordsForDate', 'fillMissingRecordGaps', 'fillMissingFullDay', 'installHourlyMissingRecordTrigger', 'addSystemLog'].indexOf(action) !== -1;
+  return ['saveRecord', 'addRecord', 'updateRecord', 'sendEmail', 'fillMissingRecordsForDate', 'fillMissingRecordGaps', 'fillMissingFullDay', 'applyDifferenceColors', 'colorizeDifferenceCells', 'colorizeSaatlikDifferenceCells', 'installHourlyMissingRecordTrigger', 'addSystemLog'].indexOf(action) !== -1;
 }
 
 function getSaatlikSheet(createIfMissing) {
@@ -159,6 +169,105 @@ function mapSaatlikRow(row) {
     notlar: row[9],
     kayitTarihi: row[10]
   };
+}
+
+function saatlikParseNumber(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return isNaN(value) ? 0 : value;
+
+  var text = String(value).trim().replace(/\s/g, '');
+  if (!text) return 0;
+
+  var commaIndex = text.lastIndexOf(',');
+  var dotIndex = text.lastIndexOf('.');
+
+  if (commaIndex > -1 && dotIndex > -1) {
+    text = commaIndex > dotIndex
+      ? text.replace(/\./g, '').replace(',', '.')
+      : text.replace(/,/g, '');
+  } else if (commaIndex > -1) {
+    text = text.replace(',', '.');
+  }
+
+  var parsed = Number(text);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+function saatlikGetDifferenceColor(primaryValue, compareValue) {
+  var primary = saatlikParseNumber(primaryValue);
+  var compare = saatlikParseNumber(compareValue);
+  var difference = primary - compare;
+
+  if (difference >= 200 || difference <= -200) {
+    return SAATLIK_DIFF_COLOR_RED;
+  }
+
+  if (primary === 0) {
+    return SAATLIK_DIFF_COLOR_ZERO;
+  }
+
+  if (difference !== 0 && difference > -200 && difference < 200) {
+    return SAATLIK_DIFF_COLOR_YELLOW;
+  }
+  return SAATLIK_DIFF_COLOR_CLEAR;
+}
+
+function saatlikBuildDifferenceBackgrounds(rowValues) {
+  var activeColor = saatlikGetDifferenceColor(rowValues[0], rowValues[2]);
+  var reactiveColor = saatlikGetDifferenceColor(rowValues[1], rowValues[3]);
+  return [activeColor, reactiveColor, activeColor, reactiveColor];
+}
+
+function saatlikApplyDifferenceColorToRow(sheet, rowNumber) {
+  if (!sheet || rowNumber < 2) {
+    return { success: false, error: 'Gecerli satir bulunamadi.' };
+  }
+
+  var rowValues = sheet.getRange(rowNumber, 5, 1, 4).getDisplayValues()[0];
+  var backgrounds = saatlikBuildDifferenceBackgrounds(rowValues);
+  sheet.getRange(rowNumber, 5, 1, 4).setBackgrounds([backgrounds]);
+
+  return { success: true, row: rowNumber, backgrounds: backgrounds };
+}
+
+function saatlikApplyDifferenceColors(params) {
+  try {
+    params = params || {};
+    var sheet = getSaatlikSheet(false);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: true, rowCount: 0, message: 'Renklendirilecek kayit yok.' };
+    }
+
+    var lastRow = sheet.getLastRow();
+    var targetRow = parseInt(params.row, 10) || 0;
+    var startRow = targetRow >= 2 ? targetRow : (parseInt(params.startRow, 10) || 2);
+    startRow = Math.max(2, Math.min(startRow, lastRow));
+
+    var requestedCount = targetRow >= 2 ? 1 : (parseInt(params.rowCount || params.count, 10) || (lastRow - startRow + 1));
+    var rowCount = Math.max(1, Math.min(requestedCount, lastRow - startRow + 1));
+
+    var values = sheet.getRange(startRow, 5, rowCount, 4).getDisplayValues();
+    var backgrounds = [];
+    for (var i = 0; i < values.length; i++) {
+      backgrounds.push(saatlikBuildDifferenceBackgrounds(values[i]));
+    }
+
+    sheet.getRange(startRow, 5, rowCount, 4).setBackgrounds(backgrounds);
+
+    return {
+      success: true,
+      sheetName: sheet.getName(),
+      startRow: startRow,
+      rowCount: rowCount,
+      message: 'E-G ve F-H fark renklendirmesi tamamlandi.'
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+function runSaatlikDifferenceColorMacro() {
+  return saatlikApplyDifferenceColors({});
 }
 
 function findSaatlikRowByDateTime(sheet, tarih, saat) {
@@ -240,10 +349,10 @@ function saatlikWriteAddRecord(sheet, data, info) {
     formattedTarih,
     formattedSaat,
     data.vardiya,
-    parseFloat(data.aktifMwh) || 0,
-    parseFloat(data.reaktifMwh) || 0,
-    parseFloat(data.aydemAktif) || 0,
-    parseFloat(data.aydemReaktif) || 0,
+    saatlikParseNumber(data.aktifMwh),
+    saatlikParseNumber(data.reaktifMwh),
+    saatlikParseNumber(data.aydemAktif),
+    saatlikParseNumber(data.aydemReaktif),
     data.kaydeden || '',
     data.notlar || '',
     saatlikFormatDateTimeTR(new Date())
@@ -257,6 +366,7 @@ function saatlikWriteAddRecord(sheet, data, info) {
   range.setValues([rowData]);
   range.setHorizontalAlignment('center');
   range.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+  saatlikApplyDifferenceColorToRow(sheet, newRow);
 
   return { success: true, message: 'Kayit basariyla eklendi! (ID: ' + nextID + ')', row: newRow };
 }
@@ -265,16 +375,17 @@ function saatlikWriteUpdateRecord(sheet, data, foundRow) {
   var recordID = sheet.getRange(foundRow, 1).getDisplayValue();
   var values = [[
     data.vardiya,
-    parseFloat(data.aktifMwh) || 0,
-    parseFloat(data.reaktifMwh) || 0,
-    parseFloat(data.aydemAktif) || 0,
-    parseFloat(data.aydemReaktif) || 0,
+    saatlikParseNumber(data.aktifMwh),
+    saatlikParseNumber(data.reaktifMwh),
+    saatlikParseNumber(data.aydemAktif),
+    saatlikParseNumber(data.aydemReaktif),
     data.kaydeden || '',
     data.notlar || '',
     saatlikFormatDateTimeTR(new Date())
   ]];
 
   sheet.getRange(foundRow, 4, 1, 8).setValues(values);
+  saatlikApplyDifferenceColorToRow(sheet, foundRow);
 
   return { success: true, message: 'Kayit basariyla guncellendi! (ID: ' + recordID + ')', row: foundRow };
 }

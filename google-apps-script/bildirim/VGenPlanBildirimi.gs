@@ -9,19 +9,31 @@
  * - VGEN_MAIL_TO
  *
  * Opsiyonel:
- * - VGEN_NOTIFICATION_SHIFT           Varsayilan: 16-24
- * - VGEN_NOTIFICATION_PAGE_TARGET     Varsayilan: anasayfa
+ * - VGEN_NOTIFICATION_SHIFT           Bos veya all/tum ise tum gun gorunur. Varsayilan: tum gun
+ * - VGEN_NOTIFICATION_PAGE_TARGET     Varsayilan: all
  * - VGEN_MESSAGE_MOTORS               Varsayilan: GM-1,GM-2,GM-3
  * - VGEN_PLAN_SOURCE                  api veya mail. Varsayilan: api
  * - VGEN_PLAN_MAIL_QUERY              Gmail arama sorgusu. Mail yedegi kullanilirsa.
  * - VGEN_PLAN_MAIL_SUBJECT            Varsayilan: Koruma Klor. Mail yedegi kullanilirsa.
  * - VGEN_PLAN_MAIL_LOOKBACK_DAYS      Varsayilan: 7. Mail yedegi kullanilirsa.
+ * - VGEN_LOGIN_URL                    Token otomatik yenileme login URL'i.
+ * - VGEN_USERNAME                     V-Gen kullanici adi.
+ * - VGEN_PASSWORD                     V-Gen sifresi.
+ * - VGEN_LOGIN_PAYLOAD_JSON           Opsiyonel login body sablonu. ${username}, ${password}, ${tenantId} kullanilabilir.
+ * - VGEN_LOGIN_HEADERS_JSON           Opsiyonel login header JSON.
+ * - VGEN_LOGIN_TOKEN_PATH             Varsayilan: access_token,token,data.accessToken,data.token
+ * - VGEN_LOGIN_EXPIRES_IN_PATH        Varsayilan: expires_in,expiresIn,data.expires_in,data.expiresIn
+ * - VGEN_ACCESS_TOKEN_EXPIRES_AT      Otomatik yazilir.
+ * - VGEN_PLAN_HEADERS_JSON            Opsiyonel plan API ekstra header JSON.
+ * - VGEN_PLAN_URL                     Opsiyonel plan API base URL override.
+ * - VGEN_TARGET_PLANT_KEYWORDS        Varsayilan: denizli. Birden fazla icin virgul kullanin.
  */
 
 var VGEN_PLAN_TRIGGER_HANDLER = 'runVgenPlanNotification';
 var VGEN_PLAN_MODULE_NAME = 'V-Gen Plan';
 var VGEN_DEFAULT_PLAN_SOURCE = 'api';
 var VGEN_DEFAULT_TENANT_ID = '26e3e75d-4a9c-4095-8e06-928d74dce07f';
+var VGEN_DEFAULT_PLAN_URL = 'https://api.vgen.vtcenerji.com/vplantmanager/plannings/assetplans/withdetails';
 
 function installVgenPlanDailyTrigger() {
   deleteVgenPlanDailyTriggers();
@@ -99,6 +111,133 @@ function setupVgenPlanApiSource() {
   return logVgenPlanSetup();
 }
 
+function setVgenLoginPropertiesOnce() {
+  var config = {
+    VGEN_LOGIN_URL: 'https://login.vtcenerji.com/oauth/token',
+    VGEN_USERNAME: 'BURAYA_KULLANICI_ADI_YAZ',
+    VGEN_PASSWORD: 'BURAYA_SIFRE_YAZ',
+    VGEN_AUTH_CLIENT_ID: '6wgog3SuEZXxaA4GIjHfSzXnIQfPcy5v',
+    VGEN_AUTH_AUDIENCE: 'https://api.vgen.vtcenerji.com',
+    VGEN_AUTH_SCOPE: 'openid email offline_access',
+    VGEN_AUTH_GRANT_TYPE: 'password',
+    VGEN_AUTH_REALM: 'Username-Password-Authentication',
+    VGEN_TENANT_ID: VGEN_DEFAULT_TENANT_ID,
+    VGEN_PLAN_URL: VGEN_DEFAULT_PLAN_URL,
+    VGEN_LOGIN_CONTENT_TYPE: 'application/json',
+    VGEN_LOGIN_PAYLOAD_JSON: '{"grant_type":"${grantType}","username":"${username}","password":"${password}","audience":"${audience}","scope":"${scope}","client_id":"${clientId}","realm":"${realm}"}',
+    VGEN_LOGIN_TOKEN_PATH: 'access_token,token,data.accessToken,data.token',
+    VGEN_LOGIN_EXPIRES_IN_PATH: 'expires_in,expiresIn,data.expires_in,data.expiresIn',
+    VGEN_TARGET_PLANT_KEYWORDS: 'denizli',
+    VGEN_REFRESH_BEFORE_SECONDS: '300'
+  };
+
+  var missing = [];
+  if (config.VGEN_LOGIN_URL === 'BURAYA_LOGIN_URL_YAZ') missing.push('VGEN_LOGIN_URL');
+  if (config.VGEN_USERNAME === 'BURAYA_KULLANICI_ADI_YAZ') missing.push('VGEN_USERNAME');
+  if (config.VGEN_PASSWORD === 'BURAYA_SIFRE_YAZ') missing.push('VGEN_PASSWORD');
+  if (missing.length) {
+    throw new Error('Once setVgenLoginPropertiesOnce icindeki su alanlari doldurun: ' + missing.join(', '));
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  Object.keys(config).forEach(function(key) {
+    props.setProperty(key, config[key]);
+  });
+
+  props.deleteProperty('VGEN_ACCESS_TOKEN');
+  props.deleteProperty('VGEN_ACCESS_TOKEN_UPDATED_AT');
+  props.deleteProperty('VGEN_ACCESS_TOKEN_EXPIRES_AT');
+
+  return logVgenPlanSetup();
+}
+
+function deleteVgenLoginProperties() {
+  var props = PropertiesService.getScriptProperties();
+  var keys = [
+    'VGEN_LOGIN_URL',
+    'VGEN_USERNAME',
+    'VGEN_PASSWORD',
+    'VGEN_LOGIN_METHOD',
+    'VGEN_LOGIN_CONTENT_TYPE',
+    'VGEN_LOGIN_PAYLOAD_JSON',
+    'VGEN_LOGIN_HEADERS_JSON',
+    'VGEN_LOGIN_TOKEN_PATH',
+    'VGEN_LOGIN_EXPIRES_AT_PATH',
+    'VGEN_LOGIN_EXPIRES_IN_PATH',
+    'VGEN_PLAN_URL',
+    'VGEN_AUTH_CLIENT_ID',
+    'VGEN_AUTH_CLIENT_SECRET',
+    'VGEN_AUTH_AUDIENCE',
+    'VGEN_AUTH_SCOPE',
+    'VGEN_AUTH_GRANT_TYPE',
+    'VGEN_AUTH_REALM',
+    'VGEN_FORCE_LOGIN_EACH_RUN',
+    'VGEN_REFRESH_BEFORE_SECONDS',
+    'VGEN_ACCESS_TOKEN',
+    'VGEN_ACCESS_TOKEN_UPDATED_AT',
+    'VGEN_ACCESS_TOKEN_EXPIRES_AT'
+  ];
+
+  for (var i = 0; i < keys.length; i++) {
+    props.deleteProperty(keys[i]);
+  }
+
+  return logVgenPlanSetup();
+}
+
+function deleteVgenAccessTokenOnly() {
+  var props = PropertiesService.getScriptProperties();
+  props.deleteProperty('VGEN_ACCESS_TOKEN');
+  props.deleteProperty('VGEN_ACCESS_TOKEN_UPDATED_AT');
+  props.deleteProperty('VGEN_ACCESS_TOKEN_EXPIRES_AT');
+  return logVgenPlanSetup();
+}
+
+function setupVgenPlanAllDayNotification() {
+  var props = PropertiesService.getScriptProperties();
+  props.deleteProperty('VGEN_NOTIFICATION_SHIFT');
+  props.setProperty('VGEN_NOTIFICATION_PAGE_TARGET', 'all');
+  props.setProperty('VGEN_MESSAGE_MOTORS', props.getProperty('VGEN_MESSAGE_MOTORS') || 'GM-1,GM-2,GM-3');
+  var setup = logVgenPlanSetup();
+  setup.existingAnnouncements = makeExistingVgenPlanAnnouncementsAllDay();
+  return setup;
+}
+
+function makeExistingVgenPlanAnnouncementsAllDay() {
+  try {
+    var sheet = getOrCreateAnnouncementsSheet();
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: true, updatedCount: 0, message: 'Guncellenecek V-Gen bildirimi yok.' };
+    }
+
+    var rows = sheet.getRange(2, 1, lastRow - 1, ANNOUNCEMENT_HEADERS.length).getDisplayValues();
+    var updated = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var item = rowToAnnouncement(rows[i]);
+      var isVgenAuto = String(item.id || '').indexOf('auto-vgen-plan-') === 0 ||
+        String(item.createdBy || '') === 'V-Gen Otomatik Plan' ||
+        /V-Gen/i.test(String(item.title || item.message || ''));
+      if (!isVgenAuto) continue;
+
+      var sheetRow = i + 2;
+      sheet.getRange(sheetRow, 4).setValue('');
+      sheet.getRange(sheetRow, 8).setValue('all');
+      sheet.getRange(sheetRow, 16).setValue('all');
+      sheet.getRange(sheetRow, 15).setValue(formatDateTimeTR(new Date()));
+      updated++;
+    }
+
+    return {
+      success: true,
+      updatedCount: updated,
+      message: 'Mevcut V-Gen bildirimleri tum gun ve tum sayfalar icin ayarlandi.'
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
 function setVgenAccessTokenOnce() {
   var token = 'BURAYA_BEARER_TOKEN_YAPISTIR';
   if (token === 'BURAYA_BEARER_TOKEN_YAPISTIR' || token.indexOf('Bearer ') !== 0) {
@@ -160,18 +299,36 @@ function maskVgenPropertyValue(key, value) {
 
 function checkVgenPlanSetup() {
   var props = PropertiesService.getScriptProperties();
+  var canAutoRefresh = canRefreshVgenAccessToken(props);
   var result = {
     success: true,
     source: props.getProperty('VGEN_PLAN_SOURCE') || VGEN_DEFAULT_PLAN_SOURCE,
     hasAccessToken: !!props.getProperty('VGEN_ACCESS_TOKEN'),
+    accessTokenExpiresAt: props.getProperty('VGEN_ACCESS_TOKEN_EXPIRES_AT') || '',
     tenantId: props.getProperty('VGEN_TENANT_ID') || VGEN_DEFAULT_TENANT_ID,
     hasMailTo: !!props.getProperty('VGEN_MAIL_TO'),
     planMailSubject: props.getProperty('VGEN_PLAN_MAIL_SUBJECT') || 'Koruma Klor',
     planMailLookbackDays: props.getProperty('VGEN_PLAN_MAIL_LOOKBACK_DAYS') || '7',
     hasPlanMailQuery: !!props.getProperty('VGEN_PLAN_MAIL_QUERY'),
-    notificationPageTarget: props.getProperty('VGEN_NOTIFICATION_PAGE_TARGET') || 'anasayfa',
+    planUrl: normalizeVgenPlanBaseUrl(props.getProperty('VGEN_PLAN_URL') || VGEN_DEFAULT_PLAN_URL),
+    hasPlanHeadersJson: !!props.getProperty('VGEN_PLAN_HEADERS_JSON'),
+    targetPlantKeywords: props.getProperty('VGEN_TARGET_PLANT_KEYWORDS') || 'denizli',
+    hasLoginUrl: !!props.getProperty('VGEN_LOGIN_URL'),
+    hasLoginPayloadJson: !!props.getProperty('VGEN_LOGIN_PAYLOAD_JSON'),
+    hasLoginCredentials: !!(props.getProperty('VGEN_USERNAME') && props.getProperty('VGEN_PASSWORD')),
+    loginTokenPath: props.getProperty('VGEN_LOGIN_TOKEN_PATH') || 'access_token,token,data.accessToken,data.token',
+    authClientId: props.getProperty('VGEN_AUTH_CLIENT_ID') || '',
+    hasAuthClientSecret: !!props.getProperty('VGEN_AUTH_CLIENT_SECRET'),
+    authAudience: props.getProperty('VGEN_AUTH_AUDIENCE') || 'https://api.vgen.vtcenerji.com',
+    authGrantType: props.getProperty('VGEN_AUTH_GRANT_TYPE') || 'password',
+    authRealm: props.getProperty('VGEN_AUTH_REALM') || 'Username-Password-Authentication',
+    canAutoRefreshToken: canAutoRefresh,
+    notificationShift: normalizeVgenNotificationShift(props.getProperty('VGEN_NOTIFICATION_SHIFT')),
+    notificationPageTarget: props.getProperty('VGEN_NOTIFICATION_PAGE_TARGET') || 'all',
     messageMotors: props.getProperty('VGEN_MESSAGE_MOTORS') || 'GM-1,GM-2,GM-3',
-    note: 'API kaynaginda token Script Properties icinde saklanir ve loglarda gosterilmez.'
+    note: canAutoRefresh
+      ? 'Token suresi dolarsa otomatik login ile yenilenir; token loglarda gosterilmez.'
+      : 'Otomatik token yenileme icin VGEN_LOGIN_URL ve login bilgileri Script Properties icinde tanimli olmali.'
   };
 
   return result;
@@ -208,6 +365,24 @@ function testVgenPlanFetchOnly() {
     return result;
   } catch (error) {
     var errorResult = { success: false, date: formatVgenDateTR(targetDate), error: error.toString() };
+    Logger.log(JSON.stringify(errorResult, null, 2));
+    return errorResult;
+  }
+}
+
+function testVgenAccessTokenRefresh() {
+  try {
+    var result = refreshVgenAccessToken('manuel test');
+    var safeResult = {
+      success: true,
+      refreshed: result.refreshed,
+      expiresAt: result.expiresAt || '',
+      message: 'V-Gen token yenilendi. Token guvenlik nedeniyle loglanmadi.'
+    };
+    Logger.log(JSON.stringify(safeResult, null, 2));
+    return safeResult;
+  } catch (error) {
+    var errorResult = { success: false, error: error.toString() };
     Logger.log(JSON.stringify(errorResult, null, 2));
     return errorResult;
   }
@@ -322,30 +497,339 @@ function getVgenPlanRowsFromApi(targetDate) {
 
 function fetchVgenPlanApiForDate(targetDate) {
   var props = PropertiesService.getScriptProperties();
-  var token = props.getProperty('VGEN_ACCESS_TOKEN') || '';
   var tenantId = props.getProperty('VGEN_TENANT_ID') || VGEN_DEFAULT_TENANT_ID;
-  if (!token) throw new Error('VGEN_ACCESS_TOKEN Script Properties icinde tanimli degil.');
+  var token = getVgenAccessTokenForPlan(props);
+  var url = buildVgenPlanApiUrl(props, targetDate, tenantId);
+  var result = fetchVgenPlanApiUrl(url, tenantId, token, props);
 
-  var url = 'https://api.vgen.vtcenerji.com/vplantmanager/plannings/assetplans/withdetails' +
-    '?tenantId=' + encodeURIComponent(tenantId) +
-    '&deliveryDate=' + encodeURIComponent(formatVgenIsoDate(targetDate)) +
-    '&periodType=Hour&includeLockStatus=true&active=true&page=1&results=2147483647';
+  if (!isVgenHttpSuccess(result.code) && shouldRefreshVgenTokenAfterApiError(result.code, result.text) && canRefreshVgenAccessToken(props)) {
+    var refreshed = refreshVgenAccessToken('plan api yetki hatasi');
+    result = fetchVgenPlanApiUrl(url, tenantId, refreshed.token, props);
+  }
+
+  if (!isVgenHttpSuccess(result.code)) {
+    throw new Error(buildVgenPlanApiErrorMessage(result.code, result.text));
+  }
+  return parseVgenJsonResponse(result.text, 'V-Gen plan API cevabi JSON degil');
+}
+
+function buildVgenPlanApiUrl(props, targetDate, tenantId) {
+  var baseUrl = normalizeVgenPlanBaseUrl(props.getProperty('VGEN_PLAN_URL') || VGEN_DEFAULT_PLAN_URL);
+  return buildVgenUrlWithQuery(baseUrl, {
+    tenantId: tenantId,
+    deliveryDate: formatVgenIsoDate(targetDate),
+    periodType: 'Hour',
+    includeLockStatus: 'true',
+    active: 'true',
+    page: '1',
+    results: '2147483647'
+  });
+}
+
+function normalizeVgenPlanBaseUrl(value) {
+  var url = String(value || VGEN_DEFAULT_PLAN_URL).trim();
+  var queryIndex = url.indexOf('?');
+  return queryIndex === -1 ? url : url.substring(0, queryIndex);
+}
+
+function fetchVgenPlanApiUrl(url, tenantId, token, props) {
+  var headers = {
+    Accept: 'application/json',
+    Authorization: token.indexOf('Bearer ') === 0 ? token : 'Bearer ' + token,
+    'X-Tenant-Id': tenantId
+  };
+  mergeVgenHeaders(headers, parseVgenJsonProperty(props.getProperty('VGEN_PLAN_HEADERS_JSON'), 'VGEN_PLAN_HEADERS_JSON'));
 
   var response = UrlFetchApp.fetch(url, {
     method: 'get',
-    headers: {
-      Accept: 'application/json',
-      Authorization: token.indexOf('Bearer ') === 0 ? token : 'Bearer ' + token,
-      'X-Tenant-Id': tenantId
-    },
+    headers: headers,
     muteHttpExceptions: true
   });
+
+  return {
+    code: response.getResponseCode(),
+    text: response.getContentText()
+  };
+}
+
+function getVgenAccessTokenForPlan(props) {
+  var token = props.getProperty('VGEN_ACCESS_TOKEN') || '';
+  if ((!token || shouldRefreshStoredVgenAccessToken(props)) && canRefreshVgenAccessToken(props)) {
+    return refreshVgenAccessToken(!token ? 'token eksik' : 'token suresi yaklasti').token;
+  }
+
+  if (!token) {
+    throw new Error('VGEN_ACCESS_TOKEN Script Properties icinde tanimli degil ve otomatik login ayarlari eksik.');
+  }
+  return token;
+}
+
+function shouldRefreshStoredVgenAccessToken(props) {
+  if (String(props.getProperty('VGEN_FORCE_LOGIN_EACH_RUN') || '').toLowerCase() === 'true') return true;
+
+  var expiresAt = props.getProperty('VGEN_ACCESS_TOKEN_EXPIRES_AT') || '';
+  if (!expiresAt) return false;
+
+  var expiresDate = new Date(expiresAt);
+  if (isNaN(expiresDate.getTime())) return false;
+
+  var refreshBeforeSeconds = Math.max(0, parseInt(props.getProperty('VGEN_REFRESH_BEFORE_SECONDS') || '300', 10));
+  return new Date().getTime() >= (expiresDate.getTime() - (refreshBeforeSeconds * 1000));
+}
+
+function shouldRefreshVgenTokenAfterApiError(code, text) {
+  var body = String(text || '').toLowerCase();
+  return code === 401 || code === 403 ||
+    (code === 400 && (
+      body.indexOf('unauthorized') !== -1 ||
+      body.indexOf('token') !== -1 ||
+      body.indexOf('tenant') !== -1
+    ));
+}
+
+function buildVgenPlanApiErrorMessage(code, text) {
+  var body = String(text || '');
+  var message = 'V-Gen plan API istegi basarisiz. HTTP ' + code + ': ' + body.substring(0, 500);
+  if (/unauthorized_tenant|not authorized to access this tenant/i.test(body)) {
+    message += ' | Tenant/token yetkisi reddedildi. VGEN_TENANT_ID dogru olmali; otomatik login ayarlandiysa yeni tokenla tekrar denendi.';
+  }
+  return message;
+}
+
+function isVgenHttpSuccess(code) {
+  return code >= 200 && code < 300;
+}
+
+function canRefreshVgenAccessToken(props) {
+  props = props || PropertiesService.getScriptProperties();
+  if (!props.getProperty('VGEN_LOGIN_URL')) return false;
+  if (props.getProperty('VGEN_LOGIN_PAYLOAD_JSON')) return true;
+  return !!(props.getProperty('VGEN_USERNAME') && props.getProperty('VGEN_PASSWORD'));
+}
+
+function refreshVgenAccessToken(reason) {
+  var props = PropertiesService.getScriptProperties();
+  if (!canRefreshVgenAccessToken(props)) {
+    throw new Error('V-Gen otomatik token yenileme ayarlari eksik. VGEN_LOGIN_URL ve VGEN_LOGIN_PAYLOAD_JSON veya VGEN_USERNAME/VGEN_PASSWORD tanimlanmali.');
+  }
+
+  var tenantId = props.getProperty('VGEN_TENANT_ID') || VGEN_DEFAULT_TENANT_ID;
+  var loginUrl = props.getProperty('VGEN_LOGIN_URL');
+  var method = String(props.getProperty('VGEN_LOGIN_METHOD') || 'post').toLowerCase();
+  var contentType = props.getProperty('VGEN_LOGIN_CONTENT_TYPE') || 'application/json';
+  var headers = parseVgenJsonProperty(props.getProperty('VGEN_LOGIN_HEADERS_JSON'), 'VGEN_LOGIN_HEADERS_JSON');
+  var payload = buildVgenLoginPayload(props, tenantId, contentType);
+
+  var options = {
+    method: method,
+    headers: headers,
+    payload: payload,
+    muteHttpExceptions: true
+  };
+  if (contentType) options.contentType = contentType;
+
+  var response = UrlFetchApp.fetch(loginUrl, options);
   var code = response.getResponseCode();
   var text = response.getContentText();
-  if (code < 200 || code >= 300) {
-    throw new Error('V-Gen plan API istegi basarisiz. HTTP ' + code + ': ' + text.substring(0, 500));
+  if (!isVgenHttpSuccess(code)) {
+    throw new Error('V-Gen login/token yenileme basarisiz. HTTP ' + code + ': ' + String(text || '').substring(0, 500));
   }
-  return JSON.parse(text);
+
+  var parsed = parseVgenJsonResponse(text, 'V-Gen login cevabi JSON degil');
+  var token = findVgenTokenInLoginResponse(parsed, props);
+  if (!token) {
+    throw new Error('V-Gen login cevabinda token bulunamadi. VGEN_LOGIN_TOKEN_PATH ayarini kontrol edin.');
+  }
+
+  props.setProperty('VGEN_ACCESS_TOKEN', token);
+  props.setProperty('VGEN_ACCESS_TOKEN_UPDATED_AT', new Date().toISOString());
+
+  var expiresAt = calculateVgenTokenExpiresAt(parsed, props);
+  if (expiresAt) {
+    props.setProperty('VGEN_ACCESS_TOKEN_EXPIRES_AT', expiresAt);
+  } else {
+    props.deleteProperty('VGEN_ACCESS_TOKEN_EXPIRES_AT');
+  }
+
+  addVgenAuthRefreshLog(reason || 'token yenileme', !!expiresAt ? expiresAt : '');
+  return {
+    refreshed: true,
+    token: token,
+    expiresAt: expiresAt
+  };
+}
+
+function buildVgenLoginPayload(props, tenantId, contentType) {
+  var rawPayload = props.getProperty('VGEN_LOGIN_PAYLOAD_JSON');
+  var username = props.getProperty('VGEN_USERNAME') || '';
+  var password = props.getProperty('VGEN_PASSWORD') || '';
+  var clientId = props.getProperty('VGEN_AUTH_CLIENT_ID') || '';
+  var clientSecret = props.getProperty('VGEN_AUTH_CLIENT_SECRET') || '';
+  var audience = props.getProperty('VGEN_AUTH_AUDIENCE') || 'https://api.vgen.vtcenerji.com';
+  var scope = props.getProperty('VGEN_AUTH_SCOPE') || 'openid email offline_access';
+  var grantType = props.getProperty('VGEN_AUTH_GRANT_TYPE') || 'password';
+  var realm = props.getProperty('VGEN_AUTH_REALM') || 'Username-Password-Authentication';
+  var payloadObject;
+
+  if (rawPayload) {
+    payloadObject = parseVgenJsonProperty(replaceVgenTemplate(rawPayload, {
+      username: username,
+      password: password,
+      tenantId: tenantId,
+      clientId: clientId,
+      clientSecret: clientSecret,
+      audience: audience,
+      scope: scope,
+      grantType: grantType,
+      realm: realm
+    }), 'VGEN_LOGIN_PAYLOAD_JSON');
+  } else {
+    payloadObject = {
+      grant_type: grantType,
+      username: username,
+      password: password,
+      audience: audience,
+      scope: scope,
+      client_id: clientId,
+      realm: realm
+    };
+    if (clientSecret) payloadObject.client_secret = clientSecret;
+  }
+
+  if (String(contentType || '').toLowerCase().indexOf('x-www-form-urlencoded') !== -1) {
+    return encodeVgenFormPayload(payloadObject);
+  }
+
+  return JSON.stringify(payloadObject);
+}
+
+function findVgenTokenInLoginResponse(parsed, props) {
+  var configured = props.getProperty('VGEN_LOGIN_TOKEN_PATH') || 'access_token,token,data.accessToken,data.token';
+  var paths = splitVgenCsv(configured);
+  var token = findVgenFirstValueAtPaths(parsed, paths);
+  return token ? String(token) : '';
+}
+
+function calculateVgenTokenExpiresAt(parsed, props) {
+  var explicitExpiresAt = findVgenFirstValueAtPaths(parsed, splitVgenCsv(props.getProperty('VGEN_LOGIN_EXPIRES_AT_PATH') || 'expires_at,expiresAt,data.expires_at,data.expiresAt'));
+  if (explicitExpiresAt) {
+    var parsedDate = new Date(explicitExpiresAt);
+    if (!isNaN(parsedDate.getTime())) return parsedDate.toISOString();
+  }
+
+  var expiresIn = findVgenFirstValueAtPaths(parsed, splitVgenCsv(props.getProperty('VGEN_LOGIN_EXPIRES_IN_PATH') || 'expires_in,expiresIn,data.expires_in,data.expiresIn'));
+  var seconds = parseInt(expiresIn || '', 10);
+  if (!isNaN(seconds) && seconds > 0) {
+    return new Date(new Date().getTime() + (seconds * 1000)).toISOString();
+  }
+
+  return '';
+}
+
+function addVgenAuthRefreshLog(reason, expiresAt) {
+  try {
+    addSystemLog({
+      tarih: formatVgenDateTR(new Date()),
+      saat: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'HH:mm'),
+      modul: VGEN_PLAN_MODULE_NAME,
+      eksikKayit: 'V-Gen token yenileme',
+      otomatikKayitSonucu: 'Basarili',
+      mailSonucu: 'Gonderilmedi',
+      hataMesaji: '',
+      detay: 'Sebep: ' + reason + (expiresAt ? ' | Bitis: ' + expiresAt : '')
+    });
+  } catch (ignore) {}
+}
+
+function parseVgenJsonResponse(text, errorPrefix) {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(errorPrefix + ': ' + String(text || '').substring(0, 500));
+  }
+}
+
+function parseVgenJsonProperty(value, propertyName) {
+  if (!value) return {};
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    throw new Error(propertyName + ' JSON olarak okunamadi: ' + error.toString());
+  }
+}
+
+function mergeVgenHeaders(target, extra) {
+  extra = extra || {};
+  for (var key in extra) {
+    if (extra.hasOwnProperty(key) && extra[key] !== undefined && extra[key] !== null) {
+      target[key] = String(extra[key]);
+    }
+  }
+  return target;
+}
+
+function findVgenFirstValueAtPaths(source, paths) {
+  for (var i = 0; i < paths.length; i++) {
+    var value = getVgenValueAtPath(source, paths[i]);
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return '';
+}
+
+function getVgenValueAtPath(source, path) {
+  var current = source;
+  var parts = String(path || '').split('.');
+  for (var i = 0; i < parts.length; i++) {
+    var key = parts[i];
+    if (!key) continue;
+    if (current === undefined || current === null || !Object.prototype.hasOwnProperty.call(current, key)) {
+      return undefined;
+    }
+    current = current[key];
+  }
+  return current;
+}
+
+function buildVgenUrlWithQuery(baseUrl, params) {
+  var parts = [];
+  for (var key in params) {
+    if (params.hasOwnProperty(key) && params[key] !== undefined && params[key] !== null && params[key] !== '') {
+      parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key]));
+    }
+  }
+
+  var separator = baseUrl.indexOf('?') === -1 ? '?' : '&';
+  return baseUrl + separator + parts.join('&');
+}
+
+function replaceVgenTemplate(text, values) {
+  var result = String(text || '');
+  for (var key in values) {
+    if (values.hasOwnProperty(key)) {
+      result = result.split('${' + key + '}').join(String(values[key] || ''));
+    }
+  }
+  return result;
+}
+
+function encodeVgenFormPayload(payloadObject) {
+  var parts = [];
+  for (var key in payloadObject) {
+    if (payloadObject.hasOwnProperty(key) && payloadObject[key] !== undefined && payloadObject[key] !== null) {
+      parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(payloadObject[key]));
+    }
+  }
+  return parts.join('&');
+}
+
+function splitVgenCsv(value) {
+  var rawParts = String(value || '').split(',');
+  var parts = [];
+  for (var i = 0; i < rawParts.length; i++) {
+    var part = String(rawParts[i] || '').trim();
+    if (part) parts.push(part);
+  }
+  return parts;
 }
 
 function extractVgenPlanRowsFromApiPayload(payload, targetDate) {
@@ -364,8 +848,6 @@ function extractVgenPlanRowsFromApiPayload(payload, targetDate) {
     for (var d = 0; d < details.length; d++) {
       var detail = details[d] || {};
       var amount = parseVgenNumber(detail.amount);
-      if (amount <= 0) continue;
-
       var startMinutes = findVgenLineStartMinutes(detail.period);
       if (startMinutes === null) continue;
       rows.push(buildMailVgenPlanRow(targetDate, motor, 'V-Gen API', startMinutes, amount, 'api-amount'));
@@ -379,9 +861,20 @@ function extractVgenPlanRowsFromApiPayload(payload, targetDate) {
 
 function isVgenTargetProductionAsset(assetName) {
   var text = normalizeVgenSearchText(assetName);
-  return text.indexOf('denizli') !== -1 &&
-    text.indexOf('uretim') !== -1 &&
-    text.indexOf('tuketim') === -1;
+  if (text.indexOf('uretim') === -1 || text.indexOf('tuketim') !== -1) return false;
+
+  var keywords = getVgenTargetPlantKeywords();
+  if (!keywords.length) return true;
+
+  for (var i = 0; i < keywords.length; i++) {
+    if (text.indexOf(normalizeVgenSearchText(keywords[i])) !== -1) return true;
+  }
+  return false;
+}
+
+function getVgenTargetPlantKeywords() {
+  var configured = PropertiesService.getScriptProperties().getProperty('VGEN_TARGET_PLANT_KEYWORDS') || 'denizli';
+  return splitVgenCsv(configured);
 }
 
 function testVgenPlanMailFetchOnly() {
@@ -804,8 +1297,8 @@ function upsertVgenPlanAnnouncement(targetDate, message) {
   var dateText = formatVgenDateTR(targetDate);
   var props = PropertiesService.getScriptProperties();
   var id = 'auto-vgen-plan-' + dateIso;
-  var shift = props.getProperty('VGEN_NOTIFICATION_SHIFT') || '16-24';
-  var pageTarget = props.getProperty('VGEN_NOTIFICATION_PAGE_TARGET') || 'anasayfa';
+  var shift = normalizeVgenNotificationShift(props.getProperty('VGEN_NOTIFICATION_SHIFT'));
+  var pageTarget = props.getProperty('VGEN_NOTIFICATION_PAGE_TARGET') || 'all';
 
   try {
     var record = {
@@ -833,6 +1326,16 @@ function upsertVgenPlanAnnouncement(targetDate, message) {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+function normalizeVgenNotificationShift(value) {
+  var text = String(value || '').trim();
+  if (!text) return '';
+  var normalized = text.toLowerCase().replace('ü', 'u').replace('/', '-');
+  if (normalized === 'all' || normalized === 'tum' || normalized === 'tumu' || normalized === 'tum-gun') {
+    return '';
+  }
+  return text.replace('/', '-');
 }
 
 function addVgenPlanSystemLog(dateText, mailResult, announcementResult, rowCount, error) {
@@ -866,7 +1369,7 @@ function normalizeVgenMotorName(value, map) {
   return text || 'Santral';
 }
 
-function normalizeVgenSearchText(value) {
+function normalizeVgenSearchTextLegacy(value) {
   return String(value || '')
     .toLowerCase()
     .replace(/ı/g, 'i')
@@ -881,6 +1384,14 @@ function normalizeVgenSearchText(value) {
     .replace(/Ö/g, 'o')
     .replace(/ç/g, 'c')
     .replace(/Ç/g, 'c');
+}
+
+function normalizeVgenSearchText(value) {
+  var text = String(value || '').toLowerCase().replace(/\u0131/g, 'i');
+  try {
+    text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  } catch (ignore) {}
+  return text;
 }
 
 function mergeVgenIntervals(intervals) {
