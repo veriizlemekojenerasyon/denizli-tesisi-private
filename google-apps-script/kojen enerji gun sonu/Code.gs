@@ -10,6 +10,20 @@
  * Who has access: Anyone
  */
 
+var ENERJI_GUN_SONU_SPREADSHEET_ID = '1yCfpgTVxMmPqpKhEmJety1IwwM7Bu_HlEvpDjqnT12E';
+
+function getEnerjiGunSonuSpreadsheet() {
+  if (ENERJI_GUN_SONU_SPREADSHEET_ID) {
+    return SpreadsheetApp.openById(ENERJI_GUN_SONU_SPREADSHEET_ID);
+  }
+
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet) {
+    throw new Error('Enerji gun sonu spreadsheet bulunamadi. ENERJI_GUN_SONU_SPREADSHEET_ID degerini kontrol edin.');
+  }
+  return spreadsheet;
+}
+
 function doGet(e) {
   return handleRequest(e);
 }
@@ -96,7 +110,7 @@ function getEnerjiEndOfDaySheetName(motor) {
 }
 
 function getOrCreateEnerjiEndOfDaySheet(motor) {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var spreadsheet = getEnerjiGunSonuSpreadsheet();
   var sheetName = getEnerjiEndOfDaySheetName(motor);
   var sheet = spreadsheet.getSheetByName(sheetName);
   var headers = ['Tarih', 'Saat', 'Motor', 'Toplam Aktif Enerji', 'Calisma Saati', 'Kalkis Sayisi', 'Kaydeden', 'Kayit Tarihi'];
@@ -127,7 +141,7 @@ function getOrCreateEnerjiEndOfDaySheet(motor) {
 
 function createEndOfDaySheets(motor, includeMainEnergyValue) {
   try {
-    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var spreadsheet = getEnerjiGunSonuSpreadsheet();
     var motors = motor ? [normalizeEnerjiMotorLabel(motor)] : ['GM-1', 'GM-2', 'GM-3'];
     var includeMainEnergy = String(includeMainEnergyValue || '').toLowerCase() === '1' ||
       String(includeMainEnergyValue || '').toLowerCase() === 'true';
@@ -278,7 +292,7 @@ function upsertMainEnergyEndOfDayRecord(data) {
 }
 
 function getOrCreateMainEnergySheet(motor) {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var spreadsheet = getEnerjiGunSonuSpreadsheet();
   var sheetName = 'Enerji ' + normalizeEnerjiMotorLabel(motor);
   var sheet = spreadsheet.getSheetByName(sheetName);
   var headers = [
@@ -388,7 +402,7 @@ function getEndOfDayValues(params) {
 }
 
 function getEnerjiEndOfDaySheets() {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var spreadsheet = getEnerjiGunSonuSpreadsheet();
   var sheets = spreadsheet.getSheets();
   var output = [];
   for (var i = 0; i < sheets.length; i++) {
@@ -539,7 +553,7 @@ function createMissingEndOfDayValuesForDate(tarih, motor, kaydeden) {
 }
 
 function endOfDayValueExists(motor, tarih) {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var spreadsheet = getEnerjiGunSonuSpreadsheet();
   var sheet = spreadsheet.getSheetByName(getEnerjiEndOfDaySheetName(motor));
   if (!sheet || sheet.getLastRow() < 2) return false;
 
@@ -557,7 +571,7 @@ function endOfDayValueExists(motor, tarih) {
 }
 
 function getMainEnergySheetIfExists(motor) {
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var spreadsheet = getEnerjiGunSonuSpreadsheet();
   return spreadsheet.getSheetByName('Enerji ' + normalizeEnerjiMotorLabel(motor));
 }
 
@@ -665,7 +679,7 @@ function updateYearlyEnergyEndOfDayRow(motor, tarih, calismaSaati, toplamAktifEn
       return { success: false, error: 'Yillik enerji icin tarih okunamadi: ' + tarih };
     }
 
-    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var spreadsheet = getEnerjiGunSonuSpreadsheet();
     var year = date.getFullYear();
     var normalizedMotor = normalizeEnerjiMotorLabel(motor);
     var sheetName = 'YillikEnerji-' + normalizedMotor + '-' + year;
