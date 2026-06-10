@@ -348,6 +348,266 @@ html[data-theme="dark"] [style*="color:black"] {
     color: var(--theme-text) !important;
 }
 
+html[data-theme="light"] .data-entry-section,
+html[data-theme="light"] .data-form,
+html[data-theme="light"] .recent-records,
+html[data-theme="light"] .vardiya-section,
+html[data-theme="light"] .vardiya-form,
+html[data-theme="light"] .temizlik-gorevleri,
+html[data-theme="light"] .temizlik-aylik-listesi,
+html[data-theme="light"] .haftalik-vardiya-kayitlari,
+html[data-theme="light"] .islem-kaydetme,
+html[data-theme="light"] .yardimci-operator-section,
+html[data-theme="light"] .motor-tracking-container,
+html[data-theme="light"] .tracking-form,
+html[data-theme="light"] .recent-records,
+html[data-theme="light"] .camera-modal-content,
+html[data-theme="light"] .kojen-selector-section,
+html[data-theme="light"] .selector-form,
+html[data-theme="light"] .kojen-motor-section,
+html[data-theme="light"] .kojen-table-container,
+html[data-theme="light"] .kojen-enerji-table-container,
+html[data-theme="light"] .end-of-day-section,
+html[data-theme="light"] .end-of-day-form,
+html[data-theme="light"] .content-section,
+html[data-theme="light"] .content-container,
+html[data-theme="light"] .vardiya-verileri-section,
+html[data-theme="light"] .maintenance-container,
+html[data-theme="light"] .form-selector,
+html[data-theme="light"] .maintenance-form,
+html[data-theme="light"] .maintenance-form-content,
+html[data-theme="light"] .modern-record-form,
+html[data-theme="light"] .form-step,
+html[data-theme="light"] .chart-panel,
+html[data-theme="light"] .stats-panel,
+html[data-theme="light"] .report-panel,
+html[data-theme="light"] .active-records-panel,
+html[data-theme="light"] .report-summary,
+html[data-theme="light"] .report-table-container,
+html[data-theme="light"] .table-wrapper,
+html[data-theme="light"] .file-upload-container,
+html[data-theme="light"] .stock-form-container,
+html[data-theme="light"] .stock-transaction-container,
+html[data-theme="light"] .stock-list-container,
+html[data-theme="light"] .stock-table-wrapper,
+html[data-theme="light"] .transactions-table-wrapper,
+html[data-theme="light"] .recent-transactions,
+html[data-theme="light"] .temizlik-checklist,
+html[data-theme="light"] .mevcut-vardiya,
+html[data-theme="light"] .personel-listesi,
+html[data-theme="light"] .vardiya-table-container,
+html[data-theme="light"] .maintenance-calendar-panel,
+html[data-theme="light"] .notification-content {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+}
+
+html[data-theme="dark"] .data-entry-section,
+html[data-theme="dark"] .data-form,
+html[data-theme="dark"] .recent-records,
+html[data-theme="dark"] .mobile-quick-panel,
+html[data-theme="dark"] .quick-panel-header,
+html[data-theme="dark"] .missing-hours-box,
+html[data-theme="dark"] .vardiya-section,
+html[data-theme="dark"] .vardiya-form,
+html[data-theme="dark"] .temizlik-gorevleri,
+html[data-theme="dark"] .temizlik-aylik-listesi,
+html[data-theme="dark"] .haftalik-vardiya-kayitlari,
+html[data-theme="dark"] .islem-kaydetme,
+html[data-theme="dark"] .yardimci-operator-section,
+html[data-theme="dark"] .motor-tracking-container,
+html[data-theme="dark"] .tracking-form,
+html[data-theme="dark"] .camera-modal-content,
+html[data-theme="dark"] .kojen-selector-section,
+html[data-theme="dark"] .selector-form,
+html[data-theme="dark"] .kojen-motor-section,
+html[data-theme="dark"] .kojen-table-container,
+html[data-theme="dark"] .kojen-enerji-table-container,
+html[data-theme="dark"] .end-of-day-section,
+html[data-theme="dark"] .end-of-day-form,
+html[data-theme="dark"] .content-section,
+html[data-theme="dark"] .content-container,
+html[data-theme="dark"] .vardiya-verileri-section,
+html[data-theme="dark"] .maintenance-container,
+html[data-theme="dark"] .form-selector,
+html[data-theme="dark"] .maintenance-form,
+html[data-theme="dark"] .maintenance-form-content,
+html[data-theme="dark"] .modern-record-form,
+html[data-theme="dark"] .form-step,
+html[data-theme="dark"] .chart-panel,
+html[data-theme="dark"] .stats-panel,
+html[data-theme="dark"] .report-panel,
+html[data-theme="dark"] .active-records-panel,
+html[data-theme="dark"] .report-summary,
+html[data-theme="dark"] .report-table-container,
+html[data-theme="dark"] .table-wrapper,
+html[data-theme="dark"] .file-upload-container,
+html[data-theme="dark"] .stock-form-container,
+html[data-theme="dark"] .stock-transaction-container,
+html[data-theme="dark"] .stock-list-container,
+html[data-theme="dark"] .stock-table-wrapper,
+html[data-theme="dark"] .transactions-table-wrapper,
+html[data-theme="dark"] .recent-transactions,
+html[data-theme="dark"] .temizlik-checklist,
+html[data-theme="dark"] .mevcut-vardiya,
+html[data-theme="dark"] .personel-listesi,
+html[data-theme="dark"] .vardiya-table-container,
+html[data-theme="dark"] .maintenance-calendar-panel,
+html[data-theme="dark"] .maintenance-calendar-day,
+html[data-theme="dark"] .notification-content {
+    background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.96)) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow) !important;
+}
+
+html[data-theme="dark"] .form-section,
+html[data-theme="dark"] .form-row,
+html[data-theme="dark"] .form-group,
+html[data-theme="dark"] .checkbox-wrapper,
+html[data-theme="dark"] .checkbox-label,
+html[data-theme="dark"] .motor-card,
+html[data-theme="dark"] .motor-checkbox,
+html[data-theme="dark"] .saat-checkbox,
+html[data-theme="dark"] .temizlik-gorev,
+html[data-theme="dark"] .islem-card,
+html[data-theme="dark"] .islem-item,
+html[data-theme="dark"] .info-item,
+html[data-theme="dark"] .measurement-item,
+html[data-theme="dark"] .oil-sample-item,
+html[data-theme="dark"] .oil-filter-item,
+html[data-theme="dark"] .ht-lt-jacket-item,
+html[data-theme="dark"] .technician-input-group,
+html[data-theme="dark"] .control-group,
+html[data-theme="dark"] .report-controls,
+html[data-theme="dark"] .summary-item,
+html[data-theme="dark"] .file-item,
+html[data-theme="dark"] .maintenance-calendar-item,
+html[data-theme="dark"] .active-records-controls,
+html[data-theme="dark"] .table-controls,
+html[data-theme="dark"] .records-header,
+html[data-theme="dark"] .record-counter {
+    background: rgba(15, 23, 42, 0.74) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .kojen-table-header,
+html[data-theme="dark"] .kojen-enerji-table-header,
+html[data-theme="dark"] .records-table thead,
+html[data-theme="dark"] .vardiya-table thead,
+html[data-theme="dark"] .personel-table thead,
+html[data-theme="dark"] .temizlik-table thead,
+html[data-theme="dark"] .vardiya-kayitlari-table thead,
+html[data-theme="dark"] .maintenance-table thead,
+html[data-theme="dark"] .stock-table thead,
+html[data-theme="dark"] .transactions-table thead {
+    background: linear-gradient(135deg, #1e3a8a, #0f766e) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .kojen-table-header .kojen-table-cell,
+html[data-theme="dark"] .kojen-enerji-table-header .kojen-enerji-table-cell,
+html[data-theme="dark"] .header-cell,
+html[data-theme="dark"] .records-table th,
+html[data-theme="dark"] .vardiya-table th,
+html[data-theme="dark"] .personel-table th,
+html[data-theme="dark"] .temizlik-table th,
+html[data-theme="dark"] .vardiya-kayitlari-table th,
+html[data-theme="dark"] .maintenance-table th,
+html[data-theme="dark"] .stock-table th,
+html[data-theme="dark"] .transactions-table th {
+    background: transparent !important;
+    color: #f8fafc !important;
+    border-color: rgba(226, 232, 240, 0.18) !important;
+}
+
+html[data-theme="dark"] .data-input,
+html[data-theme="dark"] .kojen-input,
+html[data-theme="dark"] .quick-action-btn,
+html[data-theme="dark"] .quick-refresh-btn,
+html[data-theme="dark"] .missing-hour-chip,
+html[data-theme="dark"] .form-btn,
+html[data-theme="dark"] .motor-btn,
+html[data-theme="dark"] .chart-btn,
+html[data-theme="dark"] .active-records-controls select,
+html[data-theme="dark"] .technician-input-group select,
+html[data-theme="dark"] .motor-checkbox,
+html[data-theme="dark"] .saat-checkbox {
+    background: #020617 !important;
+    border-color: var(--theme-line-strong) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .data-input:focus,
+html[data-theme="dark"] .kojen-input:focus,
+html[data-theme="dark"] .modal-input:focus,
+html[data-theme="dark"] .end-of-day-input:focus,
+html[data-theme="dark"] .form-group textarea:focus {
+    border-color: var(--theme-primary) !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18) !important;
+}
+
+html[data-theme="dark"] .modal-header,
+html[data-theme="dark"] .modal-body,
+html[data-theme="dark"] .modal-footer,
+html[data-theme="dark"] .camera-body,
+html[data-theme="dark"] .notification-body {
+    background: var(--theme-surface-strong) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .maintenance-form > h3,
+html[data-theme="dark"] .maintenance-form .record-form-title h3,
+html[data-theme="dark"] #periodic-form > div > h3,
+html[data-theme="dark"] #normal-form > div > h3,
+html[data-theme="dark"] #fault-form > div > h3 {
+    background: rgba(96, 165, 250, 0.14) !important;
+    border: 1px solid rgba(96, 165, 250, 0.28) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .kojen-table-body .kojen-table-row,
+html[data-theme="dark"] .kojen-enerji-table-body .kojen-enerji-table-row,
+html[data-theme="dark"] .input-row .kojen-table-cell,
+html[data-theme="dark"] .input-row .kojen-enerji-table-cell,
+html[data-theme="dark"] .vardiya-table td,
+html[data-theme="dark"] .personel-table td,
+html[data-theme="dark"] .temizlik-table td,
+html[data-theme="dark"] .vardiya-kayitlari-table td,
+html[data-theme="dark"] .maintenance-table td,
+html[data-theme="dark"] .stock-table td,
+html[data-theme="dark"] .transactions-table td {
+    background: #0f172a !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .kojen-table-body .kojen-table-row:nth-child(even),
+html[data-theme="dark"] .kojen-enerji-table-body .kojen-enerji-table-row:nth-child(even),
+html[data-theme="dark"] .vardiya-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .personel-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .temizlik-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .vardiya-kayitlari-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .maintenance-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .stock-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .transactions-table tbody tr:nth-child(even) td {
+    background: #111827 !important;
+}
+
+html[data-theme="dark"] .motor-btn:hover,
+html[data-theme="dark"] .motor-btn.active,
+html[data-theme="dark"] .motor-btn.selected,
+html[data-theme="dark"] .chart-btn.active,
+html[data-theme="dark"] .form-btn.active {
+    background: #1e293b !important;
+    border-color: var(--theme-primary) !important;
+    color: #f8fafc !important;
+}
+
 .theme-toggle-btn {
     display: inline-flex;
     align-items: center;
