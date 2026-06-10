@@ -1,49 +1,51 @@
 :root {
     color-scheme: light;
-    --theme-page: #eef3f8;
-    --theme-page-soft: #f8fafc;
-    --theme-surface: rgba(255, 255, 255, 0.94);
-    --theme-surface-strong: #ffffff;
-    --theme-surface-soft: #f1f5f9;
+    --theme-page: #e8eef7;
+    --theme-page-soft: #f8fbff;
+    --theme-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.64));
+    --theme-surface-strong: rgba(255, 255, 255, 0.88);
+    --theme-surface-soft: rgba(241, 245, 249, 0.66);
     --theme-text: #172033;
     --theme-muted: #64748b;
-    --theme-line: #d9e2ef;
-    --theme-line-strong: #cbd5e1;
+    --theme-line: rgba(71, 85, 105, 0.16);
+    --theme-line-strong: rgba(37, 99, 235, 0.24);
     --theme-primary: #2563eb;
-    --theme-primary-soft: #dbeafe;
-    --theme-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
-    --theme-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+    --theme-primary-soft: rgba(37, 99, 235, 0.12);
+    --theme-shadow: 0 18px 44px rgba(15, 23, 42, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    --theme-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.64);
 }
 
 html[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #0f172a;
-    --panel: #111827;
-    --text: #e5e7eb;
-    --muted: #94a3b8;
-    --line: #334155;
-    --blue: #60a5fa;
-    --green: #34d399;
-    --red: #f87171;
+    --bg: #070a12;
+    --panel: rgba(10, 16, 30, 0.86);
+    --text: #edf6ff;
+    --muted: #9fb0c6;
+    --line: rgba(125, 211, 252, 0.22);
+    --blue: #38bdf8;
+    --green: #2dd4bf;
+    --red: #fb7185;
     --amber: #fbbf24;
-    --theme-page: #07111f;
-    --theme-page-soft: #0b1628;
-    --theme-surface: rgba(17, 24, 39, 0.94);
-    --theme-surface-strong: #111827;
-    --theme-surface-soft: #0f172a;
-    --theme-text: #e5e7eb;
-    --theme-muted: #a8b4c7;
-    --theme-line: #334155;
-    --theme-line-strong: #475569;
-    --theme-primary: #60a5fa;
-    --theme-primary-soft: rgba(96, 165, 250, 0.16);
-    --theme-shadow: 0 20px 48px rgba(0, 0, 0, 0.36);
-    --theme-shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.28);
+    --theme-page: #050815;
+    --theme-page-soft: #08111f;
+    --theme-surface: linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(6, 13, 24, 0.76));
+    --theme-surface-strong: rgba(9, 16, 30, 0.94);
+    --theme-surface-soft: rgba(8, 13, 24, 0.72);
+    --theme-text: #edf6ff;
+    --theme-muted: #a6b6cc;
+    --theme-line: rgba(125, 211, 252, 0.22);
+    --theme-line-strong: rgba(45, 212, 191, 0.34);
+    --theme-primary: #38bdf8;
+    --theme-primary-soft: rgba(56, 189, 248, 0.16);
+    --theme-shadow: 0 22px 55px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    --theme-shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.045);
 }
 
 html[data-theme="light"] body {
     background:
-        linear-gradient(135deg, rgba(37, 99, 235, 0.10), rgba(20, 184, 166, 0.08)),
+        linear-gradient(135deg, rgba(37, 99, 235, 0.13), transparent 42%),
+        linear-gradient(225deg, rgba(20, 184, 166, 0.11), transparent 48%),
+        linear-gradient(180deg, #f8fbff 0%, #edf4fb 48%, #e6f4f1 100%),
         var(--theme-page) !important;
     color: var(--theme-text) !important;
 }
@@ -73,14 +75,17 @@ html[data-theme="light"] .login-card {
     background: var(--theme-surface) !important;
     border-color: var(--theme-line) !important;
     box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(18px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
 }
 
 html[data-theme="light"] input,
 html[data-theme="light"] select,
 html[data-theme="light"] textarea {
-    background: #ffffff !important;
+    background: rgba(255, 255, 255, 0.88) !important;
     border-color: var(--theme-line-strong) !important;
     color: var(--theme-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
 }
 
 html[data-theme="light"] input:focus,
@@ -92,7 +97,9 @@ html[data-theme="light"] textarea:focus {
 
 html[data-theme="dark"] body {
     background:
-        linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.3)),
+        linear-gradient(135deg, rgba(8, 145, 178, 0.18), transparent 42%),
+        linear-gradient(225deg, rgba(45, 212, 191, 0.10), transparent 46%),
+        linear-gradient(180deg, #050815 0%, #08111f 48%, #06130f 100%),
         var(--theme-page) !important;
     color: var(--theme-text) !important;
 }
@@ -111,8 +118,9 @@ html[data-theme="dark"] .page-content {
 }
 
 html[data-theme="dark"] .sidebar {
-    background: linear-gradient(180deg, #0f172a 0%, #111827 54%, #172554 100%) !important;
-    border-right-color: rgba(148, 163, 184, 0.24) !important;
+    background: linear-gradient(180deg, rgba(5, 8, 21, 0.98) 0%, rgba(8, 17, 31, 0.96) 55%, rgba(4, 47, 46, 0.88) 100%) !important;
+    border-right-color: rgba(125, 211, 252, 0.18) !important;
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.32) !important;
 }
 
 html[data-theme="dark"] .header,
@@ -157,6 +165,8 @@ html[data-theme="dark"] [class$="-card"] {
     border-color: var(--theme-line) !important;
     color: var(--theme-text) !important;
     box-shadow: var(--theme-shadow) !important;
+    backdrop-filter: blur(18px) saturate(132%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(132%) !important;
 }
 
 html[data-theme="dark"] .header-bottom,
@@ -183,6 +193,9 @@ html[data-theme="dark"] .saat-selector {
     background: var(--theme-surface-soft) !important;
     border-color: var(--theme-line) !important;
     color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(14px) saturate(125%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
 }
 
 html[data-theme="dark"] h1,
@@ -229,10 +242,10 @@ html[data-theme="dark"] .modal-input,
 html[data-theme="dark"] .form-control,
 html[data-theme="dark"] .form-input,
 html[data-theme="dark"] .end-of-day-input {
-    background: #020617 !important;
+    background: rgba(2, 6, 23, 0.82) !important;
     border-color: var(--theme-line-strong) !important;
     color: var(--theme-text) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 0 0 1px rgba(56, 189, 248, 0.02) !important;
 }
 
 html[data-theme="dark"] input:focus,
@@ -264,7 +277,7 @@ html[data-theme="dark"] .transactions-table {
 html[data-theme="dark"] th,
 html[data-theme="dark"] thead td,
 html[data-theme="dark"] .sticky-col {
-    background: #1e293b !important;
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.94), rgba(15, 23, 42, 0.94) 58%, rgba(19, 78, 74, 0.86)) !important;
     color: #f8fafc !important;
 }
 
@@ -295,9 +308,30 @@ html[data-theme="dark"] a {
 html[data-theme="dark"] .btn.ghost,
 html[data-theme="dark"] .btn-secondary,
 html[data-theme="dark"] .logout-btn {
-    background: #1e293b !important;
+    background: rgba(15, 23, 42, 0.82) !important;
     color: var(--theme-text) !important;
     border-color: var(--theme-line-strong) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
+}
+
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] .submit-btn,
+html[data-theme="dark"] .btn-kaydet,
+html[data-theme="dark"] .quick-action-btn.primary,
+html[data-theme="dark"] .btn-export {
+    background: linear-gradient(135deg, #0891b2, #0f766e) !important;
+    border-color: rgba(125, 211, 252, 0.38) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 14px 30px rgba(8, 145, 178, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .btn-primary:hover,
+html[data-theme="dark"] .submit-btn:hover,
+html[data-theme="dark"] .btn-kaydet:hover,
+html[data-theme="dark"] .quick-action-btn.primary:hover,
+html[data-theme="dark"] .btn-export:hover {
+    background: linear-gradient(135deg, #0ea5e9, #14b8a6) !important;
+    transform: translateY(-1px);
 }
 
 html[data-theme="dark"] .logo {
@@ -398,10 +432,103 @@ html[data-theme="light"] .personel-listesi,
 html[data-theme="light"] .vardiya-table-container,
 html[data-theme="light"] .maintenance-calendar-panel,
 html[data-theme="light"] .notification-content {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.64)) !important;
     border-color: var(--theme-line) !important;
     color: var(--theme-text) !important;
     box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(18px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
+}
+
+html[data-theme="light"] .form-section,
+html[data-theme="light"] .form-row,
+html[data-theme="light"] .form-group,
+html[data-theme="light"] .checkbox-wrapper,
+html[data-theme="light"] .checkbox-label,
+html[data-theme="light"] .motor-card,
+html[data-theme="light"] .motor-checkbox,
+html[data-theme="light"] .saat-checkbox,
+html[data-theme="light"] .temizlik-gorev,
+html[data-theme="light"] .islem-card,
+html[data-theme="light"] .islem-item,
+html[data-theme="light"] .info-item,
+html[data-theme="light"] .measurement-item,
+html[data-theme="light"] .oil-sample-item,
+html[data-theme="light"] .oil-filter-item,
+html[data-theme="light"] .ht-lt-jacket-item,
+html[data-theme="light"] .technician-input-group,
+html[data-theme="light"] .control-group,
+html[data-theme="light"] .report-controls,
+html[data-theme="light"] .summary-item,
+html[data-theme="light"] .file-item,
+html[data-theme="light"] .maintenance-calendar-item,
+html[data-theme="light"] .active-records-controls,
+html[data-theme="light"] .table-controls,
+html[data-theme="light"] .records-header,
+html[data-theme="light"] .record-counter {
+    background: rgba(255, 255, 255, 0.56) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(12px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(120%) !important;
+}
+
+html[data-theme="light"] .records-table thead,
+html[data-theme="light"] .vardiya-table thead,
+html[data-theme="light"] .personel-table thead,
+html[data-theme="light"] .temizlik-table thead,
+html[data-theme="light"] .vardiya-kayitlari-table thead,
+html[data-theme="light"] .maintenance-table thead,
+html[data-theme="light"] .stock-table thead,
+html[data-theme="light"] .transactions-table thead {
+    background: linear-gradient(135deg, rgba(219, 234, 254, 0.92), rgba(240, 253, 250, 0.88)) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="light"] .records-table th,
+html[data-theme="light"] .vardiya-table th,
+html[data-theme="light"] .personel-table th,
+html[data-theme="light"] .temizlik-table th,
+html[data-theme="light"] .vardiya-kayitlari-table th,
+html[data-theme="light"] .maintenance-table th,
+html[data-theme="light"] .stock-table th,
+html[data-theme="light"] .transactions-table th {
+    background: transparent !important;
+    border-color: rgba(71, 85, 105, 0.14) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="light"] .btn-primary,
+html[data-theme="light"] .submit-btn,
+html[data-theme="light"] .btn-kaydet,
+html[data-theme="light"] .quick-action-btn.primary,
+html[data-theme="light"] .btn-export {
+    background: linear-gradient(135deg, #2563eb, #0f766e) !important;
+    border-color: rgba(37, 99, 235, 0.28) !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+html[data-theme="light"] .btn-secondary,
+html[data-theme="light"] .reset-btn,
+html[data-theme="light"] .form-btn,
+html[data-theme="light"] .motor-btn,
+html[data-theme="light"] .chart-btn {
+    background: rgba(255, 255, 255, 0.72) !important;
+    border-color: var(--theme-line-strong) !important;
+    color: var(--theme-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+html[data-theme="light"] .form-btn.active,
+html[data-theme="light"] .motor-btn.active,
+html[data-theme="light"] .motor-btn.selected,
+html[data-theme="light"] .chart-btn.active {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(20, 184, 166, 0.12)) !important;
+    border-color: rgba(37, 99, 235, 0.36) !important;
+    color: #172033 !important;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
 }
 
 html[data-theme="dark"] .data-entry-section,
@@ -457,10 +584,12 @@ html[data-theme="dark"] .vardiya-table-container,
 html[data-theme="dark"] .maintenance-calendar-panel,
 html[data-theme="dark"] .maintenance-calendar-day,
 html[data-theme="dark"] .notification-content {
-    background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.96)) !important;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(6, 13, 24, 0.76)) !important;
     border-color: var(--theme-line) !important;
     color: var(--theme-text) !important;
     box-shadow: var(--theme-shadow) !important;
+    backdrop-filter: blur(18px) saturate(132%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(132%) !important;
 }
 
 html[data-theme="dark"] .form-section,
@@ -489,9 +618,12 @@ html[data-theme="dark"] .active-records-controls,
 html[data-theme="dark"] .table-controls,
 html[data-theme="dark"] .records-header,
 html[data-theme="dark"] .record-counter {
-    background: rgba(15, 23, 42, 0.74) !important;
+    background: rgba(8, 13, 24, 0.68) !important;
     border-color: var(--theme-line) !important;
     color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(12px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(120%) !important;
 }
 
 html[data-theme="dark"] .kojen-table-header,
@@ -504,7 +636,7 @@ html[data-theme="dark"] .vardiya-kayitlari-table thead,
 html[data-theme="dark"] .maintenance-table thead,
 html[data-theme="dark"] .stock-table thead,
 html[data-theme="dark"] .transactions-table thead {
-    background: linear-gradient(135deg, #1e3a8a, #0f766e) !important;
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.96), rgba(30, 41, 59, 0.94) 52%, rgba(13, 148, 136, 0.76)) !important;
     color: #f8fafc !important;
 }
 
@@ -536,9 +668,10 @@ html[data-theme="dark"] .active-records-controls select,
 html[data-theme="dark"] .technician-input-group select,
 html[data-theme="dark"] .motor-checkbox,
 html[data-theme="dark"] .saat-checkbox {
-    background: #020617 !important;
+    background: rgba(2, 6, 23, 0.82) !important;
     border-color: var(--theme-line-strong) !important;
     color: var(--theme-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
 }
 
 html[data-theme="dark"] .data-input:focus,
@@ -565,9 +698,10 @@ html[data-theme="dark"] .maintenance-form .record-form-title h3,
 html[data-theme="dark"] #periodic-form > div > h3,
 html[data-theme="dark"] #normal-form > div > h3,
 html[data-theme="dark"] #fault-form > div > h3 {
-    background: rgba(96, 165, 250, 0.14) !important;
-    border: 1px solid rgba(96, 165, 250, 0.28) !important;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(45, 212, 191, 0.08)) !important;
+    border: 1px solid rgba(125, 211, 252, 0.28) !important;
     color: #f8fafc !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055) !important;
 }
 
 html[data-theme="dark"] .kojen-table-body .kojen-table-row,
@@ -581,7 +715,7 @@ html[data-theme="dark"] .vardiya-kayitlari-table td,
 html[data-theme="dark"] .maintenance-table td,
 html[data-theme="dark"] .stock-table td,
 html[data-theme="dark"] .transactions-table td {
-    background: #0f172a !important;
+    background: rgba(8, 13, 24, 0.82) !important;
     border-color: var(--theme-line) !important;
     color: var(--theme-text) !important;
 }
@@ -595,7 +729,7 @@ html[data-theme="dark"] .vardiya-kayitlari-table tbody tr:nth-child(even) td,
 html[data-theme="dark"] .maintenance-table tbody tr:nth-child(even) td,
 html[data-theme="dark"] .stock-table tbody tr:nth-child(even) td,
 html[data-theme="dark"] .transactions-table tbody tr:nth-child(even) td {
-    background: #111827 !important;
+    background: rgba(15, 23, 42, 0.86) !important;
 }
 
 html[data-theme="dark"] .motor-btn:hover,
@@ -603,9 +737,10 @@ html[data-theme="dark"] .motor-btn.active,
 html[data-theme="dark"] .motor-btn.selected,
 html[data-theme="dark"] .chart-btn.active,
 html[data-theme="dark"] .form-btn.active {
-    background: #1e293b !important;
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.96), rgba(13, 148, 136, 0.72)) !important;
     border-color: var(--theme-primary) !important;
     color: #f8fafc !important;
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.16), 0 12px 28px rgba(8, 145, 178, 0.18) !important;
 }
 
 .theme-toggle-btn {
