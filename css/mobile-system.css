@@ -1,4 +1,51 @@
-/* Shared tablet and phone touch improvements across the system. */
+/* Shared layout and touch improvements across the system. */
+
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    min-width: 0;
+}
+
+img,
+svg,
+canvas,
+iframe {
+    max-width: 100%;
+}
+
+.dashboard-container,
+.main-content,
+.dashboard-content,
+main,
+.container,
+.admin-shell {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.main-content,
+.dashboard-content,
+main {
+    overflow-x: clip;
+}
+
+.table-container,
+.kojen-table-container,
+.vardiya-table-container,
+.log-table-wrap,
+.report-table-container,
+.stock-list-container,
+.comparison-table-wrap,
+.maintenance-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 
 @media (max-width: 1024px) {
     html {
