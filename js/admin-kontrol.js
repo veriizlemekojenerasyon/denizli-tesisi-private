@@ -54,6 +54,12 @@ const AdminTriggerModules = {
         healthAction: 'getMaintenanceTriggers',
         installAction: 'installMaintenanceTriggers',
         testAction: 'runMaintenanceCheck'
+    },
+    bildirim: {
+        title: 'Gunluk Sistem Raporu',
+        healthAction: 'getDailySystemReportTriggerHealth',
+        installAction: 'installDailySystemReportTrigger',
+        testAction: 'sendDailySystemReport'
     }
 };
 

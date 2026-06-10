@@ -79,6 +79,9 @@ function handleRequest(e) {
       case 'installDailySystemReportTrigger':
         result = installDailySystemReportTrigger();
         break;
+      case 'getDailySystemReportTriggerHealth':
+        result = getDailySystemReportTriggerHealth();
+        break;
       case 'checkVgenPlanSetup':
         result = runOptionalVgenFunction_('checkVgenPlanSetup');
         break;
@@ -637,6 +640,34 @@ function installDailySystemReportTrigger() {
     .create();
 
   return { success: true, message: 'Gunluk sistem raporu tetikleyicisi 00:20 civarina kuruldu.' };
+}
+
+function getDailySystemReportTriggerHealth() {
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    var matching = [];
+    for (var i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() === 'sendDailySystemReport') {
+        matching.push({
+          handler: triggers[i].getHandlerFunction(),
+          source: String(triggers[i].getTriggerSource()),
+          eventType: String(triggers[i].getEventType())
+        });
+      }
+    }
+
+    var logs = getSystemLogs(1);
+    return {
+      success: true,
+      installed: matching.length > 0,
+      triggerCount: matching.length,
+      triggers: matching,
+      lastLog: logs.success && logs.data.length ? logs.data[0] : null,
+      checkedAt: formatDateTimeTR(new Date())
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
 }
 
 function getDailyReportTargetDate_() {
