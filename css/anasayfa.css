@@ -1256,6 +1256,7 @@ body {
     font-size: 15px;
     font-weight: 600;
     line-height: 1.45;
+    white-space: pre-line;
 }
 
 .announcement-item__attachment {

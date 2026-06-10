@@ -1955,11 +1955,78 @@ function calculateOverdueMaintenanceCount(records) {
     }).length;
 }
 
+function renderMaintenanceCalendar(records) {
+    const grid = document.getElementById('maintenance-calendar-grid');
+    const count = document.getElementById('maintenance-calendar-count');
+    if (!grid) return;
+
+    const sorted = [...(records || [])].sort((a, b) => parseMaintenanceDate(a.date) - parseMaintenanceDate(b.date));
+    if (count) count.textContent = `${sorted.length} aktif is`;
+
+    if (!sorted.length) {
+        grid.innerHTML = '<div class="maintenance-calendar-empty">Aktif bakim isi yok.</div>';
+        return;
+    }
+
+    const grouped = sorted.reduce((acc, record) => {
+        const key = record.date || 'Tarihsiz';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(record);
+        return acc;
+    }, {});
+
+    grid.innerHTML = Object.keys(grouped).slice(0, 14).map(date => {
+        const dayRecords = grouped[date];
+        const overdue = isMaintenanceDateOverdue(date);
+        return `
+            <article class="maintenance-calendar-day ${overdue ? 'is-overdue' : ''}">
+                <div class="maintenance-calendar-date">
+                    <strong>${escapeMaintenanceHtml(date)}</strong>
+                    <span>${dayRecords.length} is</span>
+                </div>
+                <div class="maintenance-calendar-items">
+                    ${dayRecords.slice(0, 4).map(record => `
+                        <div class="maintenance-calendar-item">
+                            <span>${escapeMaintenanceHtml(record.motor || '-')}</span>
+                            <strong>${escapeMaintenanceHtml(record.recordNo || '-')}</strong>
+                            <em>${escapeMaintenanceHtml(getMaintenanceTypeDisplay(record.type).label || record.type || '-')}</em>
+                        </div>
+                    `).join('')}
+                    ${dayRecords.length > 4 ? `<div class="maintenance-calendar-more">+${dayRecords.length - 4} is daha</div>` : ''}
+                </div>
+            </article>`;
+    }).join('');
+}
+
+function parseMaintenanceDate(value) {
+    const parts = String(value || '').split('.');
+    if (parts.length !== 3) return new Date(8640000000000000).getTime();
+    return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10)).getTime();
+}
+
+function isMaintenanceDateOverdue(value) {
+    const dateTime = parseMaintenanceDate(value);
+    if (!Number.isFinite(dateTime)) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return dateTime < today.getTime();
+}
+
+function escapeMaintenanceHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function displayActiveRecords(records) {
     const tbody = document.getElementById('active-records-tbody');
     if (!tbody) return;
     
     tbody.innerHTML = '';
+    renderMaintenanceCalendar(records || []);
     const overdueEl = document.getElementById('overdue-maintenance');
     if (overdueEl) overdueEl.textContent = calculateOverdueMaintenanceCount(records);
     

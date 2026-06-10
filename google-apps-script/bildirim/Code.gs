@@ -76,11 +76,23 @@ function handleRequest(e) {
       case 'sendDailySystemReport':
         result = sendDailySystemReport(params);
         break;
+      case 'getDailySystemReportPreview':
+        result = getDailySystemReportPreview(params);
+        break;
       case 'installDailySystemReportTrigger':
         result = installDailySystemReportTrigger();
         break;
       case 'getDailySystemReportTriggerHealth':
         result = getDailySystemReportTriggerHealth();
+        break;
+      case 'installVgenPlanDailyTrigger':
+        result = runOptionalVgenFunction_('installVgenPlanDailyTrigger');
+        break;
+      case 'getVgenPlanTriggerHealth':
+        result = getVgenPlanTriggerHealth();
+        break;
+      case 'testVgenPlanPreview':
+        result = runOptionalVgenFunction_('testVgenPlanPreview');
         break;
       case 'checkVgenPlanSetup':
         result = runOptionalVgenFunction_('checkVgenPlanSetup');
@@ -133,8 +145,10 @@ function isBildirimWriteAction(action) {
     'addSystemLog',
     'sendDailySystemReport',
     'installDailySystemReportTrigger',
+    'installVgenPlanDailyTrigger',
     'makeExistingVgenPlanAnnouncementsAllDay',
     'testVgenAccessTokenRefresh',
+    'testVgenPlanPreview',
     'runVgenTomorrowPlanNotification'
   ].indexOf(action) !== -1;
 }
@@ -624,6 +638,24 @@ function sendDailySystemReport(data) {
   }
 }
 
+function getDailySystemReportPreview(data) {
+  try {
+    data = data || {};
+    var reportDate = normalizeDate(data.tarih || data.date || getDailyReportTargetDate_());
+    var report = buildDailySystemReport_(reportDate);
+    return {
+      success: true,
+      tarih: reportDate,
+      rowCount: report.rowCount,
+      issueCount: report.issueCount,
+      alarmSummary: report.alarmSummary,
+      body: report.body
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
 function installDailySystemReportTrigger() {
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
@@ -670,6 +702,47 @@ function getDailySystemReportTriggerHealth() {
   }
 }
 
+function getVgenPlanTriggerHealth() {
+  try {
+    var handler = 'runVgenPlanNotification';
+    var triggers = ScriptApp.getProjectTriggers();
+    var matching = [];
+    for (var i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() === handler) {
+        matching.push({
+          handler: triggers[i].getHandlerFunction(),
+          source: String(triggers[i].getTriggerSource()),
+          eventType: String(triggers[i].getEventType())
+        });
+      }
+    }
+
+    var setup = runOptionalVgenFunction_('checkVgenPlanSetup');
+    var logs = getSystemLogs(20);
+    var lastVgenLog = null;
+    if (logs.success && logs.data && logs.data.length) {
+      for (var j = 0; j < logs.data.length; j++) {
+        if (String(logs.data[j].modul || '').indexOf('V-Gen') !== -1) {
+          lastVgenLog = logs.data[j];
+          break;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      installed: matching.length > 0,
+      triggerCount: matching.length,
+      triggers: matching,
+      setup: setup,
+      lastLog: lastVgenLog,
+      checkedAt: formatDateTimeTR(new Date())
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
 function getDailyReportTargetDate_() {
   var date = new Date();
   date.setDate(date.getDate() - 1);
@@ -683,6 +756,7 @@ function buildDailySystemReport_(reportDate) {
   var issueLines = [];
   var rowCount = 0;
   var issueCount = 0;
+  var alarmSummary = { critical: 0, warning: 0, ok: 0 };
 
   if (lastRow >= 2) {
     var rows = sheet.getRange(2, 1, lastRow - 1, SYSTEM_LOG_HEADERS.length).getDisplayValues();
@@ -702,7 +776,9 @@ function buildDailySystemReport_(reportDate) {
       if (String(row[5] || '').indexOf('Basarili') !== -1 || String(row[5] || '').indexOf('rapor gonderildi') !== -1) {
         moduleStats[modul].autoSuccess++;
       }
-      if (row[7] || String(row[5] || '').indexOf('Hata') !== -1 || String(row[5] || '').indexOf('Basarisiz') !== -1) {
+      var severity = getDailyReportSeverity_(row);
+      alarmSummary[severity]++;
+      if (severity === 'critical' || severity === 'warning') {
         moduleStats[modul].errors++;
         issueCount++;
         if (issueLines.length < 30) {
@@ -717,6 +793,11 @@ function buildDailySystemReport_(reportDate) {
     'Tarih: ' + reportDate + '\n' +
     'Toplam log: ' + rowCount + '\n' +
     'Dikkat gerektiren olay: ' + issueCount + '\n\n';
+
+  body += 'Alarm Ozeti\n' +
+    '- Kritik: ' + alarmSummary.critical + '\n' +
+    '- Uyari: ' + alarmSummary.warning + '\n' +
+    '- Basarili/normal: ' + alarmSummary.ok + '\n\n';
 
   body += 'Modul Ozeti\n';
   if (!moduleNames.length) {
@@ -736,7 +817,35 @@ function buildDailySystemReport_(reportDate) {
   body += '\nHata / Uyari Detayi\n';
   body += issueLines.length ? issueLines.join('\n') : '- Kritik hata veya uyari yok';
 
-  return { body: body, rowCount: rowCount, issueCount: issueCount };
+  return { body: body, rowCount: rowCount, issueCount: issueCount, alarmSummary: alarmSummary };
+}
+
+function getDailyReportSeverity_(row) {
+  var text = [
+    row[4] || '',
+    row[5] || '',
+    row[6] || '',
+    row[7] || '',
+    row[8] || ''
+  ].join(' ').toLowerCase();
+
+  if (text.indexOf('hata') !== -1 ||
+      text.indexOf('basarisiz') !== -1 ||
+      text.indexOf('kilitleme') !== -1 ||
+      text.indexOf('exception') !== -1 ||
+      text.indexOf('danger') !== -1) {
+    return 'critical';
+  }
+
+  if (text.indexOf('warn') !== -1 ||
+      text.indexOf('uyari') !== -1 ||
+      text.indexOf('eksik') !== -1 ||
+      text.indexOf('ertelendi') !== -1 ||
+      text.indexOf('kontrol') !== -1) {
+    return 'warning';
+  }
+
+  return 'ok';
 }
 
 function parseReadBy(value) {

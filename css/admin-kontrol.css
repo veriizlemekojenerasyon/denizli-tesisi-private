@@ -236,7 +236,9 @@ h2 {
 .backup-grid,
 .quality-list,
 .user-activity-list,
-.operator-mobile-list {
+.operator-mobile-list,
+.alarm-summary,
+.alarm-list {
     display: grid;
     gap: 10px;
     margin-top: 14px;
@@ -331,6 +333,93 @@ h2 {
     border-left: 4px solid var(--red);
 }
 
+.alarm-panel {
+    margin-bottom: 18px;
+}
+
+.alarm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.alarm-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.alarm-summary-card,
+.alarm-item,
+.daily-report-preview {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 12px;
+}
+
+.alarm-summary-card {
+    display: grid;
+    gap: 6px;
+}
+
+.alarm-summary-card span {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.alarm-summary-card strong {
+    font-size: 26px;
+}
+
+.alarm-summary-card.ok,
+.alarm-item.ok {
+    border-left: 4px solid var(--green);
+}
+
+.alarm-summary-card.warn,
+.alarm-item.warn {
+    border-left: 4px solid var(--amber);
+    background: #fffbeb;
+}
+
+.alarm-summary-card.danger,
+.alarm-item.danger {
+    border-left: 4px solid var(--red);
+    background: #fef2f2;
+}
+
+.alarm-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+}
+
+.alarm-item strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.alarm-item p {
+    margin: 0 0 8px;
+    color: var(--muted);
+}
+
+.alarm-item span:not(.badge) {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.daily-report-preview {
+    margin-top: 14px;
+    min-height: 72px;
+    max-height: 320px;
+    overflow: auto;
+    white-space: pre-wrap;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
 .meta-row {
     display: flex;
     flex-wrap: wrap;
@@ -419,13 +508,15 @@ h2 {
     }
 
     .test-actions,
-    .backup-grid {
+    .backup-grid,
+    .alarm-summary {
         grid-template-columns: 1fr;
     }
 
     .header-actions,
     .panel-header,
-    .backup-actions {
+    .backup-actions,
+    .alarm-actions {
         align-items: stretch;
         flex-direction: column;
         width: 100%;

@@ -1265,7 +1265,7 @@ function buildVgenPlanMessage(targetDate, summary, rows) {
       lines.push(motor + ': Planlanan calisma yok.');
       continue;
     }
-    lines.push(motor + ': ' + formatVgenIntervals(item.intervals) + ' calisacak. Toplam ' + item.totalHours + ' saat.');
+    lines.push(motor + ': ' + formatVgenIntervalActions(item.intervals) + ' Toplam ' + item.totalHours + ' saat.');
   }
 
   lines.push('');
@@ -1422,9 +1422,25 @@ function mergeVgenIntervals(intervals) {
 function formatVgenIntervals(intervals) {
   var parts = [];
   for (var i = 0; i < intervals.length; i++) {
-    parts.push(minutesToVgenTime(intervals[i].startMinutes) + '-' + minutesToVgenTime(intervals[i].endMinutes));
+    parts.push(formatVgenRunInterval(intervals[i]));
   }
   return parts.join(', ');
+}
+
+function formatVgenRunInterval(interval) {
+  var start = minutesToVgenTime(interval.startMinutes);
+  var end = minutesToVgenTime(interval.endMinutes);
+  return start + '-' + end;
+}
+
+function formatVgenIntervalActions(intervals) {
+  var parts = [];
+  for (var i = 0; i < intervals.length; i++) {
+    var start = minutesToVgenTime(intervals[i].startMinutes);
+    var end = minutesToVgenTime(intervals[i].endMinutes);
+    parts.push(start + ' de devreye girecek, ' + end + ' de devreden cikacaktir.');
+  }
+  return parts.join(' ');
 }
 
 function sumVgenIntervalHours(intervals) {

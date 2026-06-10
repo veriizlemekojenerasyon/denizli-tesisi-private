@@ -32,6 +32,26 @@ function isDefaultPasswordValue(passwordValue) {
   return value === '123456' || value === hashPassword('123456');
 }
 
+function requireAdminActor(data) {
+  var actorEmail = String((data && (data.actorEmail || data.adminEmail || data.currentUserEmail)) || '').toLowerCase().trim();
+  if (!actorEmail) {
+    return { success: false, error: 'Admin dogrulamasi gerekli!' };
+  }
+
+  var actor = getUserByEmail(actorEmail);
+  if (!actor) {
+    return { success: false, error: 'Admin kullanici bulunamadi!' };
+  }
+
+  var role = String(actor.role || '').toLowerCase().trim();
+  var status = String(actor.status || '').toLowerCase().trim();
+  if (role !== 'admin' || status !== 'active') {
+    return { success: false, error: 'Bu islem icin admin yetkisi gerekli!' };
+  }
+
+  return { success: true, actor: actor };
+}
+
 /**
  * GET isteklerini handle et (CORS destekli)
  */
@@ -211,6 +231,9 @@ function getUserByEmail(email) {
  * Yeni kullanici kaydet
  */
 function saveUser(data) {
+  const adminCheck = requireAdminActor(data);
+  if (!adminCheck.success) return adminCheck;
+
   const sheet = getOrCreateSheet();
   
   // Data kontrolu
@@ -256,6 +279,9 @@ function saveUser(data) {
  * Kullanici guncelle
  */
 function updateUser(data) {
+  const adminCheck = requireAdminActor(data);
+  if (!adminCheck.success) return adminCheck;
+
   if (!data || !data.id) {
     return { success: false, error: 'Kullanici ID gerekli!' };
   }
@@ -310,6 +336,9 @@ function updateUser(data) {
  * Kullanici sil
  */
 function deleteUser(data) {
+  const adminCheck = requireAdminActor(data);
+  if (!adminCheck.success) return adminCheck;
+
   if (!data || !data.email) {
     return { success: false, error: 'E-posta adresi gerekli!' };
   }

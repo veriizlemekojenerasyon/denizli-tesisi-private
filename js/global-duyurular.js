@@ -73,7 +73,7 @@
             await markVisibleAnnouncementsRead(items);
             const message = items.map((item, index) => {
                 const attachment = item.attachmentUrl ? `\n   Ek: ${item.attachmentUrl}` : '';
-                return `${index + 1}. ${formatTickerText(item)}${attachment}`;
+                return `${index + 1}. ${formatAnnouncementDetailText(item)}${attachment}`;
             }).join('\n');
             alert(message || 'Bugun icin aktif vardiya duyurusu bulunmuyor.');
         });
@@ -150,7 +150,9 @@
     function matchesShift(item) {
         const shift = String(item.shift || '').trim();
         if (!shift) return true;
-        return normalizeShift(shift) === getCurrentShift();
+        const normalized = normalizeShift(shift).toLowerCase();
+        if (['all', 'tum', 'tüm', 'hepsi'].includes(normalized)) return true;
+        return normalized === getCurrentShift();
     }
 
     function getCurrentShift() {
@@ -185,8 +187,12 @@
 
     function formatTickerText(item) {
         const category = formatCategory(item.category);
-        const text = item.title || item.message || 'Duyuru metni yok';
+        const text = formatAnnouncementDetailText(item).replace(/\s+/g, ' ');
         return category ? `${category}: ${text}` : text;
+    }
+
+    function formatAnnouncementDetailText(item) {
+        return item.message || item.title || 'Duyuru metni yok';
     }
 
     function formatCategory(value) {

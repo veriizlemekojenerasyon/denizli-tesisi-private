@@ -830,6 +830,123 @@ textarea:focus {
   }
 }
 
+.maintenance-calendar-panel {
+  margin-top: 30px;
+  padding: 20px;
+  border: 1px solid #d9e2ef;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+}
+
+.maintenance-calendar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.maintenance-calendar-header h3 {
+  margin: 0 0 4px;
+  color: #172033;
+}
+
+.maintenance-calendar-header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.maintenance-calendar-header span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #2563eb;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.maintenance-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.maintenance-calendar-day {
+  border: 1px solid #d9e2ef;
+  border-left: 4px solid #2563eb;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.maintenance-calendar-day.is-overdue {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+.maintenance-calendar-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.maintenance-calendar-date span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.maintenance-calendar-items {
+  display: grid;
+  gap: 8px;
+}
+
+.maintenance-calendar-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.maintenance-calendar-item span {
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.maintenance-calendar-item strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maintenance-calendar-item em {
+  grid-column: 1 / -1;
+  color: #64748b;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.maintenance-calendar-more,
+.maintenance-calendar-empty {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .maintenance-calendar-header {
+    flex-direction: column;
+  }
+}
+
 body.operator-history-view .top-dashboard-row,
 body.operator-history-view .forms-section,
 body.operator-history-view .report-panel > h2,

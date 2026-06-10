@@ -9,7 +9,9 @@ const AdminControlLabels = {
     gunluk: 'Gunluk Veri',
     bakim: 'Bakim Takip',
     vardiya: 'Vardiya',
-    bildirim: 'Bildirim'
+    bildirim: 'Bildirim',
+    vgen: 'V-Gen Plan',
+    stok: 'Stok Takip'
 };
 
 const AdminTriggerModules = {
@@ -60,6 +62,13 @@ const AdminTriggerModules = {
         healthAction: 'getDailySystemReportTriggerHealth',
         installAction: 'installDailySystemReportTrigger',
         testAction: 'sendDailySystemReport'
+    },
+    vgen: {
+        title: 'V-Gen Plan Bildirimi',
+        serviceKey: 'bildirim',
+        healthAction: 'getVgenPlanTriggerHealth',
+        installAction: 'installVgenPlanDailyTrigger',
+        testAction: 'testVgenPlanPreview'
     }
 };
 
@@ -81,6 +90,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('installTriggersBtn')?.addEventListener('click', installAllTriggers);
     document.getElementById('testMailBtn')?.addEventListener('click', runTestMail);
     document.getElementById('backupAllBtn')?.addEventListener('click', runFullBackup);
+    document.getElementById('previewDailyReportBtn')?.addEventListener('click', previewDailyReport);
+    document.getElementById('sendDailyReportBtn')?.addEventListener('click', sendDailyReportNow);
     document.querySelectorAll('[data-backup-module]').forEach(button => {
         button.addEventListener('click', () => runModuleBackup(button.dataset.backupModule));
     });
@@ -123,12 +134,13 @@ async function loadDashboard() {
 
     renderTriggerHealthLoading();
 
-    const [saatlik, motor, enerji, vardiya, bildirim] = await Promise.all([
+    const [saatlik, motor, enerji, vardiya, bildirim, stok] = await Promise.all([
         fetchJson(AdminControlConfig.saatlik, { action: 'getLastRecords', count: '24' }),
         fetchJson(AdminControlConfig.motor, { action: 'getLastRecords', count: '60' }),
         fetchJson(AdminControlConfig.enerji, { action: 'getLastRecords', count: '60' }),
         fetchJson(AdminControlConfig.vardiya, { action: 'getLastRecordsWithIslemler', count: '12' }),
-        fetchJson(AdminControlConfig.bildirim, { action: 'getAnnouncements', active: 'true' })
+        fetchJson(AdminControlConfig.bildirim, { action: 'getAnnouncements', active: 'true' }),
+        fetchJson(AdminControlConfig.stok, { action: 'getLowStockItems' })
     ]);
 
     const checks = [
@@ -136,7 +148,8 @@ async function loadDashboard() {
         buildMotorCheck(motor, 'Kojen Motor'),
         buildMotorCheck(enerji, 'Kojen Enerji'),
         buildVardiyaCheck(vardiya),
-        buildBildirimCheck(bildirim)
+        buildBildirimCheck(bildirim),
+        buildStokCheck(stok)
     ];
     const qualityChecks = buildQualityChecks(saatlik, motor, enerji);
     const qualityDetails = buildDetailedQuality(saatlik, motor, enerji);
@@ -147,6 +160,7 @@ async function loadDashboard() {
     renderShiftCloseChecklist(shiftChecks);
     renderQualityDetails(qualityDetails);
     renderOperatorMobileSummary(checks, shiftChecks);
+    renderAlarmCenter(buildAlarmItems(checks, qualityChecks, qualityDetails, shiftChecks, [], stok));
     renderUserActivity();
 
     window.SystemAuditLog?.write?.(
@@ -160,7 +174,7 @@ async function loadDashboard() {
 async function loadDeferredAdminData() {
     const items = await Promise.all(Object.keys(AdminTriggerModules).map(async key => {
         const module = AdminTriggerModules[key];
-        const result = await fetchJson(AdminControlConfig[key], { action: module.healthAction });
+        const result = await fetchJson(getAdminModuleUrl(key), { action: module.healthAction });
         return { key, title: module.title, result: normalizeTriggerHealth(result) };
     }));
 
@@ -301,6 +315,17 @@ function buildBildirimCheck(result) {
         `${records.length} Aktif`,
         records.length ? 'Aktif duyuru yayinda' : 'Aktif duyuru yok',
         records.length ? 'ok' : 'warn'
+    );
+}
+
+function buildStokCheck(result) {
+    if (!result.success) return makeCheck('Stok', 'Hata', result.error, 'danger');
+    const records = Array.isArray(result.data) ? result.data : [];
+    return makeCheck(
+        'Stok Kritik Seviye',
+        records.length ? `${records.length} Kritik` : 'Tamam',
+        records.length ? records.slice(0, 5).map(item => `${item.name || item.materialName || item.code}: ${item.quantity ?? '-'}`).join(', ') : 'Kritik stokta malzeme yok',
+        records.length ? 'warn' : 'ok'
     );
 }
 
@@ -498,12 +523,156 @@ function renderUserActivity() {
         </div>`).join('');
 }
 
+function buildAlarmItems(checks, qualityChecks, qualityDetails, shiftChecks, logs = [], stokResult = null) {
+    const alarms = [];
+    checks.concat(qualityChecks, shiftChecks).forEach(item => {
+        if (!item || item.level === 'ok') return;
+        alarms.push({
+            level: item.level,
+            source: item.title,
+            title: `${item.title}: ${item.value}`,
+            detail: item.detail,
+            action: getAlarmAction(item.title)
+        });
+    });
+
+    qualityDetails.forEach(item => {
+        if (!item || item.level === 'ok') return;
+        alarms.push({
+            level: item.level,
+            source: item.module,
+            title: item.text,
+            detail: item.detail || '',
+            action: getAlarmAction(item.module)
+        });
+    });
+
+    logs.slice(0, 20).forEach(log => {
+        const level = getLogBadgeLevel(log);
+        if (level === 'ok') return;
+        alarms.push({
+            level,
+            source: log.modul || log.page || 'Log',
+            title: log.eksikKayit || log.action || 'Sistem logu',
+            detail: log.hataMesaji || log.detay || log.detail || log.otomatikKayitSonucu || '-',
+            action: 'Sistem logunu kontrol et'
+        });
+    });
+
+    if (stokResult && stokResult.success && Array.isArray(stokResult.data)) {
+        stokResult.data.slice(0, 20).forEach(item => {
+            alarms.push({
+                level: toNumber(item.quantity) <= 0 ? 'danger' : 'warn',
+                source: 'Stok Takip',
+                title: `Kritik stok: ${item.name || item.materialName || item.code || 'Malzeme'}`,
+                detail: `Mevcut: ${item.quantity ?? '-'} ${item.unit || ''}, minimum: ${item.minStock ?? '-'}`,
+                action: 'Stok Takip sayfasinda giris planla'
+            });
+        });
+    }
+
+    return dedupeAlarms(alarms)
+        .sort((a, b) => alarmWeight(b.level) - alarmWeight(a.level))
+        .slice(0, 40);
+}
+
+function renderAlarmCenter(alarms) {
+    const summary = document.getElementById('alarmSummary');
+    const list = document.getElementById('alarmList');
+    if (!summary || !list) return;
+
+    const counts = alarms.reduce((acc, item) => {
+        acc[item.level] = (acc[item.level] || 0) + 1;
+        return acc;
+    }, { danger: 0, warn: 0, ok: 0 });
+
+    summary.innerHTML = [
+        renderAlarmSummaryCard('Kritik', counts.danger || 0, 'danger'),
+        renderAlarmSummaryCard('Uyari', counts.warn || 0, 'warn'),
+        renderAlarmSummaryCard('Toplam Alarm', alarms.length, alarms.length ? 'warn' : 'ok')
+    ].join('');
+
+    if (!alarms.length) {
+        list.innerHTML = '<div class="alarm-item ok"><strong>Aktif alarm yok</strong><p>Sistem kontrollerinde kritik veya uyarili durum gorunmuyor.</p></div>';
+        return;
+    }
+
+    list.innerHTML = alarms.map(item => `
+        <div class="alarm-item ${item.level}">
+            <div>
+                <strong>${escapeHtml(item.title)}</strong>
+                <p>${escapeHtml(item.detail)}</p>
+                <span>${escapeHtml(item.source)} - ${escapeHtml(item.action)}</span>
+            </div>
+            <span class="badge ${item.level}">${item.level === 'danger' ? 'Kritik' : 'Uyari'}</span>
+        </div>`).join('');
+}
+
+function renderAlarmSummaryCard(title, value, level) {
+    return `
+        <div class="alarm-summary-card ${level}">
+            <span>${escapeHtml(title)}</span>
+            <strong>${escapeHtml(value)}</strong>
+        </div>`;
+}
+
+function dedupeAlarms(alarms) {
+    const seen = new Set();
+    return alarms.filter(item => {
+        const key = `${item.level}|${item.source}|${item.title}|${item.detail}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function alarmWeight(level) {
+    if (level === 'danger') return 3;
+    if (level === 'warn') return 2;
+    return 1;
+}
+
+function getAlarmAction(title) {
+    const text = String(title || '').toLowerCase();
+    if (text.includes('saatlik')) return 'Saatlik Veri sayfasinda kaydi kontrol et';
+    if (text.includes('motor')) return 'Kojen Motor kaydini kontrol et';
+    if (text.includes('enerji')) return 'Kojen Enerji kaydini kontrol et';
+    if (text.includes('vardiya')) return 'Vardiya kaydini kontrol et';
+    if (text.includes('duyuru')) return 'Bildirim Yonetimi sayfasini kontrol et';
+    return 'Merkezi Kontrol detaylarini incele';
+}
+
+async function previewDailyReport() {
+    const box = document.getElementById('dailyReportPreview');
+    if (box) box.textContent = 'Gunluk rapor onizlemesi aliniyor...';
+    const result = await fetchJson(AdminControlConfig.bildirim, { action: 'getDailySystemReportPreview' });
+    if (!result.success) {
+        if (box) box.textContent = `Rapor onizleme hatasi: ${result.error}`;
+        await postCentralLog('Gunluk rapor onizleme', result.error || 'Onizleme alinamadi', 'danger');
+        return;
+    }
+    if (box) box.textContent = result.body || 'Rapor bos.';
+    await postCentralLog('Gunluk rapor onizleme', `${result.tarih || '-'} raporu onizlendi`, 'ok');
+}
+
+async function sendDailyReportNow() {
+    const box = document.getElementById('dailyReportPreview');
+    if (box) box.textContent = 'Gunluk sistem raporu gonderiliyor...';
+    const result = await fetchJson(AdminControlConfig.bildirim, { action: 'sendDailySystemReport', force: 'true', sendEmpty: 'true' });
+    const message = result.success
+        ? `Gunluk rapor gonderildi. Tarih: ${result.tarih || '-'}, olay: ${result.issueCount ?? '-'}, log: ${result.rowCount ?? '-'}`
+        : `Gunluk rapor gonderilemedi: ${result.error}`;
+    if (box) box.textContent = message;
+    await postCentralLog('Gunluk rapor manuel', message, result.success ? 'ok' : 'danger');
+    renderLogs();
+}
+
 async function installAllTriggers() {
     const box = document.getElementById('testResultBox');
     if (box) box.textContent = 'Tetikleyiciler kuruluyor...';
     const modules = Object.keys(AdminTriggerModules);
     const results = await Promise.all(modules.map(moduleName =>
-        fetchJson(AdminControlConfig[moduleName], { action: AdminTriggerModules[moduleName].installAction })
+        fetchJson(getAdminModuleUrl(moduleName), { action: AdminTriggerModules[moduleName].installAction })
             .then(result => ({ moduleName, result }))
     ));
     const summary = results.map(item => `${AdminControlLabels[item.moduleName]}: ${item.result.success ? 'kuruldu' : item.result.error}`).join(' | ');
@@ -516,13 +685,18 @@ async function runModuleTest(moduleName) {
     const box = document.getElementById('testResultBox');
     if (box) box.textContent = `${AdminControlLabels[moduleName] || moduleName} testi calisiyor...`;
     const action = AdminTriggerModules[moduleName]?.testAction || 'checkHourlyMissingRecords';
-    const result = await fetchJson(AdminControlConfig[moduleName], { action });
+    const result = await fetchJson(getAdminModuleUrl(moduleName), { action });
     const summary = result.success
         ? `${AdminControlLabels[moduleName]}: ${result.message || `eksik=${result.missingCount ?? result.missing ?? '-'}, eklenen=${result.addedCount ?? result.added ?? '-'}`}`
         : `${AdminControlLabels[moduleName]}: ${result.error}`;
     if (box) box.textContent = summary;
     await postCentralLog('Manuel test', summary, result.success ? 'ok' : 'danger');
     loadDashboard();
+}
+
+function getAdminModuleUrl(moduleName) {
+    const serviceKey = AdminTriggerModules[moduleName]?.serviceKey || moduleName;
+    return AdminControlConfig[serviceKey];
 }
 
 function normalizeTriggerHealth(result) {
@@ -776,6 +950,7 @@ async function renderLogs() {
         hataMesaji: '',
         detay: log.detail
     })));
+    renderLogAlarms(logs);
     if (!logs.length) {
         body.innerHTML = '<tr><td colspan="6" class="empty">Henuz log yok.</td></tr>';
         return;
@@ -790,6 +965,19 @@ async function renderLogs() {
             <td>${escapeHtml(log.detay || log.detail || log.hataMesaji || '-')}</td>
             <td><span class="badge ${getLogBadgeLevel(log)}">${escapeHtml(log.otomatikKayitSonucu || log.status || 'info')}</span></td>
         </tr>`).join('');
+}
+
+function renderLogAlarms(logs) {
+    const currentAlarmItems = Array.from(document.querySelectorAll('#alarmList .alarm-item')).map(node => ({
+        level: node.classList.contains('danger') ? 'danger' : (node.classList.contains('warn') ? 'warn' : 'ok'),
+        source: 'Anlik Kontrol',
+        title: node.querySelector('strong')?.textContent || '',
+        detail: node.querySelector('p')?.textContent || '',
+        action: node.querySelector('span:not(.badge)')?.textContent || 'Merkezi Kontrol detaylarini incele'
+    })).filter(item => item.title && item.level !== 'ok');
+    const merged = dedupeAlarms(buildAlarmItems([], [], [], [], logs).concat(currentAlarmItems))
+        .sort((a, b) => alarmWeight(b.level) - alarmWeight(a.level));
+    renderAlarmCenter(merged);
 }
 
 function clearLogs() {

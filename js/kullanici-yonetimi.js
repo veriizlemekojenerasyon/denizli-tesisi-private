@@ -252,6 +252,7 @@ async function saveUser() {
         photo: userPhotoData || '',
         createdAt: currentEditId ? (users.find(u => u.id === currentEditId)?.createdAt || new Date().toLocaleDateString('tr-TR')) : new Date().toLocaleDateString('tr-TR')
     };
+    addActorInfo(data);
     
     if (!currentEditId) {
         const pass = document.getElementById('password').value;
@@ -282,6 +283,7 @@ async function saveUser() {
             // Google Sheets'ten yeniden yükle
             await loadUsers();
             closeModal();
+            writeUserAuditLog(currentEditId ? 'Kullanici guncellendi' : 'Kullanici eklendi', data.email, 'ok');
             showNotif(currentEditId ? 'Güncellendi!' : 'Eklendi!', 'success');
         } else {
             showNotif('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
@@ -310,6 +312,37 @@ function closeDeleteModal() {
     deleteUserId = null;
 }
 
+function addActorInfo(payload) {
+    payload = payload || {};
+    payload.actorEmail = currentUser?.email || '';
+    payload.actorRole = currentUser?.role || '';
+    return payload;
+}
+
+async function writeUserAuditLog(action, detail, status) {
+    window.SystemAuditLog?.write?.(action, detail, status);
+    const url = window.AppConfig?.getScriptUrl?.('bildirim');
+    if (!url) return;
+    try {
+        const params = new URLSearchParams({
+            action: 'addSystemLog',
+            modul: 'Kullanici Yonetimi',
+            eksikKayit: action,
+            otomatikKayitSonucu: status || 'info',
+            mailSonucu: '-',
+            hataMesaji: status === 'danger' ? String(detail || '') : '',
+            detay: `${getCurrentUserNameForLog()} | ${detail || ''}`
+        });
+        await fetch(`${url}?${params.toString()}`);
+    } catch (error) {
+        console.warn('Kullanici islem logu yazilamadi:', error);
+    }
+}
+
+function getCurrentUserNameForLog() {
+    return `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || currentUser?.email || 'Admin';
+}
+
 async function confirmDelete() {
     if (!deleteUserId) return;
     
@@ -317,16 +350,18 @@ async function confirmDelete() {
     const u = users.find(x => x.id === deleteUserId);
     
     try {
+        const payload = addActorInfo({ email: u.email });
         const res = await fetch(USER_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=deleteUser&data=${encodeURIComponent(JSON.stringify({ email: u.email }))}`
+            body: `action=deleteUser&data=${encodeURIComponent(JSON.stringify(payload))}`
         });
         const result = await res.json();
         
         if (result.success) {
             await loadUsers();
             closeDeleteModal();
+            writeUserAuditLog('Kullanici silindi', u.email, 'ok');
             showNotif('Silindi!', 'success');
         } else {
             showNotif('Silme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');

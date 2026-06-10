@@ -162,6 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (announcements.length === 0) {
             tickerTrack.appendChild(createTickerItem('Bugun icin aktif vardiya duyurusu bulunmuyor.', 'normal'));
             tickerTrack.style.animation = 'none';
+            refreshAnnouncementsFromSheets();
             return;
         }
 
@@ -196,8 +197,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function formatTickerText(item) {
         const category = formatAnnouncementCategory(item.category);
-        const text = item.title || item.message || 'Duyuru metni yok';
+        const text = getAnnouncementText(item).replace(/\s+/g, ' ');
         return category ? `${category}: ${text}` : text;
+    }
+
+    function getAnnouncementText(item) {
+        return item.message || item.title || 'Duyuru metni yok';
     }
 
     async function loadDashboardSummary() {
@@ -281,9 +286,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 summaryData.dailySteam = result.summary.dailySteam === null || result.summary.dailySteam === undefined
                     ? null
                     : parseDashboardNumber(result.summary.dailySteam);
-            }
-            if (result.summary.activeFaults !== undefined) {
-                summaryData.activeFaults = parseDashboardNumber(result.summary.activeFaults);
             }
             cacheSummaryValues();
         }
@@ -421,7 +423,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function matchesShift(item) {
         const shift = String(item.shift || '').trim();
         if (!shift) return true;
-        return normalizeShift(shift) === getCurrentShift();
+        const normalized = normalizeShift(shift).toLowerCase();
+        if (['all', 'tum', 'tüm', 'hepsi'].includes(normalized)) return true;
+        return normalized === getCurrentShift();
     }
 
     function getCurrentShift() {
@@ -1234,7 +1238,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const text = document.createElement('div');
             text.className = 'announcement-item__text';
-            text.textContent = item.title || item.message || 'Duyuru metni yok';
+            text.textContent = getAnnouncementText(item);
 
             row.appendChild(meta);
             row.appendChild(text);

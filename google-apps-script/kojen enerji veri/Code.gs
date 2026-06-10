@@ -16,7 +16,6 @@ var window = typeof window === 'undefined' ? {} : window;
  */
 
 var KOJEN_ENERJI_DEPLOY_MARKER = 'kojen-enerji-veri-2026-06-05';
-var KOJEN_ENERJI_YEARLY_REPORT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxTOJuZuGXKTy2JoICtsgXMXjntSmkkWJAaUsiZg8pIwRWeDLjl027KzBTRTMYpsn8r/exec';
 var KOJEN_ENERJI_WRITE_LOCK_WAIT_MS = 5000;
 
 // CORS ayarları - tüm origin'lere izin ver
@@ -34,7 +33,8 @@ function onEdit(e) {
 
 function notifyYearlyEnergyForRecords(records) {
   try {
-    if (!KOJEN_ENERJI_YEARLY_REPORT_WEB_APP_URL) {
+    var yearlyReportUrl = getKojenEnerjiServiceUrl('yillikEnerjiRapor');
+    if (!yearlyReportUrl) {
       return { success: false, skipped: true, error: 'Yillik enerji rapor URL eksik.' };
     }
 
@@ -57,7 +57,7 @@ function notifyYearlyEnergyForRecords(records) {
       return { success: true, skipped: true, message: 'Guncellenecek enerji kaydi yok.' };
     }
 
-    var response = UrlFetchApp.fetch(KOJEN_ENERJI_YEARLY_REPORT_WEB_APP_URL, {
+    var response = UrlFetchApp.fetch(yearlyReportUrl, {
       method: 'post',
       contentType: 'application/x-www-form-urlencoded',
       payload: {
@@ -80,6 +80,27 @@ function notifyYearlyEnergyForRecords(records) {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+function getKojenEnerjiServiceUrl(key) {
+  if (typeof getAppsScriptUrl === 'function') {
+    return getAppsScriptUrl(key) || '';
+  }
+  return '';
+}
+
+function buildKojenEnerjiServiceUrl(key, query) {
+  var baseUrl = getKojenEnerjiServiceUrl(key);
+  if (!baseUrl) return '';
+
+  var params = [];
+  for (var name in query) {
+    if (query.hasOwnProperty(name) && query[name] !== undefined && query[name] !== null) {
+      params.push(encodeURIComponent(name) + '=' + encodeURIComponent(query[name]));
+    }
+  }
+  if (!params.length) return baseUrl;
+  return baseUrl + (baseUrl.indexOf('?') === -1 ? '?' : '&') + params.join('&');
 }
 
 function shouldSyncYearlyEnergyUpdate(data) {
@@ -1119,20 +1140,12 @@ function getDashboardMaintenanceSummary(records) {
 
 function fetchDashboardExternalData() {
   var urls = {
-    motor: 'https://script.google.com/macros/s/AKfycbxJFAATa4R2kD3T8i0c57JoA_pIryNJGJgCZ7P3WF5SFldswf2pcLd0jnYr4zbOCFCn/exec?action=getLastRecords&count=100',
-    buhar: 'https://script.google.com/macros/s/AKfycbwDlfLp36QguZqRH7_PYtSjWUJihU2dTxodkKiW58rhcK41jtvpS0NKnlw9kBBnZnTJ/exec?action=getLastRecords&count=1',
-    announcements: 'https://script.google.com/macros/s/AKfycbz8I8Jk1mZQaWZtJe4eXgVaM2vrVcFbiPndZYQj0NWvZt__wgYKwFJsRndCc1hToRBM/exec?action=getAnnouncements&active=true'
+    motor: buildKojenEnerjiServiceUrl('motor', { action: 'getLastRecords', count: 100 }),
+    buhar: buildKojenEnerjiServiceUrl('buhar', { action: 'getLastRecords', count: 1 }),
+    announcements: buildKojenEnerjiServiceUrl('bildirim', { action: 'getAnnouncements', active: 'true' })
   };
 
   var keys = ['motor', 'buhar', 'announcements'];
-  var requests = keys.map(function(key) {
-    return {
-      url: urls[key],
-      method: 'get',
-      muteHttpExceptions: true
-    };
-  });
-
   var output = {
     motorRecords: [],
     buharRecords: [],
@@ -1141,10 +1154,28 @@ function fetchDashboardExternalData() {
     errors: []
   };
 
+  var requestKeys = [];
+  var requests = [];
+  for (var k = 0; k < keys.length; k++) {
+    var key = keys[k];
+    if (!urls[key]) {
+      output.errors.push(key + ': URL tanimli degil');
+      continue;
+    }
+    requestKeys.push(key);
+    requests.push({
+      url: urls[key],
+      method: 'get',
+      muteHttpExceptions: true
+    });
+  }
+
+  if (!requests.length) return output;
+
   try {
     var responses = UrlFetchApp.fetchAll(requests);
     for (var i = 0; i < responses.length; i++) {
-      var key = keys[i];
+      var key = requestKeys[i];
       var response = responses[i];
       var code = response.getResponseCode();
       if (code < 200 || code >= 300) {
