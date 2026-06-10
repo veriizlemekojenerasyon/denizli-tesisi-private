@@ -631,18 +631,8 @@ function saatlikCheckHourlyMissingRecords() {
       props.setProperty(sentKey, new Date().toISOString());
     }
 
-    var mailResult = { success: false, skipped: true, error: '' };
-    if (addResult.success) {
-      var subject = 'Saatlik Veri Girisi Uyarisi - ' + tarih + ' ' + saat + ' Kayit Girilmedi';
-      var body = 'Saatlik Veri Girisi Uyarisi\n\n' +
-        'Tarih: ' + tarih + '\n' +
-        'Saat: ' + saat + '\n' +
-        'Vardiya: ' + vardiya + '\n\n' +
-        'Bu saat icin saatlik veri girilmedi. Sistem otomatik bos kayit olusturdu.\n\n' +
-        'Otomatik kayit sonucu: Basarili';
-
-      mailResult = saatlikSendEmailAlert({ subject: subject, body: body });
-    } else {
+    var mailResult = { success: false, skipped: true, error: 'Gunluk rapora ertelendi' };
+    if (!addResult.success) {
       var afterAddCheck = saatlikGetRecordByDateTime(tarih, saat);
       if (afterAddCheck.success && afterAddCheck.found) {
         props.setProperty(sentKey, new Date().toISOString());
@@ -656,7 +646,7 @@ function saatlikCheckHourlyMissingRecords() {
       modul: 'Saatlik Veri',
       eksikKayit: 'Saatlik kayit yok',
       otomatikKayitSonucu: addResult.success ? 'Basarili' : 'Basarisiz',
-      mailSonucu: mailResult.success ? 'Basarili' : 'Gonderilmedi',
+      mailSonucu: mailResult.skipped ? 'Gunluk rapora ertelendi' : (mailResult.success ? 'Basarili' : 'Gonderilmedi'),
       hataMesaji: addResult.success ? (mailResult.success || mailResult.skipped ? '' : mailResult.error) : addResult.error,
       detay: 'Otomatik bos kayit kontrolu'
     });
@@ -1104,10 +1094,10 @@ function saatlikInstallHourlyMissingRecordTrigger() {
 
   ScriptApp.newTrigger('saatlikCheckHourlyMissingRecords')
     .timeBased()
-    .everyMinutes(1)
+    .everyHours(1)
     .create();
 
-  return { success: true, message: 'Saatlik eksik kayit tetikleyicisi kuruldu. Kontrol 59. dakikada veya sonraki ilk tetiklemede yapilir.' };
+  return { success: true, message: 'Saatlik eksik kayit tetikleyicisi kuruldu. Kontrol saatte bir calisir; mail gunluk rapora ertelendi.' };
 }
 
 function saatlikGetTriggerHealth() {

@@ -31,43 +31,53 @@ function doPost(e) {
 }
 
 function handleRequest(e) {
-  var lock = LockService.getScriptLock();
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action;
+  var lock = null;
   try {
-    lock.waitLock(30000);
+    if (isBildirimWriteAction(action)) {
+      lock = LockService.getScriptLock();
+      lock.waitLock(5000);
+    }
 
-    var action = e.parameter.action;
     var result = {};
 
     switch (action) {
       case 'getAnnouncements':
-        result = getAnnouncements(e.parameter);
+        result = getAnnouncements(params);
         break;
       case 'addAnnouncement':
-        result = addAnnouncement(e.parameter);
+        result = addAnnouncement(params);
         break;
       case 'updateAnnouncement':
-        result = updateAnnouncement(e.parameter);
+        result = updateAnnouncement(params);
         break;
       case 'deleteAnnouncement':
-        result = deleteAnnouncement(e.parameter.id);
+        result = deleteAnnouncement(params.id);
         break;
       case 'setAnnouncementActive':
-        result = setAnnouncementActive(e.parameter.id, e.parameter.active);
+        result = setAnnouncementActive(params.id, params.active);
         break;
       case 'clearInactiveAnnouncements':
         result = clearInactiveAnnouncements();
         break;
       case 'markAnnouncementRead':
-        result = markAnnouncementRead(e.parameter);
+        result = markAnnouncementRead(params);
         break;
       case 'completeAnnouncement':
-        result = completeAnnouncement(e.parameter);
+        result = completeAnnouncement(params);
         break;
       case 'addSystemLog':
-        result = addSystemLog(e.parameter);
+        result = addSystemLog(params);
         break;
       case 'getSystemLogs':
-        result = getSystemLogs(parseInt(e.parameter.count, 10) || 100);
+        result = getSystemLogs(parseInt(params.count, 10) || 100);
+        break;
+      case 'sendDailySystemReport':
+        result = sendDailySystemReport(params);
+        break;
+      case 'installDailySystemReportTrigger':
+        result = installDailySystemReportTrigger();
         break;
       case 'checkVgenPlanSetup':
         result = runOptionalVgenFunction_('checkVgenPlanSetup');
@@ -91,17 +101,39 @@ function handleRequest(e) {
         result = { success: false, error: 'Gecersiz islem' };
     }
 
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    lock.releaseLock();
+    if (lock) {
+      try {
+        lock.releaseLock();
+      } catch (lockError) {}
+    }
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
       error: error.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function isBildirimWriteAction(action) {
+  return [
+    'addAnnouncement',
+    'updateAnnouncement',
+    'deleteAnnouncement',
+    'setAnnouncementActive',
+    'clearInactiveAnnouncements',
+    'markAnnouncementRead',
+    'completeAnnouncement',
+    'addSystemLog',
+    'sendDailySystemReport',
+    'installDailySystemReportTrigger',
+    'makeExistingVgenPlanAnnouncementsAllDay',
+    'testVgenAccessTokenRefresh',
+    'runVgenTomorrowPlanNotification'
+  ].indexOf(action) !== -1;
 }
 
 function runOptionalVgenFunction_(functionName) {
@@ -539,6 +571,141 @@ function getSystemLogs(count) {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+function sendDailySystemReport(data) {
+  try {
+    data = data || {};
+    var reportDate = normalizeDate(data.tarih || data.date || getDailyReportTargetDate_());
+    var props = PropertiesService.getScriptProperties();
+    var reportKey = 'dailySystemReport:' + reportDate;
+
+    if (props.getProperty(reportKey) && String(data.force || '').toLowerCase() !== 'true') {
+      return { success: true, skipped: true, message: reportDate + ' raporu daha once gonderildi.' };
+    }
+
+    var report = buildDailySystemReport_(reportDate);
+    if (!report.rowCount && String(data.sendEmpty || '').toLowerCase() !== 'true') {
+      props.setProperty(reportKey, new Date().toISOString());
+      return { success: true, skipped: true, rowCount: 0, message: reportDate + ' icin raporlanacak sistem logu yok.' };
+    }
+
+    var to = data.to || 'mrtcsk0320@gmail.com';
+    MailApp.sendEmail({
+      to: to,
+      subject: 'Gunluk Sistem Raporu - ' + reportDate,
+      body: report.body,
+      htmlBody: report.body.replace(/\n/g, '<br>')
+    });
+
+    props.setProperty(reportKey, new Date().toISOString());
+    addSystemLog({
+      tarih: reportDate,
+      modul: 'Merkezi Kontrol',
+      eksikKayit: report.issueCount ? String(report.issueCount) + ' olay' : 'Yok',
+      otomatikKayitSonucu: 'Gunluk rapor gonderildi',
+      mailSonucu: 'Basarili',
+      detay: 'Gunluk sistem raporu'
+    });
+
+    return { success: true, tarih: reportDate, rowCount: report.rowCount, issueCount: report.issueCount, to: to };
+  } catch (error) {
+    addSystemLog({
+      modul: 'Merkezi Kontrol',
+      otomatikKayitSonucu: 'Hata',
+      mailSonucu: 'Basarisiz',
+      hataMesaji: error.toString(),
+      detay: 'sendDailySystemReport'
+    });
+    return { success: false, error: error.toString() };
+  }
+}
+
+function installDailySystemReportTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'sendDailySystemReport') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  ScriptApp.newTrigger('sendDailySystemReport')
+    .timeBased()
+    .everyDays(1)
+    .atHour(0)
+    .nearMinute(20)
+    .create();
+
+  return { success: true, message: 'Gunluk sistem raporu tetikleyicisi 00:20 civarina kuruldu.' };
+}
+
+function getDailyReportTargetDate_() {
+  var date = new Date();
+  date.setDate(date.getDate() - 1);
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+}
+
+function buildDailySystemReport_(reportDate) {
+  var sheet = getOrCreateSystemLogsSheet();
+  var lastRow = sheet.getLastRow();
+  var moduleStats = {};
+  var issueLines = [];
+  var rowCount = 0;
+  var issueCount = 0;
+
+  if (lastRow >= 2) {
+    var rows = sheet.getRange(2, 1, lastRow - 1, SYSTEM_LOG_HEADERS.length).getDisplayValues();
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var tarih = normalizeDate(row[1] || '');
+      if (tarih !== reportDate) continue;
+
+      rowCount++;
+      var modul = row[3] || 'Bilinmeyen';
+      if (!moduleStats[modul]) {
+        moduleStats[modul] = { total: 0, missing: 0, autoSuccess: 0, errors: 0 };
+      }
+
+      moduleStats[modul].total++;
+      if (row[4] && row[4] !== 'Yok') moduleStats[modul].missing++;
+      if (String(row[5] || '').indexOf('Basarili') !== -1 || String(row[5] || '').indexOf('rapor gonderildi') !== -1) {
+        moduleStats[modul].autoSuccess++;
+      }
+      if (row[7] || String(row[5] || '').indexOf('Hata') !== -1 || String(row[5] || '').indexOf('Basarisiz') !== -1) {
+        moduleStats[modul].errors++;
+        issueCount++;
+        if (issueLines.length < 30) {
+          issueLines.push('- ' + (row[2] || '--:--') + ' | ' + modul + ' | ' + (row[4] || '-') + ' | ' + (row[7] || row[5] || '-'));
+        }
+      }
+    }
+  }
+
+  var moduleNames = Object.keys(moduleStats).sort();
+  var body = 'Gunluk Sistem Raporu\n\n' +
+    'Tarih: ' + reportDate + '\n' +
+    'Toplam log: ' + rowCount + '\n' +
+    'Dikkat gerektiren olay: ' + issueCount + '\n\n';
+
+  body += 'Modul Ozeti\n';
+  if (!moduleNames.length) {
+    body += '- Log bulunamadi\n';
+  } else {
+    for (var j = 0; j < moduleNames.length; j++) {
+      var name = moduleNames[j];
+      var stat = moduleStats[name];
+      body += '- ' + name +
+        ': toplam ' + stat.total +
+        ', eksik/otomatik olay ' + stat.missing +
+        ', basarili ' + stat.autoSuccess +
+        ', hata ' + stat.errors + '\n';
+    }
+  }
+
+  body += '\nHata / Uyari Detayi\n';
+  body += issueLines.length ? issueLines.join('\n') : '- Kritik hata veya uyari yok';
+
+  return { body: body, rowCount: rowCount, issueCount: issueCount };
 }
 
 function parseReadBy(value) {

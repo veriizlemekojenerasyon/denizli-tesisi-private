@@ -184,7 +184,9 @@ function handleRequest(e) {
 }
 
 function isWriteAction(action) {
-  return ['addRecord', 'addMultipleRecords', 'sendEmail', 'checkHourlyMissingRecords', 'fillMissingFullDay', 'sortEnergySheet', 'colorizeEnergySheet', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
+  // checkHourlyMissingRecords kendi kilidini aliyor; web handler'da tekrar kilit almak
+  // ayni calismanin kendi kendini beklemesine ve Lock timeout hatasina yol acabiliyor.
+  return ['addRecord', 'addMultipleRecords', 'sendEmail', 'fillMissingFullDay', 'sortEnergySheet', 'colorizeEnergySheet', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
 }
 
 function getApiHealth() {
@@ -1614,18 +1616,7 @@ function checkHourlyMissingRecordTarget(target) {
         return record.motor === sheetMotor;
       }));
     }
-    var subject = 'Kojen Enerji Veri Uyarisi - ' + tarih + ' ' + saat + ' Kayit Girilmedi';
-    var body = 'Kojen Enerji Veri Uyarisi\n\n' +
-      'Tarih: ' + tarih + '\n' +
-      'Saat: ' + saat + '\n' +
-      'Vardiya: ' + vardiya + '\n\n' +
-      'Eksik motor enerji kayitlari: ' + missing.join(', ') + '\n' +
-      'Otomatik bos kayit eklenenler: ' + (added.length ? added.join(', ') : '-') + '\n' +
-      (existingErrors.length ? 'Kontrol hatalari: ' + existingErrors.join('; ') + '\n' : '') +
-      (errors.length ? 'Kayit hatalari: ' + errors.join('; ') + '\n' : '') +
-      '\nBu saat icin veri girilmedigi icin sistem otomatik bos kayit olusturdu.';
-
-    var mailResult = sendEmailAlert({ subject: subject, body: body });
+    var mailResult = { success: false, skipped: true, error: 'Gunluk rapora ertelendi' };
     var completedAfterAdd = added.length === missing.length;
     var unresolvedMissing = [];
     if (!completedAfterAdd) {
@@ -1653,8 +1644,8 @@ function checkHourlyMissingRecordTarget(target) {
       modul: 'Kojen Enerji',
       eksikKayit: missing.join(', '),
       otomatikKayitSonucu: autoResultText,
-      mailSonucu: mailResult.success ? 'Basarili' : 'Basarisiz',
-      hataMesaji: existingErrors.concat(errors).concat(mailResult.success ? [] : [mailResult.error]).join('; '),
+      mailSonucu: mailResult.skipped ? 'Gunluk rapora ertelendi' : (mailResult.success ? 'Basarili' : 'Basarisiz'),
+      hataMesaji: existingErrors.concat(errors).concat(mailResult.success || mailResult.skipped ? [] : [mailResult.error]).join('; '),
       detay: 'Otomatik motor calismiyor enerji kaydi'
     });
 
@@ -2071,10 +2062,10 @@ function installHourlyMissingRecordTrigger() {
 
   ScriptApp.newTrigger('checkHourlyMissingRecords')
     .timeBased()
-    .everyMinutes(1)
+    .everyHours(1)
     .create();
 
-  return { success: true, message: 'Enerji saatlik eksik kayit tetikleyicisi kuruldu. Kontrol 59. dakikada veya sonraki ilk tetiklemede yapilir.' };
+  return { success: true, message: 'Enerji saatlik eksik kayit tetikleyicisi kuruldu. Kontrol saatte bir calisir; mail gunluk rapora ertelendi.' };
 }
 
 function getTriggerHealth() {

@@ -1437,18 +1437,7 @@ function checkHourlyMissingRecords() {
       }));
     }
 
-    var subject = 'Kojen Motor Veri Uyarisi - ' + tarih + ' ' + saat + ' Kayit Girilmedi';
-    var body = 'Kojen Motor Veri Uyarisi\n\n' +
-      'Tarih: ' + tarih + '\n' +
-      'Saat: ' + saat + '\n' +
-      'Vardiya: ' + vardiya + '\n\n' +
-      'Eksik motor kayitlari: ' + missing.join(', ') + '\n' +
-      'Otomatik bos kayit eklenenler: ' + (added.length ? added.join(', ') : '-') + '\n' +
-      (existingErrors.length ? 'Kontrol hatalari: ' + existingErrors.join('; ') + '\n' : '') +
-      (errors.length ? 'Kayit hatalari: ' + errors.join('; ') + '\n' : '') +
-      '\nBu saat icin veri girilmedigi icin sistem otomatik bos kayit olusturdu.';
-
-    var mailResult = sendEmailAlert({ subject: subject, body: body });
+    var mailResult = { success: false, skipped: true, error: 'Gunluk rapora ertelendi' };
     var completedAfterAdd = added.length === missing.length;
     var unresolvedMissing = [];
     if (!completedAfterAdd) {
@@ -1476,8 +1465,8 @@ function checkHourlyMissingRecords() {
       modul: 'Kojen Motor',
       eksikKayit: missing.join(', '),
       otomatikKayitSonucu: autoResultText,
-      mailSonucu: mailResult.success ? 'Basarili' : 'Basarisiz',
-      hataMesaji: existingErrors.concat(errors).concat(mailResult.success ? [] : [mailResult.error]).join('; '),
+      mailSonucu: mailResult.skipped ? 'Gunluk rapora ertelendi' : (mailResult.success ? 'Basarili' : 'Basarisiz'),
+      hataMesaji: existingErrors.concat(errors).concat(mailResult.success || mailResult.skipped ? [] : [mailResult.error]).join('; '),
       detay: 'Otomatik motor calismiyor kaydi'
     });
 
@@ -1902,10 +1891,10 @@ function installHourlyMissingRecordTrigger() {
 
   ScriptApp.newTrigger('checkHourlyMissingRecords')
     .timeBased()
-    .everyMinutes(1)
+    .everyHours(1)
     .create();
 
-  return { success: true, message: 'Motor saatlik eksik kayit tetikleyicisi kuruldu. Kontrol 59. dakikada veya sonraki ilk tetiklemede yapilir.' };
+  return { success: true, message: 'Motor saatlik eksik kayit tetikleyicisi kuruldu. Kontrol saatte bir calisir; mail gunluk rapora ertelendi.' };
 }
 
 function getTriggerHealth() {
