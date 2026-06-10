@@ -107,6 +107,16 @@
                 renderDashboard();
             });
         }
+
+        const motorCards = document.getElementById('motorCards');
+        if (motorCards) {
+            motorCards.addEventListener('click', event => {
+                const trigger = event.target.closest('[data-detail-key]');
+                if (!trigger) return;
+                const row = state.filtered.find(item => item.key === trigger.dataset.detailKey);
+                if (row) showRecordModal(row, trigger.dataset.metricLabel || '');
+            });
+        }
     }
 
     function applyCurrentRangeForPeriod(period) {
@@ -447,6 +457,19 @@
             oilPressure: motor.oilPressure,
             coolingTemp: motor.coolingTemp,
             coolingPressure: motor.coolingPressure,
+            bearingDE: motor.bearingDE,
+            bearingNDE: motor.bearingNDE,
+            winding1: motor.winding1,
+            winding2: motor.winding2,
+            winding3: motor.winding3,
+            voltage: energy.voltage,
+            current: energy.current,
+            averageVoltage: energy.averageVoltage,
+            neutralCurrent: energy.neutralCurrent,
+            driveVoltage: energy.driveVoltage,
+            startCount: energy.startCount,
+            motorSavedBy: motor.savedBy || '',
+            energySavedBy: energy.savedBy || '',
             score,
             level,
             behavior: level === 'critical' ? 'Normal degil' : (level === 'warn' ? 'Izle' : 'Normal'),
@@ -535,6 +558,7 @@
                 oilPressureSum: 0,
                 oilPressureCount: 0,
                 minOilPressure: null,
+                detailRefs: {},
                 topIssues: {}
             };
         });
@@ -564,28 +588,28 @@
                 stat.windingAverageSum += row.windingAverage;
                 stat.windingCount++;
             }
-            stat.maxWinding = Math.max(stat.maxWinding, row.windingMax || row.windingAverage || 0);
-            stat.maxWindingSpread = Math.max(stat.maxWindingSpread, row.windingSpread || 0);
+            updateMaxDetail(stat, 'maxWinding', 'maxWinding', row.windingMax || row.windingAverage || 0, row);
+            updateMaxDetail(stat, 'maxWindingSpread', 'maxWindingSpread', row.windingSpread || 0, row);
             if (row.chargeTemp > 0) {
                 stat.chargeTempSum += row.chargeTemp;
                 stat.chargeTempCount++;
             }
-            stat.maxChargeTemp = Math.max(stat.maxChargeTemp, row.chargeTemp || 0);
+            updateMaxDetail(stat, 'maxChargeTemp', 'maxChargeTemp', row.chargeTemp || 0, row);
             if (row.chargePressure > 0) {
                 stat.chargePressureSum += row.chargePressure;
                 stat.chargePressureCount++;
             }
-            stat.minChargePressure = minPositive(stat.minChargePressure, row.chargePressure);
+            updateMinPositiveDetail(stat, 'minChargePressure', 'minChargePressure', row.chargePressure, row);
             if (row.oilTemp > 0) {
                 stat.oilTempSum += row.oilTemp;
                 stat.oilTempCount++;
             }
-            stat.maxOilTemp = Math.max(stat.maxOilTemp, row.oilTemp || 0);
+            updateMaxDetail(stat, 'maxOilTemp', 'maxOilTemp', row.oilTemp || 0, row);
             if (row.oilPressure > 0) {
                 stat.oilPressureSum += row.oilPressure;
                 stat.oilPressureCount++;
             }
-            stat.minOilPressure = minPositive(stat.minOilPressure, row.oilPressure);
+            updateMinPositiveDetail(stat, 'minOilPressure', 'minOilPressure', row.oilPressure, row);
             scoreSum += row.score;
 
             row.issues.forEach(issue => {
@@ -617,6 +641,23 @@
             motorStats,
             signals: Object.values(signals).sort((a, b) => b.count - a.count)
         };
+    }
+
+    function updateMaxDetail(stat, field, refKey, value, row) {
+        const number = Number(value || 0);
+        if (number > stat[field]) {
+            stat[field] = number;
+            stat.detailRefs[refKey] = row.key;
+        }
+    }
+
+    function updateMinPositiveDetail(stat, field, refKey, value, row) {
+        const number = Number(value || 0);
+        if (!number || number <= 0) return;
+        if (stat[field] === null || number < stat[field]) {
+            stat[field] = number;
+            stat.detailRefs[refKey] = row.key;
+        }
     }
 
     function renderKpis(aggregate, normalTableCount) {
@@ -663,16 +704,16 @@
                 `    <span>Cos Phi <b>${stat.cosPhiCount ? formatNumber(averageCosPhi) : '--'}</b></span>`,
                 `    <span>Min Cos <b>${stat.minCosPhi === null ? '--' : formatNumber(stat.minCosPhi)}</b></span>`,
                 `    <span>Sargi Ort. <b>${stat.windingCount ? formatNumber(averageWinding) + ' C' : '--'}</b></span>`,
-                `    <span>Max Sargi <b>${formatNumber(stat.maxWinding)} C</b></span>`,
-                `    <span>Sargi Farki <b>${formatNumber(stat.maxWindingSpread)} C</b></span>`,
+                renderMetric('Max Sargi', formatNumber(stat.maxWinding) + ' C', stat.detailRefs.maxWinding),
+                renderMetric('Sargi Farki', formatNumber(stat.maxWindingSpread) + ' C', stat.detailRefs.maxWindingSpread),
                 `    <span>Sarj Sic. <b>${stat.chargeTempCount ? formatNumber(averageChargeTemp) + ' C' : '--'}</b></span>`,
-                `    <span>Max Sarj Sic. <b>${formatNumber(stat.maxChargeTemp)} C</b></span>`,
+                renderMetric('Max Sarj Sic.', formatNumber(stat.maxChargeTemp) + ' C', stat.detailRefs.maxChargeTemp),
                 `    <span>Sarj Bas. <b>${stat.chargePressureCount ? formatNumber(averageChargePressure) : '--'}</b></span>`,
-                `    <span>Min Sarj Bas. <b>${stat.minChargePressure === null ? '--' : formatNumber(stat.minChargePressure)}</b></span>`,
+                renderMetric('Min Sarj Bas.', stat.minChargePressure === null ? '--' : formatNumber(stat.minChargePressure), stat.detailRefs.minChargePressure),
                 `    <span>Yag Sic. <b>${stat.oilTempCount ? formatNumber(averageOilTemp) + ' C' : '--'}</b></span>`,
-                `    <span>Max Yag Sic. <b>${formatNumber(stat.maxOilTemp)} C</b></span>`,
+                renderMetric('Max Yag Sic.', formatNumber(stat.maxOilTemp) + ' C', stat.detailRefs.maxOilTemp),
                 `    <span>Yag Bas. <b>${stat.oilPressureCount ? formatNumber(averageOilPressure) : '--'}</b></span>`,
-                `    <span>Min Yag Bas. <b>${stat.minOilPressure === null ? '--' : formatNumber(stat.minOilPressure)}</b></span>`,
+                renderMetric('Min Yag Bas.', stat.minOilPressure === null ? '--' : formatNumber(stat.minOilPressure), stat.detailRefs.minOilPressure),
                 `    <span>Uretim <b>${formatNumber(stat.production)} MWh</b></span>`,
                 `    <span>Kritik <b>${integerFormat.format(stat.critical)}</b></span>`,
                 `    <span>Uyari <b>${integerFormat.format(stat.warn)}</b></span>`,
@@ -684,6 +725,115 @@
                 '</div>'
             ].join('');
         }).join('');
+    }
+
+    function renderMetric(label, value, detailKey) {
+        const safeLabel = escapeHtml(label);
+        const safeValue = escapeHtml(value);
+        if (!detailKey || value === '--') {
+            return `<span>${safeLabel} <b>${safeValue}</b></span>`;
+        }
+        return [
+            '<span class="metric-clickable">',
+            `  <button type="button" class="metric-detail-btn" data-detail-key="${escapeHtml(detailKey)}" data-metric-label="${safeLabel}" title="Kaydi ac">`,
+            `    <span>${safeLabel}</span>`,
+            `    <b>${safeValue}</b>`,
+            '  </button>',
+            '</span>'
+        ].join('');
+    }
+
+    function showRecordModal(row, metricLabel) {
+        closeRecordModal();
+        const modal = document.createElement('div');
+        modal.className = 'comparison-record-modal is-open';
+        modal.id = 'comparisonRecordModal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.innerHTML = [
+            '<div class="comparison-record-modal__backdrop" data-close-record-modal></div>',
+            '<section class="comparison-record-modal__panel">',
+            '  <header class="comparison-record-modal__header">',
+            '    <div>',
+            `      <p>${escapeHtml(metricLabel || 'Kayit detayi')}</p>`,
+            `      <h2>${escapeHtml(row.motor)} ${escapeHtml(formatDisplayDate(row.date))} ${escapeHtml(row.hour)}</h2>`,
+            '    </div>',
+            '    <button type="button" class="comparison-record-modal__close" data-close-record-modal aria-label="Kapat">x</button>',
+            '  </header>',
+            '  <div class="comparison-record-modal__body">',
+            renderModalSummary(row),
+            renderModalSection('Motor Olcumleri', [
+                ['Durum', row.motorStatus || '-'],
+                ['Kaydeden', row.motorSavedBy || '-'],
+                ['JEN Yatak DE / NDE', `${formatNumber(row.bearingDE)} C / ${formatNumber(row.bearingNDE)} C`],
+                ['Sargi 1 / 2 / 3', `${formatNumber(row.winding1)} C / ${formatNumber(row.winding2)} C / ${formatNumber(row.winding3)} C`],
+                ['Sargi Ort. / Max / Fark', `${formatNumber(row.windingAverage)} C / ${formatNumber(row.windingMax)} C / ${formatNumber(row.windingSpread)} C`],
+                ['Sarj Sic. / Bas.', `${formatNumber(row.chargeTemp)} C / ${formatNumber(row.chargePressure)}`],
+                ['Yag Sic. / Bas.', `${formatNumber(row.oilTemp)} C / ${formatNumber(row.oilPressure)}`],
+                ['Sogutma Sic. / Bas.', `${formatNumber(row.coolingTemp)} C / ${formatNumber(row.coolingPressure)}`]
+            ]),
+            renderModalSection('Enerji Olcumleri', [
+                ['Durum', row.energyStatus || '-'],
+                ['Kaydeden', row.energySavedBy || '-'],
+                ['Aktif / Reaktif Guc', `${formatNumber(row.activePower)} MW / ${formatNumber(row.reactivePower)}`],
+                ['Cos Phi', formatNumber(row.cosPhi)],
+                ['Aydem Voltaji / Ort. Gerilim', `${formatNumber(row.voltage)} / ${formatNumber(row.averageVoltage)}`],
+                ['Ortalama Akim / Notr Akimi', `${formatNumber(row.current)} / ${formatNumber(row.neutralCurrent)}`],
+                ['Toplam Enerji', `${formatNumber(row.totalEnergy)} MWh`],
+                ['Saatlik Uretim / Calisma', `${row.productionDelta === null ? '--' : formatNumber(row.productionDelta) + ' MWh'} / ${row.hoursDelta === null ? '--' : formatNumber(row.hoursDelta) + ' sa'}`]
+            ]),
+            renderModalIssues(row),
+            '  </div>',
+            '</section>'
+        ].join('');
+        document.body.appendChild(modal);
+        modal.querySelectorAll('[data-close-record-modal]').forEach(node => {
+            node.addEventListener('click', closeRecordModal);
+        });
+        document.addEventListener('keydown', handleRecordModalKeydown);
+    }
+
+    function renderModalSummary(row) {
+        return [
+            '<div class="record-modal-summary">',
+            `  <span class="status-pill ${row.level}">${escapeHtml(row.behavior)}</span>`,
+            `  <span>Puan <b>${row.score}</b></span>`,
+            `  <span>Vardiya <b>${escapeHtml(row.shift || '-')}</b></span>`,
+            '</div>'
+        ].join('');
+    }
+
+    function renderModalSection(title, items) {
+        return [
+            '<section class="record-modal-section">',
+            `  <h3>${escapeHtml(title)}</h3>`,
+            '  <div class="record-detail-grid">',
+            items.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`).join(''),
+            '  </div>',
+            '</section>'
+        ].join('');
+    }
+
+    function renderModalIssues(row) {
+        const issues = row.issues.length
+            ? row.issues.map(issue => `<span class="note-chip ${issue.severity}">${escapeHtml(issue.title)}</span>`).join('')
+            : '<span class="note-chip">Normal</span>';
+        return [
+            '<section class="record-modal-section">',
+            '  <h3>Analiz</h3>',
+            `  <div class="row-issues">${issues}</div>`,
+            '</section>'
+        ].join('');
+    }
+
+    function closeRecordModal() {
+        const modal = document.getElementById('comparisonRecordModal');
+        if (modal) modal.remove();
+        document.removeEventListener('keydown', handleRecordModalKeydown);
+    }
+
+    function handleRecordModalKeydown(event) {
+        if (event.key === 'Escape') closeRecordModal();
     }
 
     function renderSignals(aggregate) {

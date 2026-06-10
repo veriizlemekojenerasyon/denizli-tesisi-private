@@ -118,7 +118,7 @@
     gap: 8px;
 }
 
-.motor-metrics span {
+.motor-metrics > span {
     min-height: 54px;
     display: grid;
     align-content: center;
@@ -137,6 +137,40 @@
     color: var(--text);
     font-size: 14px;
     white-space: nowrap;
+}
+
+.metric-clickable {
+    padding: 0;
+    overflow: hidden;
+}
+
+.metric-detail-btn {
+    width: 100%;
+    min-height: 54px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    padding: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+}
+
+.metric-detail-btn:hover,
+.metric-detail-btn:focus-visible {
+    background: #eff6ff;
+    outline: 2px solid #bfdbfe;
+    outline-offset: -2px;
+}
+
+.metric-detail-btn b {
+    color: var(--blue);
 }
 
 .score-track {
@@ -304,6 +338,151 @@
     font-weight: 700;
 }
 
+.comparison-record-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+}
+
+.comparison-record-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.comparison-record-modal__panel {
+    position: relative;
+    width: min(920px, 100%);
+    max-height: min(820px, calc(100vh - 36px));
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+    overflow: hidden;
+}
+
+.comparison-record-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+    background: #f8fafc;
+}
+
+.comparison-record-modal__header p,
+.comparison-record-modal__header h2 {
+    margin: 0;
+}
+
+.comparison-record-modal__header p {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.comparison-record-modal__header h2 {
+    color: var(--text);
+    font-size: 20px;
+    letter-spacing: 0;
+}
+
+.comparison-record-modal__close {
+    width: 36px;
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #ffffff;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.comparison-record-modal__body {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    overflow: auto;
+}
+
+.record-modal-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.record-modal-summary > span:not(.status-pill) {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.record-modal-summary b {
+    color: var(--text);
+}
+
+.record-modal-section {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.record-modal-section h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.record-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.record-detail-grid div {
+    min-height: 54px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #f8fafc;
+}
+
+.record-detail-grid span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.record-detail-grid b {
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.3;
+}
+
 @media (max-width: 1220px) {
     .comparison-toolbar,
     .comparison-layout,
@@ -332,5 +511,17 @@
     .unmatched-head {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .record-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .comparison-record-modal {
+        padding: 10px;
+    }
+
+    .comparison-record-modal__header {
+        align-items: flex-start;
     }
 }

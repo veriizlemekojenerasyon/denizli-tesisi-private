@@ -27,6 +27,11 @@ function hashPassword(password) {
   }
 }
 
+function isDefaultPasswordValue(passwordValue) {
+  const value = String(passwordValue || '').trim();
+  return value === '123456' || value === hashPassword('123456');
+}
+
 /**
  * GET isteklerini handle et (CORS destekli)
  */
@@ -226,6 +231,9 @@ function saveUser(data) {
   // ID ata
   data.id = data.id || Date.now();
   data.createdAt = data.createdAt || new Date().toLocaleDateString('tr-TR');
+  if (data.password) {
+    data.password = hashPassword(String(data.password).trim());
+  }
   
   // Satir olustur
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -350,10 +358,14 @@ function validateLogin(data) {
     return { success: false, error: 'Hesabiniz pasif durumda!' };
   }
 
+  const mustChangePassword = isDefaultPasswordValue(userPassword);
   const { password, ...userWithoutPassword } = user;
+  userWithoutPassword.mustChangePassword = mustChangePassword;
+
   return {
     success: true,
     user: userWithoutPassword,
+    mustChangePassword,
     message: 'Giris basarili!'
   };
 }
@@ -657,6 +669,10 @@ function resetPassword(data) {
     if (!verifyResult.success) return verifyResult;
     
     // Kullaniciyi bul ve guncelle
+    if (isDefaultPasswordValue(newPassword)) {
+      return { success: false, error: 'Yeni sifre varsayilan sifre olamaz!' };
+    }
+
     const sheet = getOrCreateSheet();
     const user = getUserByEmail(email);
     
@@ -693,8 +709,8 @@ function debugPasswordHash(password) {
 function changePassword(data) {
   try {
     const email = data.email;
-    const currentPassword = data.currentPassword;
-    const newPassword = data.newPassword;
+    const currentPassword = String(data.currentPassword || '').trim();
+    const newPassword = String(data.newPassword || '').trim();
     
     if (!email || !currentPassword || !newPassword) {
       return { success: false, error: 'Email, mevcut şifre ve yeni şifre gerekli!' };
@@ -711,13 +727,22 @@ function changePassword(data) {
     }
     
     // Mevcut şifreyi doğrula
+    const storedPassword = String(user.password || '').trim();
     const hashedCurrentPassword = hashPassword(currentPassword);
-    if (user.password !== hashedCurrentPassword) {
+    if (storedPassword !== currentPassword && storedPassword !== hashedCurrentPassword) {
       return { success: false, error: 'Mevcut şifre hatalı!' };
     }
     
     // Yeni şifreyi hashle ve kaydet
     const sheet = getOrCreateSheet();
+    if (newPassword === currentPassword || hashPassword(newPassword) === storedPassword) {
+      return { success: false, error: 'Yeni sifre mevcut sifreden farkli olmali!' };
+    }
+
+    if (isDefaultPasswordValue(newPassword)) {
+      return { success: false, error: 'Yeni sifre varsayilan sifre olamaz!' };
+    }
+
     const hashedNewPassword = hashPassword(newPassword);
     sheet.getRange(user.rowIndex, 5).setValue(hashedNewPassword); // 5. sütun = Şifre
     
