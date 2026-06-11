@@ -75,13 +75,19 @@ async function saveMotorToSheets(data) {
             urlParams.append('sargiSicaklik3', data.sargiSicaklik3 || '0');
         }
         
-        const fullUrl = url + '?' + urlParams.toString();
-        
-        const response = await fetch(fullUrl, {
-            method: 'GET',
-            cache: 'no-cache'
+        const response = await fetch(url, {
+            method: 'POST',
+            cache: 'no-cache',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: urlParams.toString()
         });
-        
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
         const result = await response.json();
         return result;
         

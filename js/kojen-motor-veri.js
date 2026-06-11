@@ -1179,12 +1179,33 @@ document.addEventListener('DOMContentLoaded', function() {
             // 🔒 ÇİFT KAYIT KONTROLÜ - Butonu kilitlemeden önce yap
             const existingRecord = getCachedMotorRecord(data.motor, data.tarih, data.saat);
             if (existingRecord) {
+                lockForm(false);
+                loadExistingRecord(existingRecord);
                 showMessage(`Bu tarih, saat ve motor (${data.motor}) için kayıt zaten var!\nMevcut kayıt: ${existingRecord.durum || 'NORMAL'}`, 'error');
                 return;
             }
             
-            // Kaydet butonunu devre dışı bırak
             kaydetBtn.disabled = true;
+            kaydetBtn.textContent = 'KONTROL EDILIYOR...';
+
+            // Canli kayit kontrolu: cache eskiyse de cift kaydi durdur.
+            const liveCheck = await checkExistingMotorRecord(data.motor, data.tarih, data.saat);
+            if (!liveCheck.success) {
+                kaydetTimerStatus = `kontrol hatasi: ${liveCheck.error || 'Bilinmeyen hata'}`;
+                showMessage('Kayit kontrolu yapilamadi: ' + (liveCheck.error || 'Bilinmeyen hata'), 'error');
+                return;
+            }
+
+            if (liveCheck.exists) {
+                if (liveCheck.record) {
+                    rememberMotorRecord(liveCheck.record);
+                    loadExistingRecord(liveCheck.record);
+                }
+                lockForm(false);
+                showMessage(`Bu tarih, saat ve motor (${data.motor}) icin kayit zaten var!\nMevcut kayit: ${(liveCheck.record && liveCheck.record.durum) || 'NORMAL'}`, 'error');
+                return;
+            }
+
             stopKaydetTimer = startConsoleDurationTimer(`Kojen motor kaydet ${data.motor} ${data.tarih} ${data.saat}`);
             kaydetBtn.textContent = '💾 KAYDEDİLİYOR...';
             
