@@ -1531,8 +1531,17 @@ return {
 // 🔥 Tarihleri renklendirme fonksiyonu
 function checkHourlyMissingRecords() {
   var lock = LockService.getScriptLock();
+  var lockAcquired = false;
   try {
-    lock.waitLock(30000);
+    lockAcquired = lock.tryLock(8000);
+    if (!lockAcquired) {
+      return {
+        success: true,
+        skipped: true,
+        busy: true,
+        message: 'Sistem mesgul; enerji kontrolu sonraki calismaya birakildi'
+      };
+    }
 
     var targets = getHourlyCheckTargets(new Date(), 3);
     var results = [];
@@ -1568,9 +1577,11 @@ function checkHourlyMissingRecords() {
     });
     return { success: false, error: error.toString() };
   } finally {
-    try {
-      lock.releaseLock();
-    } catch (ignore) {}
+    if (lockAcquired) {
+      try {
+        lock.releaseLock();
+      } catch (ignore) {}
+    }
   }
 }
 

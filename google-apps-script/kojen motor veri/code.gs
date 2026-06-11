@@ -386,7 +386,7 @@ function mergeMotorSheetData(sourceSheet, targetSheet, motor) {
       copiedRange.setHorizontalAlignment('center');
       copiedRange.setFontSize(10);
       copiedRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
-      targetSheet.getRange(appendStartRow, 5, rowsToCopy.length, 15).setNumberFormat('0.00');
+      safeSetMotorNumericFormat_(targetSheet, appendStartRow, rowsToCopy.length);
       sortMotorSheetRowsByDateTime(targetSheet, motor);
       colorizeDates(targetSheet, recordsToColorize);
     }
@@ -576,7 +576,7 @@ function getOrCreateSheet(motor) {
     sheet.getRange(2, 2, 1000, 1).setNumberFormat('@'); // Vardiya
     sheet.getRange(2, 3, 1000, 1).setNumberFormat('@'); // Saat
     sheet.getRange(2, 4, 1000, 1).setNumberFormat('@'); // Motor
-    sheet.getRange(2, 5, 1000, 15).setNumberFormat('0.00'); // Tüm sayısal değerler
+    safeSetMotorNumericFormat_(sheet, 2, 1000); // Tüm sayısal değerler
     sheet.getRange(2, 20, 1000, 1).setNumberFormat('@'); // Durum
     sheet.getRange(2, 21, 1000, 1).setNumberFormat('@'); // Kaydeden
     sheet.getRange(2, 22, 1000, 1).setNumberFormat('@'); // Kayıt Tarihi
@@ -585,6 +585,20 @@ function getOrCreateSheet(motor) {
   }
   
   return sheet;
+}
+
+function safeSetMotorNumericFormat_(sheet, startRow, rowCount) {
+  if (!sheet || !startRow || !rowCount || rowCount < 1) {
+    return { success: true, skipped: true };
+  }
+
+  try {
+    sheet.getRange(startRow, 5, rowCount, 15).setNumberFormat('0.00');
+    return { success: true };
+  } catch (error) {
+    Logger.log('Motor numeric format skipped: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
 }
 
 // Yeni kayıt ekle (Motor Bazlı)
@@ -663,7 +677,7 @@ function addRecord(data) {
     dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
     
     // Sayısal sütunları ortala
-    sheet.getRange(newRow, 5, 1, 15).setNumberFormat('0.00');
+    safeSetMotorNumericFormat_(sheet, newRow, 1);
 
     colorizeDates(sheet, [{ tarih: formattedTarih, saat: formattedSaat, row: newRow }]);
     
@@ -1190,7 +1204,7 @@ function addMultipleRecordsLegacy(dataString) {
         dataRange.setHorizontalAlignment('center');
         dataRange.setFontSize(10);
         dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
-        sheet.getRange(newRow, 5, 1, 15).setNumberFormat('0.00');
+        safeSetMotorNumericFormat_(sheet, newRow, 1);
         if (rowData[19] === 'MOTOR ÇALIŞMIYOR') {
           dataRange.setFontColor('#c62828');
         }
@@ -1330,7 +1344,7 @@ function addMultipleRecords(dataString, fastModeValue) {
             dataRange.setHorizontalAlignment('center');
             dataRange.setFontSize(10);
             dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
-            sheet.getRange(appendStartRow, 5, rowsToAdd.length, 15).setNumberFormat('0.00');
+            safeSetMotorNumericFormat_(sheet, appendStartRow, rowsToAdd.length);
             if (allStopped) {
               dataRange.setFontColor('#c62828');
             }
@@ -1363,8 +1377,17 @@ function addMultipleRecords(dataString, fastModeValue) {
 
 function checkHourlyMissingRecords() {
   var lock = LockService.getScriptLock();
+  var lockAcquired = false;
   try {
-    lock.waitLock(KOJEN_MOTOR_WRITE_LOCK_WAIT_MS || 30000);
+    lockAcquired = lock.tryLock(Math.max(KOJEN_MOTOR_WRITE_LOCK_WAIT_MS || 0, 8000));
+    if (!lockAcquired) {
+      return {
+        success: true,
+        skipped: true,
+        busy: true,
+        message: 'Sistem mesgul; motor kontrolu sonraki calismaya birakildi'
+      };
+    }
 
     var now = new Date();
     var target = getHourlyCheckTarget(now);
@@ -1490,9 +1513,11 @@ function checkHourlyMissingRecords() {
     });
     return { success: false, error: error.toString() };
   } finally {
-    try {
-      lock.releaseLock();
-    } catch (ignore) {}
+    if (lockAcquired) {
+      try {
+        lock.releaseLock();
+      } catch (ignore) {}
+    }
   }
 }
 
@@ -1641,7 +1666,7 @@ function fillMissingMotorFullDay(tarih, motor, startSaat, endSaat) {
         addedRange.setFontSize(10);
         addedRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
         addedRange.setFontColor('#c62828');
-        sheet.getRange(appendStartRow, 5, rowsToAdd.length, 15).setNumberFormat('0.00');
+        safeSetMotorNumericFormat_(sheet, appendStartRow, rowsToAdd.length);
         sortMotorSheetRowsByDateTime(sheet, currentMotor);
         colorResult = colorizeDates(sheet, recordsToColorize);
         totalColored += colorResult.coloredCount || 0;
@@ -1811,7 +1836,7 @@ function sortMotorSheetRowsByDateTime(sheet, motor) {
     range.setBackgrounds(sortedBackgrounds);
     range.setFontColors(sortedFontColors);
     range.setHorizontalAlignment('center');
-    sheet.getRange(2, 5, rowCount, 15).setNumberFormat('0.00');
+    safeSetMotorNumericFormat_(sheet, 2, rowCount);
 
     return {
       success: true,

@@ -441,6 +441,18 @@ h2 {
     font-weight: 700;
 }
 
+.field select {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 34px 8px 10px;
+    color: var(--text);
+    background: #ffffff;
+    font: inherit;
+    font-weight: 800;
+}
+
 .notice {
     padding: 12px 14px;
     color: #7c2d12;
@@ -517,6 +529,52 @@ h2 {
     color: var(--green);
     font-size: 12px;
     font-weight: 900;
+}
+
+.report-export-panel {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.export-summary {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.export-summary span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.export-summary strong {
+    min-width: 0;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 900;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.export-controls {
+    display: flex;
+    align-items: end;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.export-field {
+    min-width: 132px;
 }
 
 .chart-area {
@@ -923,6 +981,14 @@ h2 {
     .chart-detail-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .report-export-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .export-controls {
+        justify-content: flex-start;
+    }
 }
 
 @media (max-width: 560px) {
@@ -951,5 +1017,14 @@ h2 {
 
     .chart-detail-strip {
         grid-template-columns: 1fr;
+    }
+
+    .export-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .export-field {
+        grid-column: 1 / -1;
     }
 }

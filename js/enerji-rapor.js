@@ -21,6 +21,7 @@
     const state = {
         year: new Date().getFullYear(),
         period: 'daily',
+        exportPeriod: 'daily',
         motor: 'total',
         report: null,
         periodItems: [],
@@ -61,6 +62,8 @@
 
     function initializeFilters() {
         applyCurrentRangeForPeriod(state.period);
+        setExportPeriod(state.period);
+        updateExportRangeLabel();
     }
 
     function bindEvents() {
@@ -68,6 +71,7 @@
             button.addEventListener('click', () => {
                 setActiveButton('[data-period]', button);
                 state.period = button.dataset.period || 'monthly';
+                setExportPeriod(state.period);
                 const yearChanged = applyCurrentRangeForPeriod(state.period);
                 if (yearChanged) {
                     loadReport();
@@ -99,6 +103,11 @@
         document.getElementById('endDateInput')?.addEventListener('change', renderReport);
         document.getElementById('refreshReportBtn')?.addEventListener('click', loadReport);
         document.getElementById('exportCsvBtn')?.addEventListener('click', exportCurrentTableCsv);
+        document.getElementById('reportExportPeriod')?.addEventListener('change', event => {
+            state.exportPeriod = event.target.value || state.period;
+        });
+        document.getElementById('exportExcelBtn')?.addEventListener('click', () => exportEnergyReport('excel'));
+        document.getElementById('exportPdfBtn')?.addEventListener('click', () => exportEnergyReport('pdf'));
     }
 
     function applyCurrentRangeForPeriod(period) {
@@ -235,6 +244,7 @@
         renderTable(state.periodItems);
         renderInsights(aggregate, state.periodItems, filteredDays);
         updatePanelLabels();
+        updateExportRangeLabel();
     }
 
     function renderEmptyReport() {
@@ -245,6 +255,7 @@
         renderMotorMix(createAggregate('Bos', '', ''));
         renderTable([]);
         renderInsights(createAggregate('Bos', '', ''), [], []);
+        updateExportRangeLabel();
     }
 
     function renderKpis(aggregate) {
@@ -472,6 +483,21 @@
         setText('tableSubtitle', `${PERIOD_LABELS[state.period]} rapor kirilimi`);
     }
 
+    function setExportPeriod(period) {
+        const nextPeriod = PERIOD_LABELS[period] ? period : 'daily';
+        state.exportPeriod = nextPeriod;
+        const select = document.getElementById('reportExportPeriod');
+        if (select) select.value = nextPeriod;
+    }
+
+    function updateExportRangeLabel() {
+        const range = getSelectedDateRange();
+        const label = range.valid
+            ? `${isoToTrDate(range.startDate)} - ${isoToTrDate(range.endDate)}`
+            : 'Tarih araligi hatali';
+        setText('exportRangeLabel', label);
+    }
+
     function buildPeriodItems(days, period) {
         if (period === 'daily') {
             return days.map(day => aggregateDays([day], day.label || day.date, day.dateIso, day.dateIso));
@@ -637,6 +663,277 @@
         link.click();
         URL.revokeObjectURL(link.href);
         link.remove();
+    }
+
+    function exportEnergyReport(format) {
+        const payload = buildEnergyExportPayload();
+        if (!payload) return;
+
+        if (format === 'pdf') {
+            openEnergyPdfReport(payload);
+            return;
+        }
+
+        downloadEnergyExcelReport(payload);
+    }
+
+    function buildEnergyExportPayload() {
+        if (!state.report) {
+            showNotice('Rapor verisi henuz yuklenmedi.');
+            return null;
+        }
+
+        const range = getSelectedDateRange();
+        if (!range.valid) {
+            showNotice('Baslangic tarihi bitis tarihinden buyuk olamaz.');
+            return null;
+        }
+
+        const period = state.exportPeriod || state.period || 'daily';
+        const filteredDays = state.report.days.filter(day =>
+            day.dateIso >= range.startDate && day.dateIso <= range.endDate
+        );
+        const items = buildPeriodItems(filteredDays, period);
+        if (!items.length) {
+            showNotice('Disa aktarilacak rapor verisi yok.');
+            return null;
+        }
+
+        const aggregate = aggregateDays(filteredDays, 'Secili Aralik', range.startDate, range.endDate);
+        const selectedMetric = getSelectedMetric(aggregate);
+        const generatedAt = new Date();
+
+        return {
+            year: state.year,
+            period,
+            periodLabel: PERIOD_LABELS[period] || period,
+            motorLabel: MOTOR_LABELS[state.motor] || 'Toplam',
+            rangeLabel: `${isoToTrDate(range.startDate)} - ${isoToTrDate(range.endDate)}`,
+            startDate: range.startDate,
+            endDate: range.endDate,
+            generatedAt: formatReportTimestamp(generatedAt),
+            aggregate,
+            selectedMetric,
+            items
+        };
+    }
+
+    function downloadEnergyExcelReport(payload) {
+        const html = [
+            '<!DOCTYPE html>',
+            '<html><head><meta charset="UTF-8">',
+            '<style>',
+            getEnergyReportDocumentCss('excel'),
+            '</style></head><body>',
+            buildEnergyReportDocument(payload),
+            '</body></html>'
+        ].join('');
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        downloadBlob(blob, buildEnergyReportFileName(payload, 'xls'));
+    }
+
+    function openEnergyPdfReport(payload) {
+        const reportWindow = window.open('', '_blank');
+        if (!reportWindow) {
+            showNotice('PDF penceresi acilamadi. Tarayici popup iznini kontrol edin.');
+            return;
+        }
+
+        reportWindow.document.write([
+            '<!DOCTYPE html>',
+            '<html><head><meta charset="UTF-8">',
+            `<title>${escapeHtml(payload.periodLabel)} Enerji Raporu</title>`,
+            '<style>',
+            getEnergyReportDocumentCss('pdf'),
+            '</style></head><body>',
+            buildEnergyReportDocument(payload),
+            '</body></html>'
+        ].join(''));
+        reportWindow.document.close();
+        reportWindow.focus();
+        setTimeout(() => reportWindow.print(), 300);
+    }
+
+    function buildEnergyReportDocument(payload) {
+        return [
+            '<main class="energy-report-document">',
+            '  <header class="document-header">',
+            '    <div>',
+            '      <p>Yillik Enerji Sayfalari</p>',
+            `      <h1>${escapeHtml(payload.periodLabel)} Enerji Raporu</h1>`,
+            '    </div>',
+            `    <strong>${escapeHtml(payload.rangeLabel)}</strong>`,
+            '  </header>',
+            buildEnergyReportMeta(payload),
+            buildEnergyReportSummary(payload),
+            buildEnergyReportTable(payload),
+            '</main>'
+        ].join('');
+    }
+
+    function buildEnergyReportMeta(payload) {
+        const rows = [
+            ['Yil', payload.year],
+            ['Kirilim', payload.periodLabel],
+            ['Motor Filtresi', payload.motorLabel],
+            ['Olusturma Zamani', payload.generatedAt]
+        ];
+
+        return [
+            '<section class="meta-grid">',
+            rows.map(row => [
+                '<div class="meta-item">',
+                `  <span>${escapeHtml(row[0])}</span>`,
+                `  <strong>${escapeHtml(row[1])}</strong>`,
+                '</div>'
+            ].join('')).join(''),
+            '</section>'
+        ].join('');
+    }
+
+    function buildEnergyReportSummary(payload) {
+        const total = payload.aggregate.total;
+        const selected = payload.selectedMetric;
+        const cards = [
+            ['Toplam Uretim', `${formatNumber(total.productionMwh)} MWh`],
+            ['Calisma Saati', `${formatNumber(total.hours)} saat`],
+            ['Ortalama Guc', `${formatNumber(total.averageMw)} MW`],
+            ['Secili Motor', `${formatNumber(selected.productionMwh)} MWh`],
+            ['Aktif Gun', formatNumber(payload.aggregate.activeDayCount || 0)]
+        ];
+
+        return [
+            '<section class="summary-grid">',
+            cards.map(card => [
+                '<div class="summary-card">',
+                `  <span>${escapeHtml(card[0])}</span>`,
+                `  <strong>${escapeHtml(card[1])}</strong>`,
+                '</div>'
+            ].join('')).join(''),
+            '</section>'
+        ].join('');
+    }
+
+    function buildEnergyReportTable(payload) {
+        const headers = [
+            'Donem',
+            'Tarih Araligi',
+            'GM-1 MWh',
+            'GM-1 Saat',
+            'GM-1 Ort. MW',
+            'GM-2 MWh',
+            'GM-2 Saat',
+            'GM-2 Ort. MW',
+            'GM-3 MWh',
+            'GM-3 Saat',
+            'GM-3 Ort. MW',
+            'Toplam MWh',
+            'Toplam Saat',
+            'Toplam Ort. MW'
+        ];
+
+        return [
+            '<section class="table-section">',
+            '  <table>',
+            '    <thead><tr>',
+            headers.map(header => `<th>${escapeHtml(header)}</th>`).join(''),
+            '    </tr></thead>',
+            '    <tbody>',
+            payload.items.map(item => buildEnergyReportTableRow(item)).join(''),
+            '    </tbody>',
+            '  </table>',
+            '</section>'
+        ].join('');
+    }
+
+    function buildEnergyReportTableRow(item) {
+        const cells = [
+            item.label,
+            getReportRangeText(item),
+            item.gm1.productionMwh,
+            item.gm1.hours,
+            item.gm1.averageMw,
+            item.gm2.productionMwh,
+            item.gm2.hours,
+            item.gm2.averageMw,
+            item.gm3.productionMwh,
+            item.gm3.hours,
+            item.gm3.averageMw,
+            item.total.productionMwh,
+            item.total.hours,
+            item.total.averageMw
+        ];
+
+        return [
+            '<tr>',
+            cells.map((cell, index) => {
+                const value = index < 2 ? escapeHtml(cell) : formatExcelNumber(cell);
+                return `<td>${value}</td>`;
+            }).join(''),
+            '</tr>'
+        ].join('');
+    }
+
+    function getReportRangeText(item) {
+        if (!item.startDate && !item.endDate) return '';
+        if (item.startDate === item.endDate) return isoToTrDate(item.startDate);
+        return `${isoToTrDate(item.startDate)} - ${isoToTrDate(item.endDate)}`;
+    }
+
+    function getEnergyReportDocumentCss(mode) {
+        const pageCss = mode === 'pdf'
+            ? '@page{size:A4 landscape;margin:12mm;}'
+            : '';
+        return [
+            pageCss,
+            'body{margin:0;background:#ffffff;color:#172033;font-family:Arial,sans-serif;font-size:11px;}',
+            '.energy-report-document{padding:18px;}',
+            '.document-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:12px;border-bottom:2px solid #2563eb;padding-bottom:10px;}',
+            '.document-header p{margin:0 0 4px;color:#64748b;font-weight:700;}',
+            '.document-header h1{margin:0;font-size:22px;color:#172033;}',
+            '.document-header strong{font-size:14px;color:#2563eb;}',
+            '.meta-grid,.summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}',
+            '.meta-item,.summary-card{border:1px solid #d7e0ec;border-radius:6px;padding:8px;background:#f8fafc;}',
+            '.meta-item span,.summary-card span{display:block;color:#64748b;font-size:10px;font-weight:700;margin-bottom:4px;}',
+            '.meta-item strong,.summary-card strong{display:block;color:#172033;font-size:13px;}',
+            'table{width:100%;border-collapse:collapse;}',
+            'th,td{border:1px solid #d7e0ec;padding:6px 7px;text-align:right;white-space:nowrap;}',
+            'th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left;}',
+            'th{background:#e8f0ff;color:#172033;font-weight:700;}',
+            'tbody tr:nth-child(even){background:#f8fafc;}',
+            '@media print{.energy-report-document{padding:0;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'
+        ].join('');
+    }
+
+    function downloadBlob(blob, fileName) {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        link.remove();
+    }
+
+    function buildEnergyReportFileName(payload, extension) {
+        return [
+            'enerji-rapor',
+            payload.period,
+            payload.startDate,
+            payload.endDate,
+            String(payload.motorLabel || 'toplam').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        ].join('-') + `.${extension}`;
+    }
+
+    function formatReportTimestamp(date) {
+        return [
+            toIsoDate(date),
+            String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0')
+        ].join(' ');
+    }
+
+    function formatExcelNumber(value) {
+        return String(round(value)).replace('.', ',');
     }
 
     function csvCell(value) {

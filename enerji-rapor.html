@@ -118,6 +118,35 @@
                             </div>
                             <span class="panel-chip" id="periodChip">Gunluk</span>
                         </div>
+                        <div class="report-export-panel" aria-label="Yillik enerji rapor ciktilari">
+                            <div class="export-summary">
+                                <span>Yillik Enerji Sayfalari</span>
+                                <strong id="exportRangeLabel">--</strong>
+                            </div>
+                            <div class="export-controls">
+                                <label class="field export-field">
+                                    <span>Rapor</span>
+                                    <select id="reportExportPeriod">
+                                        <option value="daily">Gunluk</option>
+                                        <option value="weekly">Haftalik</option>
+                                        <option value="monthly">Aylik</option>
+                                        <option value="yearly">Yillik</option>
+                                    </select>
+                                </label>
+                                <button class="btn ghost" type="button" id="exportExcelBtn">
+                                    <span class="btn-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h2"/></svg>
+                                    </span>
+                                    Excel
+                                </button>
+                                <button class="btn ghost" type="button" id="exportPdfBtn">
+                                    <span class="btn-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+                                    </span>
+                                    PDF
+                                </button>
+                            </div>
+                        </div>
                         <div class="chart-area" id="productionChart" aria-label="Uretim grafigi"></div>
                         <div class="chart-meta">
                             <div class="chart-detail-strip" id="chartDetailStrip"></div>

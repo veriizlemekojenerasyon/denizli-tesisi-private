@@ -34,10 +34,20 @@ function handleRequest(e) {
   var params = (e && e.parameter) ? e.parameter : {};
   var action = params.action;
   var lock = null;
+  var lockAcquired = false;
   try {
     if (isBildirimWriteAction(action)) {
       lock = LockService.getScriptLock();
-      lock.waitLock(5000);
+      lockAcquired = lock.tryLock(15000);
+      if (!lockAcquired) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          retryable: true,
+          busy: true,
+          action: action || '',
+          error: 'Bildirim sistemi mesgul; islem tekrar denenebilir'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
     }
 
     var result = {};
@@ -116,12 +126,12 @@ function handleRequest(e) {
         result = { success: false, error: 'Gecersiz islem' };
     }
 
-    if (lock) lock.releaseLock();
+    if (lockAcquired) lock.releaseLock();
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    if (lock) {
+    if (lockAcquired) {
       try {
         lock.releaseLock();
       } catch (lockError) {}

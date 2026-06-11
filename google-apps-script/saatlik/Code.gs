@@ -583,8 +583,17 @@ function saatlikGetRecordByDateTime(tarih, saat) {
 // Tarih formatı (dd.MM.yyyy)
 function saatlikCheckHourlyMissingRecords() {
   var lock = LockService.getScriptLock();
+  var lockAcquired = false;
   try {
-    lock.waitLock(30000);
+    lockAcquired = lock.tryLock(8000);
+    if (!lockAcquired) {
+      return {
+        success: true,
+        skipped: true,
+        busy: true,
+        message: 'Sistem mesgul; saatlik kontrol sonraki calismaya birakildi'
+      };
+    }
 
     var now = new Date();
     var target = saatlikGetHourlyCheckTarget(now);
@@ -594,7 +603,6 @@ function saatlikCheckHourlyMissingRecords() {
     var props = PropertiesService.getScriptProperties();
 
     if (props.getProperty(sentKey)) {
-      lock.releaseLock();
       return { success: true, skipped: true, message: 'Bu saat daha once kontrol edildi' };
     }
 
@@ -610,7 +618,6 @@ function saatlikCheckHourlyMissingRecords() {
         mailSonucu: 'Gonderilmedi',
         detay: 'Kayit mevcut'
       });
-      lock.releaseLock();
       return { success: true, missing: false, added: false, message: 'Kayit mevcut' };
     }
 
@@ -651,7 +658,6 @@ function saatlikCheckHourlyMissingRecords() {
       detay: 'Otomatik bos kayit kontrolu'
     });
 
-    lock.releaseLock();
     return {
       success: true,
       missing: true,
@@ -660,9 +666,6 @@ function saatlikCheckHourlyMissingRecords() {
       mail: mailResult
     };
   } catch (error) {
-    try {
-      lock.releaseLock();
-    } catch (lockError) {}
     saatlikAddSystemLog({
       modul: 'Saatlik Veri',
       otomatikKayitSonucu: 'Hata',
@@ -671,6 +674,12 @@ function saatlikCheckHourlyMissingRecords() {
       detay: 'checkHourlyMissingRecords'
     });
     return { success: false, error: error.toString() };
+  } finally {
+    if (lockAcquired) {
+      try {
+        lock.releaseLock();
+      } catch (lockError) {}
+    }
   }
 }
 

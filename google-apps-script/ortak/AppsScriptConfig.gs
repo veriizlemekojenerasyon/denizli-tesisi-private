@@ -7,16 +7,16 @@
  */
 
 var APPS_SCRIPT_URLS = {
-  saatlik: 'https://script.google.com/macros/s/AKfycbwpAgGwe5-AIJSmllURtAj_zNeVkKjkkTFW3_k5zlMcfXdsr9z-mA8HCDRhhC3NpkGH/exec',
+  saatlik: 'https://script.google.com/macros/s/AKfycbz8tCK7XmV3I-wnCiM2iv8UwbUOkmBwj6s3IXEBeU5AZ0cwXF2Le4sejT8j7oXOz-QR/exec',
   motor: 'https://script.google.com/macros/s/AKfycbwDvLwc6FAyGvADqrPzS_hqUrAngr4vJm6bY8ZSTemYd3acUm0GlZTUrfNcRUHmkU1I/exec',
-  enerji: 'https://script.google.com/macros/s/AKfycbyAfKdtShHg87F2qDRTPAvP10trFNeZt59Rrd-fvF8y2BdXM2QDREtmd7YNA4IMNjQc/exec',
+  enerji: 'https://script.google.com/macros/s/AKfycbzy-1yMXVLXxZiFnmpQDK4KnKTZSeVYWewsUNcw9Rd45yMhIjvljU_KPL5cMPm0QC6Y/exec',
   enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbxi4qHxf-EdltRpWAfEnM2qVQln66VPuuU-hnNk9g8T6_wosCrRakDEjSzeTNFqS3tQ/exec',
   yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxTOJuZuGXKTy2JoICtsgXMXjntSmkkWJAaUsiZg8pIwRWeDLjl027KzBTRTMYpsn8r/exec',
   buhar: 'https://script.google.com/macros/s/AKfycbwDlfLp36QguZqRH7_PYtSjWUJihU2dTxodkKiW58rhcK41jtvpS0NKnlw9kBBnZnTJ/exec',
   gunluk: 'https://script.google.com/macros/s/AKfycbwObrja3MBernSzq6Q8PGlik0btKgA6DXCswp3atilbuU0Sd-hEc3M6KtWaDU4hhloN/exec',
   bakim: 'https://script.google.com/macros/s/AKfycby2EIEvRXvSuoYMEBqKDBAvHlgADT43hCMb7vM-1Nas8jgqi5JfJldI8EwkPNfpneF5/exec',
   vardiya: 'https://script.google.com/macros/s/AKfycbxZE7LNlZRCbjI0PehXQN8-jhTyj5t735inYQ5b2ti6xN_ZNG23EASAbvf2SQUNCjat/exec',
-  bildirim: 'https://script.google.com/macros/s/AKfycbyGNwzU4z_iPNWKoye4jFt3DP6Zqdm6fF_I-nfvs5e_bjlAF-2SHivtRdiNiOzqT9TI/exec',
+  bildirim: 'https://script.google.com/macros/s/AKfycbyCs-Q5mv5gNn2SpC24LE38yuP5_IbKx1LS_1nq20jI_Tv81dICKoRfOVP71A5LND_x/exec',
   kullanici: 'https://script.google.com/macros/s/AKfycbwXfLBUIZPExJm9nQnZyRXRRWlAPJvGggwL3gihg2Fal3YBHaVCwao53f3MT2zZGSFh/exec',
   stok: 'https://script.google.com/macros/s/AKfycbyGW2gUC5kqt6xH2Y6LJWM8-p2m6VxJ-C9ib9ZdqqlomsBxlvM1JEV2Yyx783jeQ6X2/exec',
   motorTakip: 'https://script.google.com/macros/s/AKfycbxLYn6NGBOdpgTCcbFbQJ815JFmoEsosjVmo9MRaSMqdZoc5UyLPq2X9eIV88OY77LN/exec',
