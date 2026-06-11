@@ -541,6 +541,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Motor seçim butonları
     const motorButtons = document.querySelectorAll('.motor-btn');
     let selectedMotor = 'GM-1';
+    window.selectedMotor = selectedMotor;
     let isLocked = false;
     
     // Elementler
@@ -975,6 +976,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 setTimeout(() => refreshCache(), 800);
                 showMessage(`${selectedMotor} motoru için enerji verileri kaydedildi!`, 'success');
                 lockForm(false);
+                goToNextMotorAfterNormalSave(selectedMotor);
                 setTimeout(() => loadVardiyaData(), 800);
                 setTimeout(() => checkAndUpdateFormStatus(), 1200);
                 
@@ -1244,8 +1246,39 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) { console.error('Vardiya verileri yüklenirken hata:', error); }
     }
 
+    async function selectMotorButton(button, options = {}) {
+        if (!button) return;
+        motorButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        selectedMotor = button.dataset.motor;
+        window.selectedMotor = selectedMotor;
+        updateGunSonuEnerjiMeta();
+        if (!options.silent) showMessage(`${selectedMotor} motoru secildi!`, 'info');
+        document.querySelectorAll('.kojen-input').forEach(input => {
+            input.value = '';
+            input.style.background = 'white';
+            input.style.color = '#2c3e50';
+        });
+        await loadVardiyaData();
+        await checkAndUpdateFormStatus();
+    }
+
+    function goToNextMotorAfterNormalSave(savedMotor) {
+        const buttons = Array.from(motorButtons);
+        const currentIndex = buttons.findIndex(button => button.dataset.motor === savedMotor);
+        const nextButton = currentIndex >= 0 ? buttons[currentIndex + 1] : null;
+        if (!nextButton) return;
+
+        setTimeout(() => {
+            selectMotorButton(nextButton, { silent: true });
+            showMessage(`${savedMotor} kaydedildi. ${nextButton.dataset.motor} motoruna gecildi.`, 'info');
+        }, 900);
+    }
+
     // Event listeners
     motorButtons.forEach(button => button.addEventListener('click', async function() {
+        await selectMotorButton(this);
+        return;
         motorButtons.forEach(btn => btn.classList.remove('active'));
         this.classList.add('active');
         selectedMotor = this.dataset.motor;
