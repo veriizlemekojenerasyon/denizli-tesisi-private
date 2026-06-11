@@ -603,6 +603,7 @@ function safeSetMotorNumericFormat_(sheet, startRow, rowCount) {
 
 // Yeni kayıt ekle (Motor Bazlı)
 function addRecord(data) {
+  var startedAt = new Date().getTime();
   try {
     // Motor bilgisinden sayfa adı belirle
     var motor = normalizeMotorLabel(data.motor);
@@ -669,24 +670,54 @@ function addRecord(data) {
     }
     sheet.getRange(insertRow, 1, 1, 22).setValues([values]);
     
-    // Yeni eklenen satırın formatını ayarla
+    // Yeni eklenen satırın format/renk işlemleri kayıt yazıldıktan sonra
+    // çalışır. Bunlar hata verirse ana kaydı başarısız sayma.
+    var postWriteWarnings = [];
     var newRow = insertRow;
-    var dataRange = sheet.getRange(newRow, 1, 1, 22);
-    dataRange.setHorizontalAlignment('center');
-    dataRange.setFontSize(10);
-    dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
-    
-    // Sayısal sütunları ortala
-    safeSetMotorNumericFormat_(sheet, newRow, 1);
+    var dataRange = null;
+    try {
+      dataRange = sheet.getRange(newRow, 1, 1, 22);
+      dataRange.setHorizontalAlignment('center');
+      dataRange.setFontSize(10);
+      dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
 
-    colorizeDates(sheet, [{ tarih: formattedTarih, saat: formattedSaat, row: newRow }]);
+      // Sayısal sütunları ortala
+      safeSetMotorNumericFormat_(sheet, newRow, 1);
+    } catch (formatError) {
+      postWriteWarnings.push('Format uyarisi: ' + formatError.toString());
+      console.error('Motor kaydi yazildi, formatlama atlaniyor: ' + formatError.toString());
+    }
+
+    try {
+      var colorResult = colorizeDates(sheet, [{ tarih: formattedTarih, saat: formattedSaat, row: newRow }]);
+      if (colorResult && colorResult.success === false) {
+        postWriteWarnings.push('Renklendirme uyarisi: ' + (colorResult.error || 'Bilinmeyen hata'));
+      }
+    } catch (colorError) {
+      postWriteWarnings.push('Renklendirme uyarisi: ' + colorError.toString());
+      console.error('Motor kaydi yazildi, renklendirme atlaniyor: ' + colorError.toString());
+    }
     
     // Motor çalışmıyor durumunda yazıyı kırmızı yap, tarih rengini ezme
     if (durum === 'MOTOR ÇALIŞMIYOR') {
-      dataRange.setFontColor('#c62828');
+      try {
+        if (!dataRange) dataRange = sheet.getRange(newRow, 1, 1, 22);
+        dataRange.setFontColor('#c62828');
+      } catch (fontError) {
+        postWriteWarnings.push('Yazi rengi uyarisi: ' + fontError.toString());
+        console.error('Motor kaydi yazildi, yazi rengi atlaniyor: ' + fontError.toString());
+      }
     }
     
-    return { success: true, message: motor + ' motoru için kayıt başarıyla eklendi!', record: mapMotorRow(values), row: newRow };
+    return {
+      success: true,
+      version: KOJEN_MOTOR_API_VERSION,
+      message: motor + ' motoru için kayıt başarıyla eklendi!',
+      record: mapMotorRow(values),
+      row: newRow,
+      warnings: postWriteWarnings,
+      durationMs: new Date().getTime() - startedAt
+    };
     
   } catch (error) {
     return { success: false, error: error.toString() };

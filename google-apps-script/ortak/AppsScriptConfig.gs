@@ -8,7 +8,7 @@
 
 var APPS_SCRIPT_URLS = {
   saatlik: 'https://script.google.com/macros/s/AKfycbz8tCK7XmV3I-wnCiM2iv8UwbUOkmBwj6s3IXEBeU5AZ0cwXF2Le4sejT8j7oXOz-QR/exec',
-  motor: 'https://script.google.com/macros/s/AKfycbwDvLwc6FAyGvADqrPzS_hqUrAngr4vJm6bY8ZSTemYd3acUm0GlZTUrfNcRUHmkU1I/exec',
+  motor: 'https://script.google.com/macros/s/AKfycbyK7j7nVfMrtO0jmMAi2Bp4T0pY7Yxay_1keZ6reU739OlUUcRQfsGX2TIniry_d3fl/exec',
   enerji: 'https://script.google.com/macros/s/AKfycbzy-1yMXVLXxZiFnmpQDK4KnKTZSeVYWewsUNcw9Rd45yMhIjvljU_KPL5cMPm0QC6Y/exec',
   enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbxi4qHxf-EdltRpWAfEnM2qVQln66VPuuU-hnNk9g8T6_wosCrRakDEjSzeTNFqS3tQ/exec',
   yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxTOJuZuGXKTy2JoICtsgXMXjntSmkkWJAaUsiZg8pIwRWeDLjl027KzBTRTMYpsn8r/exec',
