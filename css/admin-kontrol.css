@@ -415,9 +415,109 @@ h2 {
     min-height: 72px;
     max-height: 320px;
     overflow: auto;
-    white-space: pre-wrap;
+    white-space: normal;
     color: var(--muted);
     line-height: 1.45;
+}
+
+.daily-report-sections {
+    display: grid;
+    gap: 12px;
+}
+
+.report-section {
+    display: grid;
+    gap: 10px;
+}
+
+.report-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.report-section-title h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+}
+
+.report-section-title span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.report-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.report-mini-card,
+.report-row {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.report-mini-card {
+    min-height: 72px;
+    display: grid;
+    align-content: center;
+    gap: 4px;
+    padding: 10px;
+}
+
+.report-mini-card span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.report-mini-card strong {
+    color: var(--text);
+    font-size: 22px;
+}
+
+.report-list {
+    display: grid;
+    gap: 8px;
+}
+
+.report-row {
+    padding: 10px;
+}
+
+.report-row strong {
+    display: block;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.report-row p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.report-mini-card.ok,
+.report-row.ok {
+    border-left: 4px solid var(--green);
+    background: #f0fdf4;
+}
+
+.report-mini-card.warn,
+.report-row.warn {
+    border-left: 4px solid var(--amber);
+    background: #fffbeb;
+}
+
+.report-mini-card.danger,
+.report-row.danger {
+    border-left: 4px solid var(--red);
+    background: #fef2f2;
 }
 
 .meta-row {
@@ -490,6 +590,10 @@ h2 {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .report-mini-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .admin-header {
         align-items: flex-start;
         flex-direction: column;
@@ -509,7 +613,8 @@ h2 {
 
     .test-actions,
     .backup-grid,
-    .alarm-summary {
+    .alarm-summary,
+    .report-mini-grid {
         grid-template-columns: 1fr;
     }
 

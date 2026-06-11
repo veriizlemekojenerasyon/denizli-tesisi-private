@@ -651,7 +651,7 @@ async function previewDailyReport() {
         await postCentralLog('Gunluk rapor onizleme', result.error || 'Onizleme alinamadi', 'danger');
         return;
     }
-    if (box) box.textContent = result.body || 'Rapor bos.';
+    if (box) renderDailyReportPreview(box, result);
     await postCentralLog('Gunluk rapor onizleme', `${result.tarih || '-'} raporu onizlendi`, 'ok');
 }
 
@@ -662,9 +662,107 @@ async function sendDailyReportNow() {
     const message = result.success
         ? `Gunluk rapor gonderildi. Tarih: ${result.tarih || '-'}, olay: ${result.issueCount ?? '-'}, log: ${result.rowCount ?? '-'}`
         : `Gunluk rapor gonderilemedi: ${result.error}`;
-    if (box) box.textContent = message;
+    if (box) box.innerHTML = renderDailyReportMailStatus(result, message);
     await postCentralLog('Gunluk rapor manuel', message, result.success ? 'ok' : 'danger');
     renderLogs();
+}
+
+function renderDailyReportPreview(box, result) {
+    const summary = result.summary || {};
+    const cards = [
+        { label: 'Toplam Log', value: summary.rowCount ?? result.rowCount ?? 0, level: 'ok' },
+        { label: 'Kritik', value: summary.criticalCount ?? result.alarmSummary?.critical ?? 0, level: 'danger' },
+        { label: 'Uyari', value: summary.warningCount ?? result.alarmSummary?.warning ?? 0, level: 'warn' },
+        { label: 'Eksik Veri', value: summary.missingCount ?? 0, level: (summary.missingCount || 0) ? 'warn' : 'ok' },
+        { label: 'Otomatik Mudahale', value: summary.autoActionCount ?? 0, level: 'ok' },
+        { label: 'Tekrar Eden Hata', value: summary.repeatedErrorCount ?? 0, level: (summary.repeatedErrorCount || 0) ? 'danger' : 'ok' }
+    ];
+
+    box.innerHTML = `
+        <div class="daily-report-sections">
+            <section class="report-section">
+                <div class="report-section-title">
+                    <h3>Gunluk Ozet</h3>
+                    <span>${escapeHtml(result.tarih || summary.reportDate || '-')}</span>
+                </div>
+                <div class="report-mini-grid">
+                    ${cards.map(card => `
+                        <div class="report-mini-card ${card.level}">
+                            <span>${escapeHtml(card.label)}</span>
+                            <strong>${escapeHtml(card.value)}</strong>
+                        </div>`).join('')}
+                </div>
+            </section>
+            ${renderDailyReportSection('Eksik Veri Takibi', result.missingData, item => ({
+                level: 'warn',
+                title: `${item.modul || '-'} - ${item.eksikKayit || '-'}`,
+                detail: `${item.saat || item.kayitZamani || '--:--'} | ${item.otomatikKayitSonucu || item.detay || '-'}`
+            }))}
+            ${renderDailyReportSection('Otomatik Mudahale Ozeti', result.autoActions, item => ({
+                level: getLogBadgeLevel(item),
+                title: `${item.modul || '-'} - ${item.otomatikKayitSonucu || '-'}`,
+                detail: `${item.saat || item.kayitZamani || '--:--'} | ${item.detay || item.mailSonucu || '-'}`
+            }))}
+            ${renderDailyReportSection('Tekrar Eden Hata Analizi', result.repeatedErrors, item => ({
+                level: 'danger',
+                title: `${item.modul || '-'} - ${item.count || 0} kez`,
+                detail: item.error || '-'
+            }))}
+            ${renderDailyReportSection('Renkli Alarm Merkezi', result.alarmItems, item => ({
+                level: item.level === 'danger' ? 'danger' : 'warn',
+                title: `${item.label || ''} ${item.module || '-'} - ${item.title || '-'}`.trim(),
+                detail: `${item.time || '--:--'} | ${item.detail || '-'}`
+            }))}
+            <section class="report-section">
+                <div class="report-section-title">
+                    <h3>Yoneticinin Gun Sonu Maili</h3>
+                    <span>00:20 tetikleyici</span>
+                </div>
+                <div class="report-list">
+                    <div class="report-row ok">
+                        <strong>Mail icerigi hazir</strong>
+                        <p>Bu bolumler gun sonunda yoneticiye HTML ve metin olarak gonderilecek.</p>
+                    </div>
+                </div>
+            </section>
+        </div>`;
+}
+
+function renderDailyReportSection(title, items, mapper) {
+    const rows = Array.isArray(items) ? items.slice(0, 12) : [];
+    return `
+        <section class="report-section">
+            <div class="report-section-title">
+                <h3>${escapeHtml(title)}</h3>
+                <span>${rows.length} kayit</span>
+            </div>
+            <div class="report-list">
+                ${rows.length ? rows.map(item => {
+                    const row = mapper(item);
+                    return `
+                        <div class="report-row ${row.level || 'ok'}">
+                            <strong>${escapeHtml(row.title || '-')}</strong>
+                            <p>${escapeHtml(row.detail || '-')}</p>
+                        </div>`;
+                }).join('') : '<div class="report-row ok"><strong>Kayit yok</strong><p>Bu baslikta dikkat gerektiren veri gorunmuyor.</p></div>'}
+            </div>
+        </section>`;
+}
+
+function renderDailyReportMailStatus(result, message) {
+    const level = result.success ? 'ok' : 'danger';
+    const summary = result.summary || {};
+    return `
+        <div class="daily-report-sections">
+            <section class="report-section">
+                <div class="report-row ${level}">
+                    <strong>${escapeHtml(message)}</strong>
+                    <p>${result.success
+                        ? `Alici: ${escapeHtml(result.to || '-')} | Kritik: ${escapeHtml(summary.criticalCount ?? result.alarmSummary?.critical ?? '-')} | Uyari: ${escapeHtml(summary.warningCount ?? result.alarmSummary?.warning ?? '-')}`
+                        : escapeHtml(result.error || 'Mail gonderilemedi')}</p>
+                </div>
+            </section>
+        </div>`;
 }
 
 async function installAllTriggers() {

@@ -622,7 +622,7 @@ function sendDailySystemReport(data) {
       to: to,
       subject: 'Gunluk Sistem Raporu - ' + reportDate,
       body: report.body,
-      htmlBody: report.body.replace(/\n/g, '<br>')
+      htmlBody: report.htmlBody
     });
 
     props.setProperty(reportKey, new Date().toISOString());
@@ -635,7 +635,15 @@ function sendDailySystemReport(data) {
       detay: 'Gunluk sistem raporu'
     });
 
-    return { success: true, tarih: reportDate, rowCount: report.rowCount, issueCount: report.issueCount, to: to };
+    return {
+      success: true,
+      tarih: reportDate,
+      rowCount: report.rowCount,
+      issueCount: report.issueCount,
+      alarmSummary: report.alarmSummary,
+      summary: report.summary,
+      to: to
+    };
   } catch (error) {
     addSystemLog({
       modul: 'Merkezi Kontrol',
@@ -659,6 +667,12 @@ function getDailySystemReportPreview(data) {
       rowCount: report.rowCount,
       issueCount: report.issueCount,
       alarmSummary: report.alarmSummary,
+      summary: report.summary,
+      moduleStats: report.moduleStats,
+      missingData: report.missingData,
+      autoActions: report.autoActions,
+      repeatedErrors: report.repeatedErrors,
+      alarmItems: report.alarmItems,
       body: report.body
     };
   } catch (error) {
@@ -763,7 +777,11 @@ function buildDailySystemReport_(reportDate) {
   var sheet = getOrCreateSystemLogsSheet();
   var lastRow = sheet.getLastRow();
   var moduleStats = {};
-  var issueLines = [];
+  var logs = [];
+  var missingData = [];
+  var autoActions = [];
+  var alarmItems = [];
+  var errorGroups = {};
   var rowCount = 0;
   var issueCount = 0;
   var alarmSummary = { critical: 0, warning: 0, ok: 0 };
@@ -776,58 +794,283 @@ function buildDailySystemReport_(reportDate) {
       if (tarih !== reportDate) continue;
 
       rowCount++;
+      var log = mapDailyReportLog_(row);
       var modul = row[3] || 'Bilinmeyen';
       if (!moduleStats[modul]) {
-        moduleStats[modul] = { total: 0, missing: 0, autoSuccess: 0, errors: 0 };
+        moduleStats[modul] = { total: 0, missing: 0, autoSuccess: 0, warning: 0, errors: 0 };
       }
 
       moduleStats[modul].total++;
-      if (row[4] && row[4] !== 'Yok') moduleStats[modul].missing++;
-      if (String(row[5] || '').indexOf('Basarili') !== -1 || String(row[5] || '').indexOf('rapor gonderildi') !== -1) {
+      logs.push(log);
+      if (isDailyReportMissingLog_(log)) {
+        moduleStats[modul].missing++;
+        missingData.push(log);
+      }
+      if (isDailyReportAutoAction_(log)) {
         moduleStats[modul].autoSuccess++;
+        autoActions.push(log);
       }
       var severity = getDailyReportSeverity_(row);
+      log.severity = severity;
       alarmSummary[severity]++;
       if (severity === 'critical' || severity === 'warning') {
-        moduleStats[modul].errors++;
-        issueCount++;
-        if (issueLines.length < 30) {
-          issueLines.push('- ' + (row[2] || '--:--') + ' | ' + modul + ' | ' + (row[4] || '-') + ' | ' + (row[7] || row[5] || '-'));
+        if (severity === 'critical') {
+          moduleStats[modul].errors++;
+          addDailyReportErrorGroup_(errorGroups, log);
+        } else {
+          moduleStats[modul].warning++;
         }
+        issueCount++;
+        alarmItems.push(buildDailyReportAlarmItem_(log));
       }
     }
   }
 
   var moduleNames = Object.keys(moduleStats).sort();
-  var body = 'Gunluk Sistem Raporu\n\n' +
-    'Tarih: ' + reportDate + '\n' +
-    'Toplam log: ' + rowCount + '\n' +
-    'Dikkat gerektiren olay: ' + issueCount + '\n\n';
+  var repeatedErrors = buildDailyReportRepeatedErrors_(errorGroups);
+  var summary = {
+    reportDate: reportDate,
+    rowCount: rowCount,
+    issueCount: issueCount,
+    criticalCount: alarmSummary.critical,
+    warningCount: alarmSummary.warning,
+    okCount: alarmSummary.ok,
+    missingCount: missingData.length,
+    autoActionCount: autoActions.length,
+    repeatedErrorCount: repeatedErrors.length,
+    moduleCount: moduleNames.length
+  };
+  var report = {
+    summary: summary,
+    reportDate: reportDate,
+    rowCount: rowCount,
+    issueCount: issueCount,
+    alarmSummary: alarmSummary,
+    moduleStats: moduleStats,
+    moduleNames: moduleNames,
+    missingData: missingData.slice(0, 30),
+    autoActions: autoActions.slice(0, 30),
+    repeatedErrors: repeatedErrors.slice(0, 20),
+    alarmItems: alarmItems.slice(0, 40)
+  };
+  report.body = buildDailySystemReportText_(report);
+  report.htmlBody = buildDailySystemReportHtml_(report);
+  return report;
+}
 
-  body += 'Alarm Ozeti\n' +
-    '- Kritik: ' + alarmSummary.critical + '\n' +
-    '- Uyari: ' + alarmSummary.warning + '\n' +
-    '- Basarili/normal: ' + alarmSummary.ok + '\n\n';
+function mapDailyReportLog_(row) {
+  return {
+    kayitZamani: row[0] || '',
+    tarih: normalizeDate(row[1] || ''),
+    saat: row[2] || '',
+    modul: row[3] || 'Bilinmeyen',
+    eksikKayit: row[4] || '',
+    otomatikKayitSonucu: row[5] || '',
+    mailSonucu: row[6] || '',
+    hataMesaji: row[7] || '',
+    detay: row[8] || '',
+    severity: 'ok'
+  };
+}
 
-  body += 'Modul Ozeti\n';
-  if (!moduleNames.length) {
-    body += '- Log bulunamadi\n';
-  } else {
-    for (var j = 0; j < moduleNames.length; j++) {
-      var name = moduleNames[j];
-      var stat = moduleStats[name];
-      body += '- ' + name +
-        ': toplam ' + stat.total +
-        ', eksik/otomatik olay ' + stat.missing +
-        ', basarili ' + stat.autoSuccess +
-        ', hata ' + stat.errors + '\n';
-    }
+function isDailyReportMissingLog_(log) {
+  var missing = String(log.eksikKayit || '').trim().toLowerCase();
+  return !!missing && missing !== '-' && missing !== 'yok' && missing !== '0';
+}
+
+function isDailyReportAutoAction_(log) {
+  var text = String(log.otomatikKayitSonucu || '').toLowerCase();
+  if (!text || text === '-' || text === 'bilinmiyor') return false;
+  return text.indexOf('basarili') !== -1 ||
+    text.indexOf('basarisiz') !== -1 ||
+    text.indexOf('hata') !== -1 ||
+    text.indexOf('gerekmedi') !== -1 ||
+    text.indexOf('rapor') !== -1 ||
+    text.indexOf('kuruldu') !== -1 ||
+    text.indexOf('ertelendi') !== -1 ||
+    text.indexOf('olusturuldu') !== -1 ||
+    text.indexOf('eklendi') !== -1;
+}
+
+function addDailyReportErrorGroup_(groups, log) {
+  var errorText = normalizeDailyReportErrorText_(log.hataMesaji || log.detay || log.otomatikKayitSonucu || 'Bilinmeyen hata');
+  var key = log.modul + '|' + errorText;
+  if (!groups[key]) {
+    groups[key] = {
+      modul: log.modul,
+      error: errorText,
+      count: 0,
+      firstTime: log.kayitZamani || log.saat || '',
+      lastTime: log.kayitZamani || log.saat || '',
+      examples: []
+    };
   }
+  groups[key].count++;
+  groups[key].lastTime = log.kayitZamani || log.saat || groups[key].lastTime;
+  if (groups[key].examples.length < 3) {
+    groups[key].examples.push(log.saat || log.kayitZamani || '-');
+  }
+}
 
-  body += '\nHata / Uyari Detayi\n';
-  body += issueLines.length ? issueLines.join('\n') : '- Kritik hata veya uyari yok';
+function buildDailyReportRepeatedErrors_(groups) {
+  var list = [];
+  for (var key in groups) {
+    if (!groups.hasOwnProperty(key)) continue;
+    if (groups[key].count < 2) continue;
+    list.push(groups[key]);
+  }
+  list.sort(function(a, b) {
+    return b.count - a.count;
+  });
+  return list;
+}
 
-  return { body: body, rowCount: rowCount, issueCount: issueCount, alarmSummary: alarmSummary };
+function normalizeDailyReportErrorText_(value) {
+  var text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return 'Bilinmeyen hata';
+  if (text.length > 180) return text.substring(0, 177) + '...';
+  return text;
+}
+
+function buildDailyReportAlarmItem_(log) {
+  return {
+    level: log.severity === 'critical' ? 'danger' : 'warn',
+    label: log.severity === 'critical' ? 'KIRMIZI' : 'SARI',
+    time: log.saat || log.kayitZamani || '--:--',
+    module: log.modul,
+    title: log.eksikKayit || log.otomatikKayitSonucu || 'Sistem olayi',
+    detail: log.hataMesaji || log.detay || log.mailSonucu || '-'
+  };
+}
+
+function buildDailySystemReportText_(report) {
+  var body = 'Gunluk Sistem Raporu\n\n' +
+    'Tarih: ' + report.reportDate + '\n' +
+    'Toplam log: ' + report.rowCount + '\n' +
+    'Dikkat gerektiren olay: ' + report.issueCount + '\n\n';
+
+  body += 'Gunluk Ozet\n' +
+    '- Kritik alarm: ' + report.alarmSummary.critical + '\n' +
+    '- Uyari: ' + report.alarmSummary.warning + '\n' +
+    '- Normal/basarili: ' + report.alarmSummary.ok + '\n' +
+    '- Eksik veri olayi: ' + report.summary.missingCount + '\n' +
+    '- Otomatik mudahale: ' + report.summary.autoActionCount + '\n' +
+    '- Tekrar eden hata: ' + report.summary.repeatedErrorCount + '\n\n';
+
+  body += 'Eksik Veri Takibi\n';
+  body += buildDailyReportTextList_(report.missingData, function(item) {
+    return '- ' + (item.saat || '--:--') + ' | ' + item.modul + ' | ' + (item.eksikKayit || '-') + ' | ' + (item.otomatikKayitSonucu || '-');
+  });
+
+  body += '\nOtomatik Mudahale Ozeti\n';
+  body += buildDailyReportTextList_(report.autoActions, function(item) {
+    return '- ' + (item.saat || '--:--') + ' | ' + item.modul + ' | ' + (item.otomatikKayitSonucu || '-') + ' | ' + (item.detay || item.mailSonucu || '-');
+  });
+
+  body += '\nTekrar Eden Hata Analizi\n';
+  body += buildDailyReportTextList_(report.repeatedErrors, function(item) {
+    return '- ' + item.modul + ' | ' + item.count + ' kez | ' + item.error;
+  });
+
+  body += '\nRenkli Alarm Merkezi\n';
+  body += buildDailyReportTextList_(report.alarmItems, function(item) {
+    return '- [' + item.label + '] ' + item.time + ' | ' + item.module + ' | ' + item.title + ' | ' + item.detail;
+  });
+
+  body += '\nYoneticinin Gun Sonu Maili\n' +
+    '- Bu rapor sistem loglarindan otomatik uretilmistir.\n' +
+    '- Kritik veya tekrar eden hata varsa ilgili modulde Hata Mesaji sutunu kontrol edilmelidir.\n';
+
+  return body;
+}
+
+function buildDailyReportTextList_(items, mapper) {
+  if (!items || !items.length) return '- Kayit yok\n';
+  var lines = [];
+  for (var i = 0; i < items.length; i++) {
+    lines.push(mapper(items[i]));
+  }
+  return lines.join('\n') + '\n';
+}
+
+function buildDailySystemReportHtml_(report) {
+  return [
+    '<div style="font-family:Arial,sans-serif;color:#172033;line-height:1.45">',
+    '<h2 style="margin:0 0 6px">Gunluk Sistem Raporu</h2>',
+    '<p style="margin:0 0 14px;color:#64748b">Tarih: ', escapeHtml_(report.reportDate), '</p>',
+    buildDailyReportHtmlSummary_(report),
+    buildDailyReportHtmlSection_('Eksik Veri Takibi', report.missingData, function(item) {
+      return escapeHtml_((item.saat || '--:--') + ' | ' + item.modul + ' | ' + (item.eksikKayit || '-') + ' | ' + (item.otomatikKayitSonucu || '-'));
+    }),
+    buildDailyReportHtmlSection_('Otomatik Mudahale Ozeti', report.autoActions, function(item) {
+      return escapeHtml_((item.saat || '--:--') + ' | ' + item.modul + ' | ' + (item.otomatikKayitSonucu || '-') + ' | ' + (item.detay || item.mailSonucu || '-'));
+    }),
+    buildDailyReportHtmlSection_('Tekrar Eden Hata Analizi', report.repeatedErrors, function(item) {
+      return escapeHtml_(item.modul + ' | ' + item.count + ' kez | ' + item.error);
+    }),
+    buildDailyReportHtmlAlarmSection_(report.alarmItems),
+    '<p style="margin-top:16px;color:#64748b">Bu rapor sistem loglarindan otomatik uretilmistir.</p>',
+    '</div>'
+  ].join('');
+}
+
+function buildDailyReportHtmlSummary_(report) {
+  var cards = [
+    ['Kritik', report.alarmSummary.critical, '#dc2626'],
+    ['Uyari', report.alarmSummary.warning, '#d97706'],
+    ['Normal', report.alarmSummary.ok, '#16a34a'],
+    ['Eksik Veri', report.summary.missingCount, '#2563eb'],
+    ['Otomatik Mudahale', report.summary.autoActionCount, '#2563eb'],
+    ['Tekrar Eden Hata', report.summary.repeatedErrorCount, '#dc2626']
+  ];
+  var html = '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0">';
+  for (var i = 0; i < cards.length; i++) {
+    html += '<div style="border:1px solid #d7e0ec;border-left:4px solid ' + cards[i][2] + ';border-radius:8px;padding:10px;background:#f8fafc">' +
+      '<span style="display:block;color:#64748b;font-size:12px;font-weight:bold">' + escapeHtml_(cards[i][0]) + '</span>' +
+      '<strong style="font-size:22px">' + escapeHtml_(cards[i][1]) + '</strong>' +
+      '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildDailyReportHtmlSection_(title, items, mapper) {
+  var html = '<h3 style="margin:16px 0 8px">' + escapeHtml_(title) + '</h3>';
+  if (!items || !items.length) {
+    return html + '<p style="margin:0;color:#64748b">Kayit yok.</p>';
+  }
+  html += '<ul style="margin:0;padding-left:18px">';
+  for (var i = 0; i < items.length; i++) {
+    html += '<li style="margin-bottom:6px">' + mapper(items[i]) + '</li>';
+  }
+  html += '</ul>';
+  return html;
+}
+
+function buildDailyReportHtmlAlarmSection_(items) {
+  var html = '<h3 style="margin:16px 0 8px">Renkli Alarm Merkezi</h3>';
+  if (!items || !items.length) {
+    return html + '<p style="margin:0;color:#16a34a">Aktif alarm yok.</p>';
+  }
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var color = item.level === 'danger' ? '#dc2626' : '#d97706';
+    var bg = item.level === 'danger' ? '#fef2f2' : '#fffbeb';
+    html += '<div style="border:1px solid #d7e0ec;border-left:5px solid ' + color + ';background:' + bg + ';border-radius:8px;padding:10px;margin-bottom:8px">' +
+      '<strong>' + escapeHtml_(item.label + ' | ' + item.module + ' | ' + item.title) + '</strong>' +
+      '<p style="margin:4px 0 0;color:#64748b">' + escapeHtml_(item.time + ' - ' + item.detail) + '</p>' +
+      '</div>';
+  }
+  return html;
+}
+
+function escapeHtml_(value) {
+  return String(value === null || value === undefined ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function getDailyReportSeverity_(row) {
@@ -851,7 +1094,8 @@ function getDailyReportSeverity_(row) {
       text.indexOf('uyari') !== -1 ||
       text.indexOf('eksik') !== -1 ||
       text.indexOf('ertelendi') !== -1 ||
-      text.indexOf('kontrol') !== -1) {
+      text.indexOf('mesgul') !== -1 ||
+      text.indexOf('busy') !== -1) {
     return 'warning';
   }
 
