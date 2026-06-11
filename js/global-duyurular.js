@@ -508,6 +508,36 @@
                 background: #dbeafe;
             }
 
+            html[data-theme="dark"] .critical-announcement-overlay {
+                background: rgba(2, 6, 23, 0.78);
+            }
+
+            html[data-theme="dark"] .critical-announcement-modal {
+                color: #edf6ff;
+                background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(6, 13, 24, 0.94));
+                border: 1px solid rgba(248, 113, 113, 0.38);
+                border-top: 6px solid #fb7185;
+                box-shadow: 0 24px 70px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+            }
+
+            html[data-theme="dark"] .critical-announcement-kicker {
+                color: #fca5a5;
+            }
+
+            html[data-theme="dark"] .critical-announcement-modal h2 {
+                color: #f8fafc;
+            }
+
+            html[data-theme="dark"] .critical-announcement-modal p {
+                color: #cbd5e1;
+            }
+
+            html[data-theme="dark"] .critical-btn.secondary {
+                color: #bfdbfe;
+                background: rgba(37, 99, 235, 0.20);
+                border: 1px solid rgba(96, 165, 250, 0.34);
+            }
+
             @keyframes globalTickerScroll {
                 from { transform: translateX(0); }
                 to { transform: translateX(-50%); }

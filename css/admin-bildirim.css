@@ -298,6 +298,82 @@ textarea {
     text-align: center;
 }
 
+html[data-theme="dark"] body {
+    color: #edf6ff;
+    background:
+        linear-gradient(135deg, rgba(8, 145, 178, 0.18), transparent 42%),
+        linear-gradient(225deg, rgba(45, 212, 191, 0.10), transparent 46%),
+        linear-gradient(180deg, #050815 0%, #08111f 48%, #06130f 100%);
+}
+
+html[data-theme="dark"] .page-header,
+html[data-theme="dark"] .editor-panel,
+html[data-theme="dark"] .list-panel,
+html[data-theme="dark"] .announcement-card {
+    color: #edf6ff;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(6, 13, 24, 0.78));
+    border-color: rgba(125, 211, 252, 0.22);
+    box-shadow: 0 22px 55px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+html[data-theme="dark"] .page-header p,
+html[data-theme="dark"] .list-header p,
+html[data-theme="dark"] label,
+html[data-theme="dark"] .current-user {
+    color: #a6b6cc;
+}
+
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] input,
+html[data-theme="dark"] select {
+    color: #edf6ff;
+    background: rgba(2, 6, 23, 0.82);
+    border-color: rgba(45, 212, 191, 0.34);
+}
+
+html[data-theme="dark"] textarea::placeholder {
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .ticker-preview {
+    background: rgba(8, 13, 24, 0.72);
+    border-color: #fb7185;
+}
+
+html[data-theme="dark"] .ticker-preview span,
+html[data-theme="dark"] #previewText,
+html[data-theme="dark"] .announcement-text {
+    color: #f8fafc;
+}
+
+html[data-theme="dark"] .announcement-card.high {
+    background: rgba(220, 38, 38, 0.14);
+    border-color: rgba(248, 113, 113, 0.38);
+    border-left-color: #fb7185;
+}
+
+html[data-theme="dark"] .announcement-card.medium {
+    background: rgba(217, 119, 6, 0.14);
+    border-color: rgba(251, 191, 36, 0.36);
+    border-left-color: #fbbf24;
+}
+
+html[data-theme="dark"] .badge {
+    color: #cbd5e1;
+    background: rgba(15, 23, 42, 0.88);
+    border: 1px solid rgba(125, 211, 252, 0.18);
+}
+
+html[data-theme="dark"] .attachment-link {
+    color: #38bdf8;
+}
+
+html[data-theme="dark"] .empty-state {
+    color: #a6b6cc;
+    background: rgba(8, 13, 24, 0.58);
+    border-color: rgba(125, 211, 252, 0.26);
+}
+
 @media (max-width: 900px) {
     .page-header,
     .layout {
