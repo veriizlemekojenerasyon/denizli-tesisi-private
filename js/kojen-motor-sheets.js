@@ -75,13 +75,13 @@ async function saveMotorToSheets(data) {
             urlParams.append('sargiSicaklik3', data.sargiSicaklik3 || '0');
         }
         
-        const response = await fetch(url, {
-            method: 'POST',
-            cache: 'no-cache',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: urlParams.toString()
+        // Apps Script POST yanıtları bazı tarayıcı/hesap kombinasyonlarında
+        // CORS seviyesinde "Failed to fetch" verebiliyor. Tekil kayıt verisi
+        // kısa olduğu için doGet üzerinden göndermek daha kararlı.
+        const requestUrl = `${url}?${urlParams.toString()}`;
+        const response = await fetch(requestUrl, {
+            method: 'GET',
+            cache: 'no-cache'
         });
 
         if (!response.ok) {
