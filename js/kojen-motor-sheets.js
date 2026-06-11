@@ -16,6 +16,8 @@ const KojenMotorSheetsConfig = {
  * @returns {Promise<Object>} - Kayıt sonucu
  */
 async function saveMotorToSheets(data) {
+    let requestUrl = '';
+
     try {
         const url = KojenMotorSheetsConfig.WEB_APP_URL;
         
@@ -78,7 +80,7 @@ async function saveMotorToSheets(data) {
         // Apps Script POST yanıtları bazı tarayıcı/hesap kombinasyonlarında
         // CORS seviyesinde "Failed to fetch" verebiliyor. Tekil kayıt verisi
         // kısa olduğu için doGet üzerinden göndermek daha kararlı.
-        const requestUrl = `${url}?${urlParams.toString()}`;
+        requestUrl = `${url}?${urlParams.toString()}`;
         const response = await fetch(requestUrl, {
             method: 'GET',
             cache: 'no-cache'
@@ -93,8 +95,54 @@ async function saveMotorToSheets(data) {
         
     } catch (error) {
         console.error('Sheets kayıt hatası:', error);
-        return { success: false, error: error.message };
+        const message = error && error.message ? error.message : String(error || 'Bilinmeyen hata');
+        if (requestUrl && message.indexOf('Failed to fetch') !== -1) {
+            const verifiedResult = await verifyMotorSaveAfterFetchFailure(data, requestUrl);
+            if (verifiedResult) return verifiedResult;
+        }
+        return { success: false, error: message };
     }
+}
+
+async function verifyMotorSaveAfterFetchFailure(data, requestUrl) {
+    await delayMotorRequest(1200);
+
+    let checkResult = await checkExistingMotorRecord(data.motor, data.tarih, data.saat);
+    if (checkResult && checkResult.success && checkResult.exists) {
+        return {
+            success: true,
+            message: 'Kayıt eklendi; tarayıcı yanıtı okuyamadığı için kontrol edilerek doğrulandı.',
+            record: checkResult.record || data,
+            warning: 'fetch-response-blocked'
+        };
+    }
+
+    try {
+        await fetch(requestUrl, {
+            method: 'GET',
+            cache: 'no-cache',
+            mode: 'no-cors'
+        });
+    } catch (retryError) {
+        console.warn('Kojen motor no-cors kayıt denemesi okunamadı:', retryError);
+    }
+
+    await delayMotorRequest(2200);
+    checkResult = await checkExistingMotorRecord(data.motor, data.tarih, data.saat);
+    if (checkResult && checkResult.success && checkResult.exists) {
+        return {
+            success: true,
+            message: 'Kayıt eklendi; tarayıcı yanıtı okuyamadığı için sonradan doğrulandı.',
+            record: checkResult.record || data,
+            warning: 'fetch-response-blocked-after-retry'
+        };
+    }
+
+    return null;
+}
+
+function delayMotorRequest(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
