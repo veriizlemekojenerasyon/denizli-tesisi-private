@@ -179,7 +179,7 @@
             'kojen-enerji': ['kojen-enerji-veri'],
             bakim: ['bakim-takibi'],
             stok: ['stok-takip'],
-            admin: ['admin-bildirim', 'admin-kontrol', 'kullanici-yonetimi', 'motor-takip']
+            admin: ['admin-bildirim', 'admin-kontrol', 'kullanici-yonetimi', 'motor-takip', 'veri-disa-aktarim']
         };
 
         return (groups[target] || []).includes(page);

@@ -18,7 +18,8 @@
         compare: '<path d="M4 7h12"/><path d="m13 4 3 3-3 3"/><path d="M20 17H8"/><path d="m11 14-3 3 3 3"/>',
         control: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
         bell: '<path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/>',
-        users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>'
+        users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+        download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>'
     };
 
     const standardMenu = [
@@ -33,6 +34,7 @@
         { id: 'enerji-rapor', icon: 'chart', text: 'Enerji Raporlari', href: 'enerji-rapor.html', adminOnly: true },
         { id: 'motor-enerji-karsilastirma', icon: 'compare', text: 'Motor Enerji Analiz', href: 'motor-enerji-karsilastirma.html', adminOnly: true },
         { id: 'operator-verimlilik', icon: 'chart', text: 'Operator Verimlilik', href: 'operator-verimlilik.html', adminOnly: true },
+        { id: 'veri-disa-aktarim', icon: 'download', text: 'Veri Disa Aktarim', href: 'veri-disa-aktarim.html', adminOnly: true },
         { id: 'bakim', icon: 'wrench', text: 'Bakım Takibi', href: 'bakim-takibi.html' },
         { id: 'stok', icon: 'box', text: 'Stok Takip', href: 'stok-takip.html' },
         { id: 'admin-kontrol', icon: 'control', text: 'Merkezi Kontrol', href: 'admin-kontrol.html', adminOnly: true },
@@ -52,6 +54,7 @@
         'enerji-rapor.html': 'enerji-rapor',
         'motor-enerji-karsilastirma.html': 'motor-enerji-karsilastirma',
         'operator-verimlilik.html': 'operator-verimlilik',
+        'veri-disa-aktarim.html': 'veri-disa-aktarim',
         'bakim-takibi.html': 'bakim',
         'stok-takip.html': 'stok',
         'admin-kontrol.html': 'admin-kontrol',

@@ -732,6 +732,388 @@ html[data-theme="dark"] .transactions-table tbody tr:nth-child(even) td {
     background: rgba(15, 23, 42, 0.86) !important;
 }
 
+html[data-theme="dark"] .vardiya-table-container {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(6, 13, 24, 0.82)) !important;
+}
+
+html[data-theme="dark"] .vardiya-verileri-section {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(6, 13, 24, 0.78)) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow) !important;
+}
+
+html[data-theme="dark"] .vardiya-title {
+    color: var(--theme-text) !important;
+    border-bottom-color: rgba(248, 113, 113, 0.62) !important;
+}
+
+html[data-theme="dark"] .vardiya-info {
+    background: rgba(8, 13, 24, 0.7) !important;
+    border-left-color: var(--theme-primary) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .saat-araligi {
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .saat-araligi span {
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .no-data-message {
+    background: rgba(8, 13, 24, 0.72) !important;
+    border: 1px solid var(--theme-line) !important;
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .vardiya-table {
+    background: rgba(2, 6, 23, 0.72) !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr:hover td {
+    background: rgba(30, 41, 59, 0.94) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .vardiya-table td:first-child {
+    background: linear-gradient(135deg, rgba(127, 29, 29, 0.46), rgba(69, 10, 10, 0.58)) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .vardiya-table td:nth-child(2) {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.62), rgba(12, 74, 110, 0.44)) !important;
+    color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr:nth-child(even) td:first-child,
+html[data-theme="dark"] .vardiya-table tbody tr:hover td:first-child {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.5), rgba(69, 10, 10, 0.66)) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr:nth-child(even) td:nth-child(2),
+html[data-theme="dark"] .vardiya-table tbody tr:hover td:nth-child(2) {
+    background: linear-gradient(135deg, rgba(12, 74, 110, 0.66), rgba(8, 47, 73, 0.54)) !important;
+    color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr.motor-calismiyor td {
+    background: rgba(127, 29, 29, 0.42) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr.motor-calismiyor td:first-child {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.62), rgba(69, 10, 10, 0.74)) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .vardiya-table td.durum-normal {
+    background: linear-gradient(135deg, rgba(20, 83, 45, 0.62), rgba(22, 101, 52, 0.42)) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .vardiya-table td.durum-calismiyor {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.68), rgba(127, 29, 29, 0.5)) !important;
+    color: #fecaca !important;
+}
+
+/* Dark mode cleanup for report, analysis, control and dashboard surfaces. */
+html[data-theme="dark"] .report-header,
+html[data-theme="dark"] .toolbar,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .kpi-card,
+html[data-theme="dark"] .notice,
+html[data-theme="dark"] .report-export-panel,
+html[data-theme="dark"] .chart-detail,
+html[data-theme="dark"] .insight-item,
+html[data-theme="dark"] .lock-panel,
+html[data-theme="dark"] .locked-card,
+html[data-theme="dark"] .comparison-record-modal__panel,
+html[data-theme="dark"] .comparison-record-modal__header,
+html[data-theme="dark"] .record-modal-section,
+html[data-theme="dark"] .record-detail-grid div,
+html[data-theme="dark"] .motor-card,
+html[data-theme="dark"] .signal-card,
+html[data-theme="dark"] .issue-card,
+html[data-theme="dark"] .unmatched-card,
+html[data-theme="dark"] .score-row,
+html[data-theme="dark"] .motor-row,
+html[data-theme="dark"] .module-row,
+html[data-theme="dark"] .motor-meta span,
+html[data-theme="dark"] .module-meta span,
+html[data-theme="dark"] .admin-header,
+html[data-theme="dark"] .status-card,
+html[data-theme="dark"] .health-card,
+html[data-theme="dark"] .quality-item,
+html[data-theme="dark"] .activity-item,
+html[data-theme="dark"] .operator-action-card,
+html[data-theme="dark"] .backup-result,
+html[data-theme="dark"] .test-result,
+html[data-theme="dark"] .quick-links a,
+html[data-theme="dark"] .alarm-summary-card,
+html[data-theme="dark"] .alarm-item,
+html[data-theme="dark"] .daily-report-preview,
+html[data-theme="dark"] .report-mini-card,
+html[data-theme="dark"] .report-row,
+html[data-theme="dark"] .elz-mainpage-card,
+html[data-theme="dark"] .elz-card-row,
+html[data-theme="dark"] .elz-refresh-status,
+html[data-theme="dark"] .announcement-item,
+html[data-theme="dark"] .maintenance-history-badge,
+html[data-theme="dark"] .current-user,
+html[data-theme="dark"] .backup-format {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+}
+
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] .comparison-record-modal__close {
+    background: rgba(2, 6, 23, 0.84) !important;
+    border-color: var(--theme-line-strong) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .segmented {
+    background: rgba(2, 6, 23, 0.72) !important;
+    border-color: var(--theme-line) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+html[data-theme="dark"] .segment {
+    background: transparent !important;
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .segment:hover,
+html[data-theme="dark"] .segment:focus-visible {
+    background: rgba(30, 41, 59, 0.82) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .segment.active {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.96), rgba(13, 148, 136, 0.72)) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.18), 0 10px 24px rgba(8, 145, 178, 0.18) !important;
+}
+
+html[data-theme="dark"] .report-table,
+html[data-theme="dark"] .operator-table,
+html[data-theme="dark"] .comparison-table,
+html[data-theme="dark"] .log-table,
+html[data-theme="dark"] .steam-data-table,
+html[data-theme="dark"] .maintenance-history-table,
+html[data-theme="dark"] .table-wrap,
+html[data-theme="dark"] .log-table-wrap,
+html[data-theme="dark"] .comparison-table-wrap,
+html[data-theme="dark"] .operator-table-wrap {
+    background: rgba(2, 6, 23, 0.62) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .report-table th,
+html[data-theme="dark"] .operator-table th,
+html[data-theme="dark"] .comparison-table th,
+html[data-theme="dark"] .log-table th,
+html[data-theme="dark"] .steam-data-table th,
+html[data-theme="dark"] .maintenance-history-table th {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.96), rgba(30, 41, 59, 0.94)) !important;
+    border-color: var(--theme-line) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .report-table td,
+html[data-theme="dark"] .operator-table td,
+html[data-theme="dark"] .comparison-table td,
+html[data-theme="dark"] .log-table td,
+html[data-theme="dark"] .steam-data-table td,
+html[data-theme="dark"] .maintenance-history-table td {
+    background: rgba(8, 13, 24, 0.82) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .report-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .operator-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .comparison-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .log-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .steam-data-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .maintenance-history-table tbody tr:nth-child(even) td {
+    background: rgba(15, 23, 42, 0.86) !important;
+}
+
+html[data-theme="dark"] .report-table tbody tr:hover td,
+html[data-theme="dark"] .operator-table tbody tr:hover td,
+html[data-theme="dark"] .comparison-table tbody tr:hover td,
+html[data-theme="dark"] .log-table tbody tr:hover td,
+html[data-theme="dark"] .steam-data-table tbody tr:hover td,
+html[data-theme="dark"] .maintenance-history-table tbody tr:hover td {
+    background: rgba(30, 41, 59, 0.94) !important;
+}
+
+html[data-theme="dark"] .bar-track,
+html[data-theme="dark"] .bar-track.stacked,
+html[data-theme="dark"] .mix-track,
+html[data-theme="dark"] .score-track,
+html[data-theme="dark"] .signal-bar,
+html[data-theme="dark"] .efficiency-track,
+html[data-theme="dark"] .module-track {
+    background: rgba(2, 6, 23, 0.78) !important;
+    border: 1px solid rgba(125, 211, 252, 0.16) !important;
+}
+
+html[data-theme="dark"] .motor-metrics > span,
+html[data-theme="dark"] .note-chip,
+html[data-theme="dark"] .record-modal-summary > span:not(.status-pill) {
+    background: rgba(2, 6, 23, 0.74) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .motor-card.critical,
+html[data-theme="dark"] .signal-card.critical,
+html[data-theme="dark"] .issue-card.critical,
+html[data-theme="dark"] .comparison-table tr.critical-row td,
+html[data-theme="dark"] .quality-item.danger,
+html[data-theme="dark"] .alarm-summary-card.danger,
+html[data-theme="dark"] .alarm-item.danger,
+html[data-theme="dark"] .report-mini-card.danger,
+html[data-theme="dark"] .report-row.danger,
+html[data-theme="dark"] .announcement-item.high,
+html[data-theme="dark"] .maintenance-history-badge--fault,
+html[data-theme="dark"] .badge.danger,
+html[data-theme="dark"] .note-chip.critical,
+html[data-theme="dark"] .score-pill.risk,
+html[data-theme="dark"] .level-pill.risk {
+    background: rgba(127, 29, 29, 0.42) !important;
+    border-color: rgba(248, 113, 113, 0.42) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .motor-card.warn,
+html[data-theme="dark"] .signal-card.warn,
+html[data-theme="dark"] .issue-card.warn,
+html[data-theme="dark"] .comparison-table tr.warn-row td,
+html[data-theme="dark"] .quality-item.warn,
+html[data-theme="dark"] .alarm-summary-card.warn,
+html[data-theme="dark"] .alarm-item.warn,
+html[data-theme="dark"] .report-mini-card.warn,
+html[data-theme="dark"] .report-row.warn,
+html[data-theme="dark"] .announcement-item.medium,
+html[data-theme="dark"] .maintenance-history-badge--periodic,
+html[data-theme="dark"] .badge.warn,
+html[data-theme="dark"] .note-chip.warn,
+html[data-theme="dark"] .score-pill.warn,
+html[data-theme="dark"] .level-pill.warn {
+    background: rgba(120, 53, 15, 0.42) !important;
+    border-color: rgba(251, 191, 36, 0.42) !important;
+    color: #fde68a !important;
+}
+
+html[data-theme="dark"] .motor-card.good,
+html[data-theme="dark"] .quality-item.ok,
+html[data-theme="dark"] .operator-action-card.ok,
+html[data-theme="dark"] .health-card.ok,
+html[data-theme="dark"] .alarm-summary-card.ok,
+html[data-theme="dark"] .alarm-item.ok,
+html[data-theme="dark"] .report-mini-card.ok,
+html[data-theme="dark"] .report-row.ok,
+html[data-theme="dark"] .badge.ok,
+html[data-theme="dark"] .score-pill,
+html[data-theme="dark"] .level-pill.good {
+    background: rgba(20, 83, 45, 0.34) !important;
+    border-color: rgba(52, 211, 153, 0.34) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .risk-pill.good,
+html[data-theme="dark"] .status-pill.good {
+    background: rgba(20, 83, 45, 0.52) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .risk-pill.warn,
+html[data-theme="dark"] .status-pill.warn {
+    background: rgba(120, 53, 15, 0.52) !important;
+    color: #fde68a !important;
+}
+
+html[data-theme="dark"] .risk-pill.critical,
+html[data-theme="dark"] .status-pill.critical {
+    background: rgba(127, 29, 29, 0.52) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .panel-chip,
+html[data-theme="dark"] .elz-card-badge,
+html[data-theme="dark"] .score-rank,
+html[data-theme="dark"] .level-pill.watch {
+    background: rgba(8, 47, 73, 0.72) !important;
+    border-color: rgba(125, 211, 252, 0.24) !important;
+    color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .elz-refresh-status.is-loading {
+    background: rgba(8, 47, 73, 0.7) !important;
+    color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .elz-refresh-status.is-success {
+    background: rgba(20, 83, 45, 0.48) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .elz-refresh-status.is-warning {
+    background: rgba(120, 53, 15, 0.48) !important;
+    color: #fde68a !important;
+}
+
+html[data-theme="dark"] .elz-refresh-status.is-error {
+    background: rgba(127, 29, 29, 0.48) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .elz-mainpage-card h3,
+html[data-theme="dark"] .elz-card-row__label,
+html[data-theme="dark"] .bar-value,
+html[data-theme="dark"] .report-table td,
+html[data-theme="dark"] .log-table td {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .elz-card-value,
+html[data-theme="dark"] .elz-card-row__value,
+html[data-theme="dark"] .motor-metrics b,
+html[data-theme="dark"] .record-detail-grid b,
+html[data-theme="dark"] .score-main strong,
+html[data-theme="dark"] .motor-row strong,
+html[data-theme="dark"] .module-row strong,
+html[data-theme="dark"] .chart-detail strong,
+html[data-theme="dark"] .export-summary strong,
+html[data-theme="dark"] .alarm-item strong,
+html[data-theme="dark"] .report-row strong {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .elz-card-meta,
+html[data-theme="dark"] .score-main span,
+html[data-theme="dark"] .motor-row span,
+html[data-theme="dark"] .module-row span,
+html[data-theme="dark"] .signal-meta,
+html[data-theme="dark"] .issue-meta,
+html[data-theme="dark"] .unmatched-meta,
+html[data-theme="dark"] .insight-item span,
+html[data-theme="dark"] .chart-detail span,
+html[data-theme="dark"] .export-summary span,
+html[data-theme="dark"] .alarm-item p,
+html[data-theme="dark"] .report-row p {
+    color: var(--theme-muted) !important;
+}
+
 html[data-theme="dark"] .motor-btn:hover,
 html[data-theme="dark"] .motor-btn.active,
 html[data-theme="dark"] .motor-btn.selected,

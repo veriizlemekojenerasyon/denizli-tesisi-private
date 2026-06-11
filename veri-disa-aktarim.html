@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veri Disa Aktarim | Kojenerasyon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/enerji-rapor.css">
+    <link rel="stylesheet" href="css/veri-disa-aktarim.css">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body data-active-page="veri-disa-aktarim">
+    <div class="dashboard-container">
+        <nav class="sidebar" aria-label="Ana menu">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Koruma logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu"></ul>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <span id="sidebarUserNameDisplay">Yukleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout" type="button">Cikis Yap</button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <header class="report-header export-header">
+                <div>
+                    <p class="eyebrow">Admin Veri Merkezi</p>
+                    <h1>Veri Disa Aktarim</h1>
+                    <p class="header-subtitle">Saatlik, gunluk, buhar, vardiya, motor, enerji, bakim ve stok kayitlarini Excel olarak al.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn ghost" type="button" id="refreshExportBtn">
+                        <span class="btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.6 6.1"/><path d="M3 12A9 9 0 0 1 18.6 5.9"/><path d="M18 2v4h4"/><path d="M6 22v-4H2"/></svg>
+                        </span>
+                        Verileri Getir
+                    </button>
+                    <button class="btn primary" type="button" id="exportSelectedBtn">
+                        <span class="btn-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                        </span>
+                        Excel Indir
+                    </button>
+                    <div class="current-user" id="userNameDisplay">Admin</div>
+                </div>
+            </header>
+
+            <main class="export-content" id="exportApp">
+                <section class="export-toolbar" aria-label="Disa aktarim filtreleri">
+                    <div class="field-row">
+                        <label class="field">
+                            <span>Baslangic</span>
+                            <input type="date" id="startDateInput">
+                        </label>
+                        <label class="field">
+                            <span>Bitis</span>
+                            <input type="date" id="endDateInput">
+                        </label>
+                        <label class="field">
+                            <span>Onizleme</span>
+                            <select id="previewSectionSelect">
+                                <option value="">Veri yuklenince secilebilir</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="toolbar-actions">
+                        <button class="btn ghost" type="button" id="selectAllBtn">Tumunu Sec</button>
+                        <button class="btn ghost" type="button" id="clearAllBtn">Secimi Temizle</button>
+                        <button class="btn ghost" type="button" id="clearDateBtn">Tarih Filtresini Temizle</button>
+                    </div>
+                </section>
+
+                <section class="notice export-notice" id="exportNotice" hidden></section>
+
+                <section class="export-summary-grid" aria-label="Disa aktarim ozeti">
+                    <article class="export-summary-card">
+                        <span>Secili Modul</span>
+                        <strong id="selectedModuleCount">0</strong>
+                        <small>Excel dosyasina eklenecek</small>
+                    </article>
+                    <article class="export-summary-card">
+                        <span>Toplam Kayit</span>
+                        <strong id="totalRecordCount">0</strong>
+                        <small>Son yuklenen veri</small>
+                    </article>
+                    <article class="export-summary-card">
+                        <span>Tarih Araligi</span>
+                        <strong id="rangeSummary">Bu ay</strong>
+                        <small>Tarih filtresi bos ise tum kayitlar</small>
+                    </article>
+                    <article class="export-summary-card">
+                        <span>Durum</span>
+                        <strong id="exportStatusText">Hazir</strong>
+                        <small id="exportStatusDetail">Veriler henuz yuklenmedi</small>
+                    </article>
+                </section>
+
+                <section class="export-module-grid" id="moduleGrid" aria-label="Disa aktarilacak veri modulleri"></section>
+
+                <section class="export-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Excel Onizleme</h2>
+                            <p id="previewSubtitle">Verileri getirdikten sonra secili bolumun ilk kayitlari burada gorunur.</p>
+                        </div>
+                        <span class="panel-chip" id="previewCountChip">0 kayit</span>
+                    </div>
+                    <div class="export-table-wrap">
+                        <table class="export-table">
+                            <thead id="previewTableHead"></thead>
+                            <tbody id="previewTableBody">
+                                <tr><td>Henuz veri yuklenmedi.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/app-config.js"></script>
+    <script src="js/sidebar-menu.js"></script>
+    <script src="js/veri-disa-aktarim.js"></script>
+    <script src="js/logout-system.js"></script>
+</body>
+</html>

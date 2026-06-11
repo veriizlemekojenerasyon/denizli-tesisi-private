@@ -54,7 +54,7 @@ function handleRequest(e) {
         result = addTransaction(e.parameter);
         break;
       case 'getTransactions':
-        result = getTransactions();
+        result = getTransactions(e.parameter);
         break;
       case 'getStockSummary':
         result = getStockSummary();
@@ -384,8 +384,9 @@ function addTransaction(data) {
 }
 
 // İşlemleri getir
-function getTransactions() {
+function getTransactions(params) {
   try {
+    params = params || {};
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = spreadsheet.getSheetByName('StokIslemleri');
     
@@ -399,6 +400,30 @@ function getTransactions() {
     
     var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getDisplayValues();
     var transactions = [];
+    var rawLimit = String(params.limit || params.count || '').toLowerCase();
+    var readAll = rawLimit === 'all' || rawLimit === 'tum' || rawLimit === 'tumu' || rawLimit === '0';
+    var limit = readAll ? data.length : (parseInt(rawLimit, 10) || 50);
+    var startIndex = Math.max(0, data.length - Math.max(1, limit));
+
+    if (rawLimit) {
+      for (var limitedIndex = data.length - 1; limitedIndex >= startIndex; limitedIndex--) {
+        var limitedRow = data[limitedIndex];
+        transactions.push({
+          id: limitedRow[0],
+          materialId: limitedRow[1],
+          materialName: limitedRow[2],
+          type: limitedRow[3],
+          quantity: parseFloat(limitedRow[4]) || 0,
+          unit: limitedRow[5],
+          date: limitedRow[6],
+          person: limitedRow[7],
+          reason: limitedRow[8],
+          createdDate: limitedRow[9]
+        });
+      }
+
+      return { success: true, data: transactions };
+    }
     
     for (var i = data.length - 1; i >= Math.max(0, data.length - 50); i--) { // Son 50 işlem
       var row = data[i];
