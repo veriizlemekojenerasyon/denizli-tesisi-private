@@ -446,7 +446,7 @@ function runVgenPlanNotification(options) {
     var rows = plan.rows;
     var summary = buildVgenMotorSummary(rows);
     var message = buildVgenPlanMessage(targetDate, summary, rows);
-    var subject = 'V-Gen ' + getVgenPlanDateLabel(targetDate) + ' Motor Plani - ' + targetDateTr;
+    var subject = 'V-Gen Motor Plani - ' + targetDateTr;
 
     var mailResult = dryRun ? { success: true, skipped: true, message: 'Dry run: mail gonderilmedi' } : sendVgenPlanMail(subject, message);
     var announcementResult = dryRun
@@ -1244,7 +1244,7 @@ function compareVgenMotorNames(a, b) {
 function buildVgenPlanMessage(targetDate, summary, rows) {
   var dateText = formatVgenDateTR(targetDate);
   var lines = [];
-  lines.push(dateText + ' V-Gen ' + getVgenPlanDateLabel(targetDate).toLowerCase() + ' motor plani');
+  lines.push(dateText + ' V-Gen motor plani');
   lines.push('');
 
   if (!rows.length) {
@@ -1344,7 +1344,7 @@ function addVgenPlanSystemLog(dateText, mailResult, announcementResult, rowCount
       tarih: dateText,
       saat: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'HH:mm'),
       modul: VGEN_PLAN_MODULE_NAME,
-      eksikKayit: 'Ertesi gun plan bildirimi',
+      eksikKayit: 'Plan bildirimi',
       otomatikKayitSonucu: announcementResult && announcementResult.success ? 'Bildirim olusturuldu' : 'Bildirim yok',
       mailSonucu: mailResult && mailResult.skipped ? 'Gonderilmedi' : (mailResult && mailResult.success ? 'Basarili' : 'Basarisiz'),
       hataMesaji: error || (mailResult && mailResult.error) || (announcementResult && announcementResult.error) || '',
@@ -1489,15 +1489,6 @@ function getVgenTomorrowDate() {
 function getVgenTodayDate() {
   var date = new Date();
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function getVgenPlanDateLabel(date) {
-  var today = getVgenTodayDate();
-  var tomorrow = getVgenTomorrowDate();
-  var iso = formatVgenIsoDate(date);
-  if (iso === formatVgenIsoDate(today)) return 'Bugun';
-  if (iso === formatVgenIsoDate(tomorrow)) return 'Ertesi Gun';
-  return 'Gunluk';
 }
 
 function parseVgenDateOnly(value) {

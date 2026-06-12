@@ -32,7 +32,7 @@ function doPost(e) {
 
 function handleRequest(e) {
   var params = (e && e.parameter) ? e.parameter : {};
-  var action = params.action;
+  var action = String(params.action || '').trim();
   var lock = null;
   var lockAcquired = false;
   try {
@@ -53,6 +53,30 @@ function handleRequest(e) {
     var result = {};
 
     switch (action) {
+      case '':
+      case 'health':
+      case 'pingBildirim':
+        result = {
+          success: true,
+          service: 'Bildirim VGen',
+          message: 'Bildirim API calisiyor',
+          checkedAt: new Date().toISOString(),
+          availableActions: [
+            'getAnnouncements',
+            'addAnnouncement',
+            'updateAnnouncement',
+            'deleteAnnouncement',
+            'setAnnouncementActive',
+            'getSystemLogs',
+            'sendDailySystemReport',
+            'getDailySystemReportPreview',
+            'installVgenPlanDailyTrigger',
+            'getVgenPlanTriggerHealth',
+            'checkVgenPlanSetup',
+            'runVgenTomorrowPlanNotification'
+          ]
+        };
+        break;
       case 'getAnnouncements':
         result = getAnnouncements(params);
         break;
@@ -99,7 +123,7 @@ function handleRequest(e) {
         result = runOptionalVgenFunction_('installVgenPlanDailyTrigger');
         break;
       case 'getVgenPlanTriggerHealth':
-        result = getVgenPlanTriggerHealth();
+        result = runOptionalVgenFunction_('getVgenPlanTriggerHealth');
         break;
       case 'testVgenPlanPreview':
         result = runOptionalVgenFunction_('testVgenPlanPreview');
