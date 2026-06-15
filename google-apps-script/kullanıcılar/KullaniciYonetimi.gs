@@ -626,9 +626,11 @@ Saygilarimizla,
 Denizli Tesisi Yonetim Sistemi
     `;
     
-    // GmailApp otomatik olarak script sahibinin email adresini kullanir
-    // Gonderen adi olarak "Denizli Tesisi Sistem" gosterilir
-    GmailApp.sendEmail(email, subject, body, {
+    // MailApp, sadece mail gonderme izni ister ve script sahibinin adresini kullanir.
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      body: body,
       name: 'Denizli Tesisi Sistem'
     });
     
@@ -730,6 +732,25 @@ function debugPasswordHash(password) {
     original: password,
     hashed: hashPassword(password)
   };
+}
+
+/**
+ * Apps Script editorunden bir kez calistirip mail gonderme iznini onaylamak icin.
+ */
+function authorizePasswordResetMail() {
+  const userEmail = Session.getActiveUser().getEmail();
+  if (!userEmail) {
+    return { success: false, error: 'Aktif kullanici email adresi okunamadi.' };
+  }
+
+  MailApp.sendEmail({
+    to: userEmail,
+    subject: 'Denizli Tesisi - Mail yetki testi',
+    body: 'Sifre sifirlama mail yetkisi basariyla verildi.',
+    name: 'Denizli Tesisi Sistem'
+  });
+
+  return { success: true, message: 'Mail yetki testi gonderildi.' };
 }
 
 /**

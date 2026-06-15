@@ -17,7 +17,7 @@ var APPS_SCRIPT_URLS = {
   bakim: 'https://script.google.com/macros/s/AKfycby2EIEvRXvSuoYMEBqKDBAvHlgADT43hCMb7vM-1Nas8jgqi5JfJldI8EwkPNfpneF5/exec',
   vardiya: 'https://script.google.com/macros/s/AKfycbxZE7LNlZRCbjI0PehXQN8-jhTyj5t735inYQ5b2ti6xN_ZNG23EASAbvf2SQUNCjat/exec',
   bildirim: 'https://script.google.com/macros/s/AKfycbz2TpddOgrNQoWL7jak5OAoNGPvEsbjDy-mwH06P9Z7iFQOcOsKgtOjtbzwTrW1HVsQ/exec',
-  kullanici: 'https://script.google.com/macros/s/AKfycbwXfLBUIZPExJm9nQnZyRXRRWlAPJvGggwL3gihg2Fal3YBHaVCwao53f3MT2zZGSFh/exec',
+  kullanici: 'https://script.google.com/macros/s/AKfycbx9vl-siC8bKbGlrX1bJ2LHluuafZ4WbUnM3wxiQ4opvDbD1_8ll34T2mfpIWFR2Nu7/exec',
   stok: 'https://script.google.com/macros/s/AKfycbz8LKe17Xcly6_ujWrnLbD1BnprW19rGtrVssExet5iUgGkiZ23Cf25H--THCKOKWmE/exec',
   motorTakip: 'https://script.google.com/macros/s/AKfycbxLYn6NGBOdpgTCcbFbQJ815JFmoEsosjVmo9MRaSMqdZoc5UyLPq2X9eIV88OY77LN/exec',
   elzMainpage: 'https://script.google.com/macros/s/AKfycbww7IzvG3dgsQgzHTOtzjwDHCJ561KLRBWTCNW3oD5aLVNqj4iRk-FJXome4XTccV_Z/exec'
