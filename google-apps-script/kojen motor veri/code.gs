@@ -24,6 +24,7 @@ function doPost(e) {
 
 var KOJEN_MOTOR_API_VERSION = 'motor-fast-bulk-2026-06-03-v3';
 var KOJEN_MOTOR_WRITE_LOCK_WAIT_MS = 5000;
+var KOJEN_MOTOR_MISSING_CHECK_LOOKBACK_HOURS = 10;
 
 function handleRequest(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -1420,14 +1421,56 @@ function checkHourlyMissingRecords() {
       };
     }
 
-    var now = new Date();
-    var target = getHourlyCheckTarget(now);
-    var hour = target.hour;
-    var saat = target.saat;
-    var tarih = target.tarih;
-    var vardiya = getVardiyaByHour(hour);
-    var sentKey = 'kojenMotorHourlyCheck:' + tarih + ':' + saat;
     var props = PropertiesService.getScriptProperties();
+    var targets = getHourlyCheckTargets(new Date(), KOJEN_MOTOR_MISSING_CHECK_LOOKBACK_HOURS);
+    var results = [];
+    var totalMissing = 0;
+    var totalAdded = 0;
+    var allErrors = [];
+
+    for (var targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+      var targetResult = processHourlyMotorMissingTarget(targets[targetIndex], props);
+      results.push(targetResult);
+      totalMissing += targetResult.missingCount || 0;
+      totalAdded += targetResult.addedCount || 0;
+      if (targetResult.errors && targetResult.errors.length) {
+        allErrors = allErrors.concat(targetResult.errors);
+      }
+    }
+
+    return {
+      success: true,
+      checkedCount: results.length,
+      missingCount: totalMissing,
+      addedCount: totalAdded,
+      results: results,
+      errors: allErrors,
+      message: totalAdded ? 'Eksik kojen motor saatleri otomatik tamamlandi' : 'Eksik motor kaydi yok'
+    };
+  } catch (error) {
+    addSystemLog({
+      modul: 'Kojen Motor',
+      otomatikKayitSonucu: 'Hata',
+      mailSonucu: 'Bilinmiyor',
+      hataMesaji: error.toString(),
+      detay: 'checkHourlyMissingRecords'
+    });
+    return { success: false, error: error.toString() };
+  } finally {
+    if (lockAcquired) {
+      try {
+        lock.releaseLock();
+      } catch (ignore) {}
+    }
+  }
+}
+
+function processHourlyMotorMissingTarget(target, props) {
+  var hour = target.hour;
+  var saat = target.saat;
+  var tarih = target.tarih;
+  var vardiya = getVardiyaByHour(hour);
+  var sentKey = 'kojenMotorHourlyCheck:' + tarih + ':' + saat;
 
     if (props.getProperty(sentKey)) {
       return { success: true, skipped: true, message: 'Bu saat daha once kontrol edildi' };
@@ -1526,6 +1569,8 @@ function checkHourlyMissingRecords() {
 
     return {
       success: true,
+      tarih: tarih,
+      saat: saat,
       missingCount: missing.length,
       addedCount: added.length,
       missing: missing,
@@ -1534,22 +1579,6 @@ function checkHourlyMissingRecords() {
       errors: existingErrors.concat(errors),
       mail: mailResult
     };
-  } catch (error) {
-    addSystemLog({
-      modul: 'Kojen Motor',
-      otomatikKayitSonucu: 'Hata',
-      mailSonucu: 'Bilinmiyor',
-      hataMesaji: error.toString(),
-      detay: 'checkHourlyMissingRecords'
-    });
-    return { success: false, error: error.toString() };
-  } finally {
-    if (lockAcquired) {
-      try {
-        lock.releaseLock();
-      } catch (ignore) {}
-    }
-  }
 }
 
 function fillMissingMotorFullDay(tarih, motor, startSaat, endSaat) {
@@ -1997,6 +2026,32 @@ function getHourlyCheckTarget(date) {
     saat: pad2(target.getHours()) + ':00',
     tarih: Utilities.formatDate(target, Session.getScriptTimeZone(), 'dd.MM.yyyy')
   };
+}
+
+function getHourlyCheckTargets(date, lookbackHours) {
+  var latest = getHourlyCheckTarget(date);
+  var latestDate = parseRecordDateTime(latest.tarih, latest.saat);
+  var count = Math.max(1, parseInt(lookbackHours, 10) || 1);
+  var targets = [];
+  var seen = {};
+
+  for (var offset = count - 1; offset >= 0; offset--) {
+    var targetDate = new Date(latestDate.getTime());
+    targetDate.setHours(targetDate.getHours() - offset);
+    var hour = targetDate.getHours();
+    var tarih = Utilities.formatDate(targetDate, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+    var saat = pad2(hour) + ':00';
+    var key = tarih + '|' + saat;
+    if (seen[key]) continue;
+    seen[key] = true;
+    targets.push({
+      hour: hour,
+      saat: saat,
+      tarih: tarih
+    });
+  }
+
+  return targets;
 }
 
 function pad2(value) {
