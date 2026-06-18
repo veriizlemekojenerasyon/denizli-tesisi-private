@@ -14,9 +14,26 @@
     const MOTOR_LABELS = { gm1: 'GM-1', gm2: 'GM-2', gm3: 'GM-3' };
     const SHIFT_NAMES = ['24-08', '08-16', '16-24'];
     const MOTOR_CAPACITY_MW = 3.45;
+    const MOTOR_TARGET_MW = 3;
+    const MOTOR_DERATED_TARGET_MW = 2.8;
+    const MOTOR_CHARGE_TEMP_CAUTION = 55;
+    const MOTOR_CHARGE_TEMP_HIGH = 65;
+    const MOTOR_WINDING_TEMP_CAUTION = 115;
+    const MOTOR_WINDING_TEMP_HIGH = 125;
+    const MOTOR_POWER_SCORE_WEIGHT = 8;
+    const TIMELY_ENTRY_TOLERANCE_MINUTES = 15;
+    const TIMELINESS_BONUS_MAX = 4;
+    const TIMELINESS_PENALTY_MAX = 6;
+    const REPEATED_VALUE_PENALTY_MAX = 3;
+    const SHIFT_CLOSE_PENALTY_MAX = 5;
     const AUTO_OPERATOR_PATTERN = /(otomatik|automatic|system|sistem|kayit girilmedi|kayit yok)/i;
     const EXCLUDED_OPERATOR_NAME_KEYS = new Set(['MURAT COSKUN']);
     const HOURLY_REQUIRED_FIELDS = ['aktifMwh', 'reaktifMwh', 'aydemAktif', 'aydemReaktif'];
+    const HOURLY_ACCURACY_PAIRS = [
+        ['aktifMwh', 'aydemAktif'],
+        ['reaktifMwh', 'aydemReaktif']
+    ];
+    const HOURLY_ACCURACY_TOLERANCE = 0.001;
     const DAILY_REQUIRED_FIELDS = [
         'yagSeviyesi',
         'kuplaj',
@@ -280,6 +297,9 @@
         const notes = String(row.notlar || row.aciklama || row.durum || '');
         const automatic = isAutomaticOperator(operator) || AUTO_OPERATOR_PATTERN.test(notes) || !operator;
         const fieldQuality = assessRecordQuality(module, row);
+        const hourlyAccuracy = module === 'hourly'
+            ? assessHourlyAccuracy(row)
+            : { checked: 0, matched: 0, mismatched: 0 };
 
         return {
             module,
@@ -294,6 +314,7 @@
             automatic,
             endOfDay: time === '23:59',
             fieldQuality,
+            hourlyAccuracy,
             extraWorkCount: 0,
             raw: row
         };
@@ -327,6 +348,7 @@
             automatic: false,
             endOfDay: false,
             fieldQuality: { passed: 1, total: 1 },
+            hourlyAccuracy: { checked: 0, matched: 0, mismatched: 0 },
             extraWorkCount: extraShare,
             raw: row
         }));
@@ -349,6 +371,26 @@
         const total = fields.length;
         const passed = fields.reduce((sum, field) => sum + (hasFilledValue(row[field]) ? 1 : 0), 0);
         return { passed, total };
+    }
+
+    function assessHourlyAccuracy(row) {
+        return HOURLY_ACCURACY_PAIRS.reduce((result, pair) => {
+            const enteredValue = row[pair[0]];
+            const actualValue = row[pair[1]];
+            if (!hasFilledValue(enteredValue) || !hasFilledValue(actualValue)) {
+                return result;
+            }
+
+            const entered = toNumber(enteredValue);
+            const actual = toNumber(actualValue);
+            result.checked += 1;
+            if (Math.abs(entered - actual) <= HOURLY_ACCURACY_TOLERANCE) {
+                result.matched += 1;
+            } else {
+                result.mismatched += 1;
+            }
+            return result;
+        }, { checked: 0, matched: 0, mismatched: 0 });
     }
 
     function getShiftExtraWorkCount(row) {
@@ -392,7 +434,7 @@
         const ownerMap = buildShiftOwnerMap(rangeRecords);
         const expectedEvents = buildExpectedEvents(range);
         const quality = calculateQuality(filteredRecords, expectedEvents, ownerMap);
-        const operatorRows = calculateOperatorRows(filteredRecords, expectedEvents, quality.missingEvents, ownerMap, range);
+        const operatorRows = calculateOperatorRows(filteredRecords, expectedEvents, quality.missingEvents, ownerMap, range, rangeRecords);
         const motorAggregate = aggregateMotorReport(range);
 
         state.quality = quality;
@@ -539,6 +581,9 @@
                 quality.moduleStats[record.module].manual += 1;
                 quality.fieldCheckPassed += record.fieldQuality.passed;
                 quality.fieldCheckTotal += record.fieldQuality.total;
+                quality.hourlyAccuracyChecked += record.hourlyAccuracy.checked;
+                quality.hourlyAccuracyMatched += record.hourlyAccuracy.matched;
+                quality.hourlyAccuracyMismatched += record.hourlyAccuracy.mismatched;
                 quality.extraWorkCount += record.extraWorkCount;
             }
         });
@@ -571,9 +616,12 @@
         return quality;
     }
 
-    function calculateOperatorRows(records, expectedEvents, missingEvents, ownerMap, range) {
+    function calculateOperatorRows(records, expectedEvents, missingEvents, ownerMap, range, allRangeRecords) {
         const stats = new Map();
         const selectedDays = Math.max(1, listDates(range.startDate, minIso(range.endDate, toIsoDate(getTodayDateOnly()))).length);
+        const motorConditionIndex = buildMotorConditionIndex(allRangeRecords || records);
+        const repeatedHourlySlots = buildRepeatedHourlyValueSlots(allRangeRecords || records);
+        const closedShiftIndex = buildClosedShiftIndex(allRangeRecords || records);
 
         records.forEach(record => {
             if (record.automatic || !record.operatorKey || isExcludedOperator(record.operator)) return;
@@ -582,7 +630,13 @@
             stat.manualTotal += 1;
             stat.qualityPassed += record.fieldQuality.passed;
             stat.qualityTotal += record.fieldQuality.total;
+            stat.hourlyAccuracyChecked += record.hourlyAccuracy.checked;
+            stat.hourlyAccuracyMatched += record.hourlyAccuracy.matched;
+            stat.hourlyAccuracyMismatched += record.hourlyAccuracy.mismatched;
             stat.extraWorkCount += record.extraWorkCount;
+            applyMotorPowerScore(stat, record, motorConditionIndex);
+            applyTimelinessScore(stat, record);
+            applyRepeatedValueScore(stat, record, repeatedHourlySlots);
             stat.days.add(record.dateIso);
         });
 
@@ -607,6 +661,9 @@
             owners.forEach(owner => {
                 const stat = ensureOperatorStat(stats, owner.key, owner.name);
                 stat.assignedMissing += share;
+                if (closedShiftIndex.has(shiftKey(event.dateIso, event.shift))) {
+                    stat.shiftCloseWarnings += share;
+                }
             });
         });
 
@@ -622,12 +679,34 @@
             const activeDayRatio = Math.min(1, row.days.size / selectedDays);
             const moduleBreadth = MODULE_ORDER.filter(module => row.moduleCounts[module] > 0).length / MODULE_ORDER.length;
             const extraWorkRatio = Math.min(1, row.extraWorkCount / Math.max(1, row.moduleCounts.shift));
-            const score = row.assignedExpected > 0
+            const baseScore = row.assignedExpected > 0
                 ? (completion * 55) + (qualityRatio * 20) + (volumeRatio * 15) + (moduleBreadth * 5) + (extraWorkRatio * 5)
                 : (qualityRatio * 35) + (volumeRatio * 45) + (activeDayRatio * 10) + (moduleBreadth * 5) + (extraWorkRatio * 5);
+            const accuracyRatio = row.hourlyAccuracyChecked > 0
+                ? clamp(row.hourlyAccuracyMatched / row.hourlyAccuracyChecked, 0, 1)
+                : null;
+            const accuracyAdjustment = accuracyRatio === null ? 0 : ((accuracyRatio - 0.5) * 20);
+            const motorPowerAdjustment = row.motorPowerChecked > 0
+                ? clamp((row.motorPowerScoreTotal / row.motorPowerChecked) * MOTOR_POWER_SCORE_WEIGHT, -MOTOR_POWER_SCORE_WEIGHT, MOTOR_POWER_SCORE_WEIGHT)
+                : 0;
+            const timelinessAdjustment = calculateTimelinessAdjustment(row);
+            const repeatedValueAdjustment = -Math.min(REPEATED_VALUE_PENALTY_MAX, row.repeatedValueWarnings);
+            const shiftCloseAdjustment = -Math.min(SHIFT_CLOSE_PENALTY_MAX, row.shiftCloseWarnings * 0.5);
+            const score = baseScore + accuracyAdjustment + motorPowerAdjustment + timelinessAdjustment + repeatedValueAdjustment + shiftCloseAdjustment;
 
             row.completion = completion * 100;
             row.qualityPct = qualityRatio * 100;
+            row.hourlyAccuracyPct = accuracyRatio === null ? null : accuracyRatio * 100;
+            row.accuracyAdjustment = round(accuracyAdjustment);
+            row.motorPowerAdjustment = round(motorPowerAdjustment);
+            row.motorPowerChecked = round(row.motorPowerChecked);
+            row.timelinessAdjustment = round(timelinessAdjustment);
+            row.timelyEntryCount = round(row.timelyEntryCount);
+            row.lateEntryCount = round(row.lateEntryCount);
+            row.repeatedValueAdjustment = round(repeatedValueAdjustment);
+            row.repeatedValueWarnings = round(row.repeatedValueWarnings);
+            row.shiftCloseAdjustment = round(shiftCloseAdjustment);
+            row.shiftCloseWarnings = round(row.shiftCloseWarnings);
             row.extraWorkCount = round(row.extraWorkCount);
             row.score = Math.round(clamp(score, 0, 100));
             row.assignedExpected = round(row.assignedExpected);
@@ -638,6 +717,167 @@
         return rows
             .filter(row => row.manualTotal > 0 || row.assignedExpected > 0 || row.assignedMissing > 0)
             .sort((a, b) => b.score - a.score || b.manualTotal - a.manualTotal || a.name.localeCompare(b.name, 'tr'));
+    }
+
+    function buildMotorConditionIndex(records) {
+        const index = new Map();
+        (records || [])
+            .filter(record => record.module === 'motor' && record.motor && record.hour >= 0)
+            .forEach(record => {
+                index.set(motorSlotKey(record), assessMotorCondition(record.raw || {}));
+            });
+        return index;
+    }
+
+    function applyMotorPowerScore(stat, record, motorConditionIndex) {
+        if (record.module !== 'energy' || !record.motor || record.hour < 0) return;
+        const powerMw = getEnergyPowerMw(record.raw || {});
+        if (powerMw <= 0) return;
+
+        const condition = motorConditionIndex.get(motorSlotKey(record)) || assessMotorCondition({});
+        const result = assessMotorPower(powerMw, condition);
+        stat.motorPowerChecked += 1;
+        stat.motorPowerScoreTotal += result.score;
+    }
+
+    function assessMotorPower(powerMw, condition) {
+        const targetMw = condition.derated ? MOTOR_DERATED_TARGET_MW : MOTOR_TARGET_MW;
+        const distance = Math.abs(powerMw - targetMw);
+        let score = 0;
+
+        if (distance <= 0.08) {
+            score = 1;
+        } else if (distance <= 0.18) {
+            score = 0.45;
+        } else if (powerMw < targetMw) {
+            score = -clamp((targetMw - powerMw) / 0.35, 0.25, 1);
+        } else {
+            score = condition.derated
+                ? -clamp((powerMw - targetMw) / 0.35, 0.25, 1)
+                : 0.15;
+        }
+
+        if (condition.high && powerMw > MOTOR_DERATED_TARGET_MW + 0.2) {
+            score -= 0.35;
+        }
+
+        return {
+            score: clamp(score, -1, 1),
+            targetMw
+        };
+    }
+
+    function assessMotorCondition(row) {
+        const chargeTemp = toNumber(row.sarjSicaklik || row.sarjSicakligi || row.chargeTemp);
+        const windingTemps = [
+            toNumber(row.sargiSicaklik1 || row.sargi1),
+            toNumber(row.sargiSicaklik2 || row.sargi2),
+            toNumber(row.sargiSicaklik3 || row.sargi3)
+        ];
+        const maxWindingTemp = Math.max.apply(null, windingTemps.concat([0]));
+        const caution = chargeTemp >= MOTOR_CHARGE_TEMP_CAUTION || maxWindingTemp >= MOTOR_WINDING_TEMP_CAUTION;
+        const high = chargeTemp >= MOTOR_CHARGE_TEMP_HIGH || maxWindingTemp >= MOTOR_WINDING_TEMP_HIGH;
+
+        return {
+            chargeTemp,
+            maxWindingTemp,
+            caution,
+            high,
+            derated: caution || high
+        };
+    }
+
+    function getEnergyPowerMw(row) {
+        return toNumber(
+            row.aktifGuc ||
+            row.aktifGucMw ||
+            row.anlikAktifGuc ||
+            row.activePower ||
+            row.guc ||
+            row.AktifGuc ||
+            row['Aktif Guc']
+        );
+    }
+
+    function motorSlotKey(record) {
+        return `${record.dateIso}|${record.motor}|${String(record.hour).padStart(2, '0')}`;
+    }
+
+    function applyTimelinessScore(stat, record) {
+        if (!['hourly', 'motor', 'energy'].includes(record.module) || record.hour < 0) return;
+        const createdAt = parseRecordDateTime(record.raw && (record.raw.kayitTarihi || record.raw.KayitTarihi || record.raw.createdAt));
+        if (!createdAt) return;
+
+        const expectedAt = getExpectedRecordDateTime(record.dateIso, record.hour);
+        if (!expectedAt) return;
+        const delayMinutes = (createdAt.getTime() - expectedAt.getTime()) / 60000;
+        if (delayMinutes <= TIMELY_ENTRY_TOLERANCE_MINUTES) {
+            stat.timelyEntryCount += 1;
+        } else {
+            stat.lateEntryCount += 1;
+        }
+        stat.timelinessChecked += 1;
+    }
+
+    function calculateTimelinessAdjustment(row) {
+        if (row.timelinessChecked <= 0) return 0;
+        const timelyRatio = clamp(row.timelyEntryCount / row.timelinessChecked, 0, 1);
+        if (timelyRatio >= 0.9) return TIMELINESS_BONUS_MAX;
+        if (timelyRatio >= 0.75) return 1;
+        if (timelyRatio >= 0.5) return -3;
+        return -TIMELINESS_PENALTY_MAX;
+    }
+
+    function buildRepeatedHourlyValueSlots(records) {
+        const slots = new Set();
+        const rows = (records || [])
+            .filter(record => record.module === 'hourly' && record.hour >= 0)
+            .slice()
+            .sort((a, b) => getExpectedRecordDateTime(a.dateIso, a.hour) - getExpectedRecordDateTime(b.dateIso, b.hour));
+
+        for (let index = 2; index < rows.length; index += 1) {
+            const prev2 = rows[index - 2];
+            const prev = rows[index - 1];
+            const cur = rows[index];
+            const prev2Time = getExpectedRecordDateTime(prev2.dateIso, prev2.hour).getTime();
+            const prevTime = getExpectedRecordDateTime(prev.dateIso, prev.hour).getTime();
+            const curTime = getExpectedRecordDateTime(cur.dateIso, cur.hour).getTime();
+            const consecutive = prevTime - prev2Time === 3600000 && curTime - prevTime === 3600000;
+            const values = [prev2, prev, cur].map(record => ({
+                active: toNumber(record.raw && record.raw.aktifMwh),
+                reactive: toNumber(record.raw && record.raw.reaktifMwh)
+            }));
+            const allSame = values.every(value =>
+                value.active === values[0].active &&
+                value.reactive === values[0].reactive
+            );
+            const allZero = values.every(value => value.active === 0 && value.reactive === 0);
+            if (consecutive && allSame && !allZero) {
+                slots.add(slotKeyForRecord(cur));
+            }
+        }
+        return slots;
+    }
+
+    function applyRepeatedValueScore(stat, record, repeatedHourlySlots) {
+        if (record.module !== 'hourly') return;
+        if (repeatedHourlySlots.has(slotKeyForRecord(record))) {
+            stat.repeatedValueWarnings += 1;
+        }
+    }
+
+    function buildClosedShiftIndex(records) {
+        const index = new Set();
+        (records || [])
+            .filter(record => record.module === 'shift' && record.shift)
+            .forEach(record => {
+                const status = normalizeLooseName((record.raw && record.raw.durum) || '');
+                const endTime = normalizeTime((record.raw && record.raw.bitisSaati) || '');
+                if (endTime || status === 'TAMAMLANDI' || status === 'BITTI' || status === 'KAPALI') {
+                    index.add(shiftKey(record.dateIso, record.shift));
+                }
+            });
+        return index;
     }
 
     function ensureOperatorStat(stats, key, name) {
@@ -652,6 +892,22 @@
                 qualityPassed: 0,
                 qualityTotal: 0,
                 qualityPct: 0,
+                hourlyAccuracyChecked: 0,
+                hourlyAccuracyMatched: 0,
+                hourlyAccuracyMismatched: 0,
+                hourlyAccuracyPct: null,
+                accuracyAdjustment: 0,
+                motorPowerChecked: 0,
+                motorPowerScoreTotal: 0,
+                motorPowerAdjustment: 0,
+                timelinessChecked: 0,
+                timelyEntryCount: 0,
+                lateEntryCount: 0,
+                timelinessAdjustment: 0,
+                repeatedValueWarnings: 0,
+                repeatedValueAdjustment: 0,
+                shiftCloseWarnings: 0,
+                shiftCloseAdjustment: 0,
                 extraWorkCount: 0,
                 completion: 0,
                 score: 0,
@@ -723,7 +979,7 @@
         const body = document.getElementById('operatorTableBody');
         if (!body) return;
         if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="15">Secili aralikta operator verisi yok.</td></tr>';
+            body.innerHTML = '<tr><td colspan="23">Secili aralikta operator verisi yok.</td></tr>';
             return;
         }
 
@@ -740,6 +996,14 @@
             `<td>${formatNumber(row.assignedExpected)}</td>`,
             `<td>${formatNumber(row.assignedMissing)}</td>`,
             `<td>%${formatNumber(row.qualityPct)}</td>`,
+            `<td>${formatInteger(row.hourlyAccuracyMatched)}</td>`,
+            `<td>${formatInteger(row.hourlyAccuracyMismatched)}</td>`,
+            `<td>${formatSignedNumber(row.motorPowerAdjustment)}</td>`,
+            `<td>${formatInteger(row.motorPowerChecked)}</td>`,
+            `<td>${formatSignedNumber(row.timelinessAdjustment)}</td>`,
+            `<td>${formatInteger(row.lateEntryCount)}</td>`,
+            `<td>${formatInteger(row.repeatedValueWarnings)}</td>`,
+            `<td>${formatNumber(row.shiftCloseWarnings)}</td>`,
             `<td>${formatNumber(row.extraWorkCount)}</td>`,
             `<td>%${formatNumber(row.completion)}</td>`,
             `<td class="score-cell">${formatInteger(row.score)}</td>`,
@@ -821,6 +1085,9 @@
         const fieldQuality = quality.fieldCheckTotal > 0
             ? (quality.fieldCheckPassed / quality.fieldCheckTotal) * 100
             : 0;
+        const hourlyAccuracy = quality.hourlyAccuracyChecked > 0
+            ? (quality.hourlyAccuracyMatched / quality.hourlyAccuracyChecked) * 100
+            : 0;
 
         const insights = [
             {
@@ -834,6 +1101,13 @@
                 text: quality.fieldCheckTotal > 0
                     ? `%${formatNumber(fieldQuality)} alan dolu. Saatlik aktif/reaktif ve gunluk veri alanlari kontrol edildi.`
                     : 'Kontrol edilecek manuel veri alani bulunamadi.'
+            },
+            {
+                level: quality.hourlyAccuracyChecked === 0 || hourlyAccuracy >= 95 ? 'ok' : 'warn',
+                title: 'Saatlik fark kontrolu',
+                text: quality.hourlyAccuracyChecked > 0
+                    ? `%${formatNumber(hourlyAccuracy)} farksiz. ${formatInteger(quality.hourlyAccuracyMismatched)} farkli deger puani dusurdu.`
+                    : 'Saatlik gercek/Aydem karsilastirmasi icin veri bulunamadi.'
             },
             {
                 level: missingRate > 10 ? 'warn' : 'ok',
@@ -903,7 +1177,7 @@
         }
 
         const rows = [
-            ['Operator', 'Saatlik', 'Motor', 'Enerji', 'Gunluk', 'Buhar', 'Vardiya', 'Manuel Toplam', 'Sorumlu Slot', 'Eksik/Oto', 'Veri Tamligi %', 'Ekstra Is', 'Tamamlanma %', 'Puan', 'Seviye']
+            ['Operator', 'Saatlik', 'Motor', 'Enerji', 'Gunluk', 'Buhar', 'Vardiya', 'Manuel Toplam', 'Sorumlu Slot', 'Eksik/Oto', 'Veri Tamligi %', 'Farksiz', 'Farkli', 'Fark Puani', 'Motor Guc Puani', 'Kontrol Edilen Motor', 'Zaman Puani', 'Gec Kayit', 'Tekrar Uyarisi', 'Kapanis Uyarisi', 'Ekstra Is', 'Tamamlanma %', 'Puan', 'Seviye']
         ].concat(state.operatorRows.map(row => [
             row.name,
             row.moduleCounts.hourly,
@@ -916,6 +1190,15 @@
             formatCsvNumber(row.assignedExpected),
             formatCsvNumber(row.assignedMissing),
             formatCsvNumber(row.qualityPct),
+            row.hourlyAccuracyMatched,
+            row.hourlyAccuracyMismatched,
+            formatCsvNumber(row.accuracyAdjustment),
+            formatCsvNumber(row.motorPowerAdjustment),
+            formatCsvNumber(row.motorPowerChecked),
+            formatCsvNumber(row.timelinessAdjustment),
+            formatCsvNumber(row.lateEntryCount),
+            formatCsvNumber(row.repeatedValueWarnings),
+            formatCsvNumber(row.shiftCloseWarnings),
             formatCsvNumber(row.extraWorkCount),
             formatCsvNumber(row.completion),
             row.score,
@@ -994,6 +1277,9 @@
             adminExcludedCount: 0,
             fieldCheckPassed: 0,
             fieldCheckTotal: 0,
+            hourlyAccuracyChecked: 0,
+            hourlyAccuracyMatched: 0,
+            hourlyAccuracyMismatched: 0,
             extraWorkCount: 0,
             missingEvents: [],
             moduleStats: {
@@ -1089,6 +1375,45 @@
         const match = String(value || '').match(/(\d{1,2})[:.](\d{2})/);
         if (!match) return '';
         return `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`;
+    }
+
+    function parseRecordDateTime(value) {
+        const text = String(value || '').trim();
+        if (!text) return null;
+
+        const iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]+(\d{1,2})[:.](\d{2})(?::(\d{2}))?)?/);
+        if (iso) {
+            return new Date(
+                parseInt(iso[1], 10),
+                parseInt(iso[2], 10) - 1,
+                parseInt(iso[3], 10),
+                parseInt(iso[4] || '0', 10),
+                parseInt(iso[5] || '0', 10),
+                parseInt(iso[6] || '0', 10)
+            );
+        }
+
+        const tr = text.match(/(\d{1,2})[./](\d{1,2})[./](\d{4})(?:\s+(\d{1,2})[:.](\d{2})(?::(\d{2}))?)?/);
+        if (tr) {
+            return new Date(
+                parseInt(tr[3], 10),
+                parseInt(tr[2], 10) - 1,
+                parseInt(tr[1], 10),
+                parseInt(tr[4] || '0', 10),
+                parseInt(tr[5] || '0', 10),
+                parseInt(tr[6] || '0', 10)
+            );
+        }
+
+        const parsed = new Date(text);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function getExpectedRecordDateTime(dateIso, hour) {
+        if (!dateIso || hour < 0) return null;
+        const date = parseIsoDate(dateIso);
+        date.setHours(hour, 0, 0, 0);
+        return date;
     }
 
     function getHourFromTime(value) {
@@ -1241,6 +1566,12 @@
 
     function formatInteger(value) {
         return integerFormat.format(Math.round(toNumber(value)));
+    }
+
+    function formatSignedNumber(value) {
+        const number = round(value);
+        if (number > 0) return `+${formatNumber(number)}`;
+        return formatNumber(number);
     }
 
     function formatCsvNumber(value) {

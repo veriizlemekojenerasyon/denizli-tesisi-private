@@ -278,6 +278,9 @@
             if (previous) {
                 row.productionDelta = round(row.totalEnergy - previous.totalEnergy, 3);
                 row.hoursDelta = round(row.runningHours - previous.runningHours, 3);
+                row.previousStatus = previous.status || '';
+                row.previousActivePower = previous.activePower;
+                row.previousProductionDelta = previous.productionDelta;
             }
             lastByMotor[row.motor] = row;
         });
@@ -322,6 +325,22 @@
         const motorStopped = isStoppedStatus(motor.status);
         const energyStopped = isStoppedStatus(energy.status);
         const running = !motorStopped && !energyStopped;
+        const startupStatusTransition = !motorStopped &&
+            energyStopped &&
+            isStoppedStatus(energy.previousStatus);
+        const shutdownStatusTransition = motorStopped &&
+            !energyStopped &&
+            energy.productionDelta !== null &&
+            energy.productionDelta > 0 &&
+            !isStoppedStatus(energy.previousStatus);
+        const startupTransition = running &&
+            energy.activePower <= 0.2 &&
+            isStoppedStatus(energy.previousStatus);
+        const shutdownTransition = (motorStopped || energyStopped) &&
+            energy.activePower > 0.25 &&
+            energy.productionDelta !== null &&
+            energy.productionDelta > 0 &&
+            !isStoppedStatus(energy.previousStatus);
         const windingValues = [motor.winding1, motor.winding2, motor.winding3].filter(value => value > 0);
         const windingAverage = windingValues.length ? average(windingValues) : 0;
         const windingMax = windingValues.length ? Math.max.apply(null, windingValues) : 0;
@@ -333,13 +352,13 @@
             motor.winding1, motor.winding2, motor.winding3
         ].every(value => value === 0);
 
-        if (motorStopped !== energyStopped) {
+        if (motorStopped !== energyStopped && !startupStatusTransition && !shutdownStatusTransition) {
             addIssue(issues, 'critical', 'Durum celiskisi', 'Motor veri ve enerji veri ayni calisma durumunu gostermiyor.');
         }
-        if (running && energy.activePower <= 0.2) {
+        if (running && energy.activePower <= 0.2 && !startupTransition) {
             addIssue(issues, 'critical', 'Normal ama guc yok', 'Durum normal gorunuyor ancak aktif guc dusuk.');
         }
-        if ((motorStopped || energyStopped) && energy.activePower > 0.25) {
+        if ((motorStopped || energyStopped) && energy.activePower > 0.25 && !shutdownTransition) {
             addIssue(issues, 'critical', 'Calismiyor ama guc var', 'Durum calismiyor gorunurken enerji uretimi okunuyor.');
         }
         if (energy.activePower > MOTOR_CAPACITY_MW * 1.08) {
