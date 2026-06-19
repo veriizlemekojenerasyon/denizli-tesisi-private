@@ -339,6 +339,10 @@ async function checkAndSendMissingEnerjiMail() {
     if (typeof runKojenEnerjiHourlyMissingRecordCheck === 'function') {
         const serverResult = await runKojenEnerjiHourlyMissingRecordCheck();
         if (serverResult.success) {
+            if (serverResult.skipped && serverResult.busy) {
+                console.log('Kojen enerji saatlik kontrolü meşgul olduğu için atlandı.');
+                return;
+            }
             if ((serverResult.addedCount || 0) > 0) {
                 showMessage(`${serverResult.addedCount} otomatik kojen enerji kaydi olusturuldu.`, 'warning');
                 if (typeof loadVardiyaData === 'function') {

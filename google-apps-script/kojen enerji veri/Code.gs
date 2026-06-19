@@ -514,7 +514,7 @@ function addRecord(data) {
     if (insertInfo.exists) {
       return { success: false, error: 'Bu tarih, saat ve motor icin kayit zaten var!' };
     }
-    var lastRow = 1;
+    var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       var allData = sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
       var inputTarih = normalizeDateTR(data.tarih);
@@ -692,7 +692,7 @@ function getRecordsByMotorAndDate(motor, tarih) {
     var filtered = [];
     for (var i = rows.length - 1; i >= 0; i--) {
       var record = mapEnerjiRow(rows[i]);
-      if (record.tarih === searchTarih) filtered.push(record);
+      if (normalizeDateTR(record.tarih) === searchTarih) filtered.push(record);
     }
     
     return { success: true, data: filtered };
@@ -712,15 +712,15 @@ function checkExistingRecord(motor, tarih, saat) {
 
     var searchTarih = normalizeDateTR(tarih);
     var searchMotor = normalizeEnerjiMotorLabel(motor);
-    var searchSaat = String(saat || '').trim();
+    var searchSaat = normalizeEnerjiSaat(saat);
     var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues();
     var existing = null;
 
     for (var i = 0; i < data.length; i++) {
       var record = mapEnerjiRow(data[i]);
       var recMotor = normalizeEnerjiMotorLabel(record.motor);
-      var recTarih = String(record.tarih || '').trim();
-      var recSaat = String(record.saat || '').trim();
+      var recTarih = normalizeDateTR(record.tarih || '');
+      var recSaat = normalizeEnerjiSaat(record.saat || '');
 
       if (recMotor === searchMotor && recTarih === searchTarih && recSaat === searchSaat) {
         existing = record;
@@ -755,7 +755,7 @@ function checkMultipleRecords(data) {
 
       var motor = normalizeEnerjiMotorLabel(parts[0]);
       var tarih = parts[1].trim();
-      var saat = parts[2].trim();
+      var saat = normalizeEnerjiSaat(parts[2]);
       var searchTarih = normalizeDateTR(tarih);
       var key = motor + '|' + tarih + '|' + saat;
 
@@ -768,15 +768,15 @@ function checkMultipleRecords(data) {
           recordsByMotor[motor] = rows.map(function(row) {
             return {
               tarih: row[0],
-              saat: row[2]
+              saat: normalizeEnerjiSaat(row[2] || '')
             };
           });
         }
       }
 
       var existing = recordsByMotor[motor].find(function(record) {
-        var recTarih = String(record.tarih || '').trim();
-        var recSaat = String(record.saat || '').trim();
+        var recTarih = normalizeDateTR(record.tarih || '');
+        var recSaat = normalizeEnerjiSaat(record.saat || '');
 
         return recTarih === searchTarih && recSaat === saat;
       });
@@ -1535,6 +1535,13 @@ function checkHourlyMissingRecords() {
   try {
     lockAcquired = lock.tryLock(8000);
     if (!lockAcquired) {
+      addSystemLog({
+        modul: 'Kojen Enerji',
+        otomatikKayitSonucu: 'Atlandi',
+        mailSonucu: 'Kilit mesgul',
+        hataMesaji: 'checkHourlyMissingRecords lock alinmadi',
+        detay: 'Sistem mesgul; saatlik otomatik kontrol sonraki calismaya birakildi'
+      });
       return {
         success: true,
         skipped: true,
