@@ -162,15 +162,128 @@
         menu.innerHTML = generateMenuHTML(getActivePage());
     }
 
+    let sidebarControlsInitialized = false;
+    let sidebarBackdrop = null;
+
+    function isHoverCapable() {
+        return window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    }
+
+    function isMobileViewport() {
+        if (!window.matchMedia) return false;
+
+        const narrowScreen = window.matchMedia('(max-width: 1024px)').matches;
+        const touchTablet = window.matchMedia('(pointer: coarse) and (max-width: 1366px)').matches;
+
+        return narrowScreen || touchTablet;
+    }
+
+    function isMobileCompactMode() {
+        return document.body.classList.contains('sidebar-mobile-compact');
+    }
+
+    function getSidebar() {
+        return document.querySelector('.sidebar');
+    }
+
+    function closeMobileSidebar() {
+        const sidebar = getSidebar();
+        document.body.classList.remove('sidebar-mobile-open');
+        if (sidebar) {
+            sidebar.classList.remove('is-expanded');
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.hidden = true;
+        }
+    }
+
+    function openMobileSidebar() {
+        const sidebar = getSidebar();
+        document.body.classList.add('sidebar-mobile-open');
+        if (sidebar) {
+            sidebar.classList.add('is-expanded');
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.hidden = false;
+        }
+    }
+
+    function ensureMobileControls() {
+        if (!sidebarBackdrop) {
+            sidebarBackdrop = document.createElement('div');
+            sidebarBackdrop.className = 'sidebar-mobile-backdrop';
+            sidebarBackdrop.hidden = true;
+            sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+            document.body.appendChild(sidebarBackdrop);
+        }
+    }
+
+    function handleCollapsedMobileClick(event) {
+        if (!isMobileCompactMode() || isHoverCapable()) return;
+        if (document.body.classList.contains('sidebar-mobile-open')) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        openMobileSidebar();
+    }
+
+    function applySidebarMode() {
+        const sidebar = getSidebar();
+        if (!sidebar) return;
+
+        const hoverReady = isHoverCapable();
+        const mobileMode = isMobileViewport();
+        const collapsibleReady = hoverReady || mobileMode;
+
+        document.body.classList.toggle('sidebar-hover-ready', collapsibleReady);
+        document.body.classList.toggle('sidebar-mobile-compact', mobileMode);
+        document.body.classList.remove('sidebar-mobile-drawer');
+
+        if (mobileMode) {
+            ensureMobileControls();
+            closeMobileSidebar();
+            return;
+        }
+
+        closeMobileSidebar();
+    }
+
+    function initializeSidebarBehavior() {
+        if (sidebarControlsInitialized) return;
+        sidebarControlsInitialized = true;
+
+        applySidebarMode();
+
+        window.addEventListener('resize', applySidebarMode);
+
+        const sidebar = getSidebar();
+        if (sidebar) {
+            sidebar.addEventListener('click', handleCollapsedMobileClick, true);
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && document.body.classList.contains('sidebar-mobile-open')) {
+                closeMobileSidebar();
+            }
+        });
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', renderSidebarMenu);
     } else {
         renderSidebarMenu();
     }
 
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeSidebarBehavior);
+    } else {
+        initializeSidebarBehavior();
+    }
+
     window.StandardSidebarMenu = {
         items: standardMenu,
         render: renderSidebarMenu,
-        generateMenuHTML: generateMenuHTML
+        generateMenuHTML: generateMenuHTML,
+        refreshMode: applySidebarMode
     };
 })();
