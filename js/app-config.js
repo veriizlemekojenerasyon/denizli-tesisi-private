@@ -24,7 +24,7 @@
 
         vardiya: 'https://script.google.com/macros/s/AKfycbxZE7LNlZRCbjI0PehXQN8-jhTyj5t735inYQ5b2ti6xN_ZNG23EASAbvf2SQUNCjat/exec',
 
-        bildirim: 'https://script.google.com/macros/s/AKfycbz2TpddOgrNQoWL7jak5OAoNGPvEsbjDy-mwH06P9Z7iFQOcOsKgtOjtbzwTrW1HVsQ/exec',
+        bildirim: 'https://script.google.com/macros/s/AKfycbwxfc2103ITgtvplA9zPVF4C1sZfZtRoi2hyvL25jHK0SZhO0tSKFfybenzLHkzhQ71/exec',
 
         kullanici: 'https://script.google.com/macros/s/AKfycbx9vl-siC8bKbGlrX1bJ2LHluuafZ4WbUnM3wxiQ4opvDbD1_8ll34T2mfpIWFR2Nu7/exec',
 
