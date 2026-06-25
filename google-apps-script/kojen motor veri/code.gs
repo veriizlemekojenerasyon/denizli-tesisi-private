@@ -75,12 +75,19 @@ function handleRequest(e) {
       case 'checkHourlyMissingRecords':
         result = checkHourlyMissingRecords();
         break;
+      case 'getServerTime':
+        // 🔥 Server'ın TAM TARİHİNİ döndür (client tarihinden bağımsız)
+        result = getServerTimeInfo();
+        break;
       case 'fillMissingFullDay':
       case 'fillMissingMotorFullDay':
         result = fillMissingMotorFullDay(params.tarih, params.motor, params.startSaat, params.endSaat);
         break;
       case 'normalizeMotorSheetNames':
         result = normalizeMotorSheetNames();
+        break;
+      case 'cleanupInvalidRecords':
+        result = cleanupInvalidRecords();
         break;
       case 'sortMotorSheet':
         result = sortMotorSheet(params.motor);
@@ -155,9 +162,11 @@ function getApiHealth() {
       'getLastRecords',
       'sendEmail',
       'checkHourlyMissingRecords',
+      'getServerTime',
       'fillMissingFullDay',
       'fillMissingMotorFullDay',
       'normalizeMotorSheetNames',
+      'cleanupInvalidRecords',
       'sortMotorSheet',
       'colorizeMotorSheet',
       'installHourlyMissingRecordTrigger',
@@ -381,14 +390,20 @@ function mergeMotorSheetData(sourceSheet, targetSheet, motor) {
     }
 
     if (rowsToCopy.length) {
+      // Satırları sona ekle, sonra tarih/saat sırasına göre sort et
       var appendStartRow = targetSheet.getLastRow() + 1;
       targetSheet.getRange(appendStartRow, 1, rowsToCopy.length, 22).setValues(rowsToCopy);
+
       var copiedRange = targetSheet.getRange(appendStartRow, 1, rowsToCopy.length, 22);
       copiedRange.setHorizontalAlignment('center');
       copiedRange.setFontSize(10);
       copiedRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
       safeSetMotorNumericFormat_(targetSheet, appendStartRow, rowsToCopy.length);
+
+      // Satırlar eklendikten sonra sırala
       sortMotorSheetRowsByDateTime(targetSheet, motor);
+
+      // Renklendirme
       colorizeDates(targetSheet, recordsToColorize);
     }
 
@@ -1320,7 +1335,7 @@ function addMultipleRecords(dataString, fastModeValue) {
           return parseRecordDateTime(normalizeDateTR(a.tarih || ''), normalizeMotorSaat(a.saat || '')).getTime() -
             parseRecordDateTime(normalizeDateTR(b.tarih || ''), normalizeMotorSaat(b.saat || '')).getTime();
         });
-        var appendStartRow = lastRow + 1;
+        var appendStartRow = sheet.getLastRow() + 1;
         var rowsToAdd = [];
         var groupAddedRecords = [];
         var allStopped = true;
@@ -1370,6 +1385,7 @@ function addMultipleRecords(dataString, fastModeValue) {
         }
 
         if (rowsToAdd.length) {
+          // Satırları sona ekle, sonra tarih/saat sırasına göre sort et
           var dataRange = sheet.getRange(appendStartRow, 1, rowsToAdd.length, 22);
           dataRange.setValues(rowsToAdd);
           if (!fastMode) {
@@ -1380,6 +1396,8 @@ function addMultipleRecords(dataString, fastModeValue) {
             if (allStopped) {
               dataRange.setFontColor('#c62828');
             }
+            // Satırlar eklendikten sonra sırala
+            sortMotorSheetRowsByDateTime(sheet, motor);
             colorizeDates(sheet, groupAddedRecords);
           }
           addedRecords = addedRecords.concat(groupAddedRecords);
@@ -1404,6 +1422,32 @@ function addMultipleRecords(dataString, fastModeValue) {
     };
   } catch (error) {
     return { success: false, error: error.toString() };
+  }
+}
+
+// 🔥 SERVER'ın GÜNÜ BUGÜN TARİHİNİ DÖNDÜR
+function getServerTimeInfo() {
+  try {
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = String(now.getMonth() + 1).padStart(2, '0');
+    var day = String(now.getDate()).padStart(2, '0');
+    var hour = String(now.getHours()).padStart(2, '0');
+    var minute = String(now.getMinutes()).padStart(2, '0');
+    var second = String(now.getSeconds()).padStart(2, '0');
+
+    return {
+      success: true,
+      currentDate: day + '.' + month + '.' + year,  // DD.MM.YYYY
+      currentTime: hour + ':' + minute + ':' + second,  // HH:MM:SS
+      timestamp: now.getTime(),
+      timezone: Session.getScriptTimeZone()
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString()
+    };
   }
 }
 
@@ -1583,10 +1627,34 @@ function processHourlyMotorMissingTarget(target, props) {
 
 function fillMissingMotorFullDay(tarih, motor, startSaat, endSaat) {
   try {
+    // DEBUG: Alınan parametreleri log'la
+    console.log('🔍 fillMissingMotorFullDay BAŞLADI - Parametreler:');
+    console.log('  tarih:', JSON.stringify(tarih));
+    console.log('  motor:', JSON.stringify(motor));
+    console.log('  startSaat:', JSON.stringify(startSaat));
+    console.log('  endSaat:', JSON.stringify(endSaat));
+
+    // 🚨 UYARI: Parametreler BOŞ ise
+    if (!tarih || !motor) {
+      console.warn('⚠️ UYARI: fillMissingMotorFullDay() parametreler olmadan çağrıldı!');
+      console.warn('  tarih:', tarih, 'motor:', motor);
+      console.warn('  Bu durumda TÜM motorlar ve TÜM tarihler taranır!');
+      console.warn('  Eğer sheette hatalı tarihler varsa, bu işlem sorun yaratabilir!');
+      return { 
+        success: false, 
+        error: 'fillMissingMotorFullDay() parametreler olmadan çağrılamaz! tarih ve motor parametreleri gereklidir.',
+        warning: 'Parametreler olmadan çağrı güvenli değildir'
+      };
+    }
+
     var targetTarih = normalizeDateTR(tarih || '');
     var motors = motor ? [normalizeMotorLabel(motor)] : ['GM-1', 'GM-2', 'GM-3'];
     var startHour = startSaat ? parseInt(normalizeMotorSaat(startSaat).split(':')[0], 10) : 0;
     var endHour = endSaat ? parseInt(normalizeMotorSaat(endSaat).split(':')[0], 10) : 23;
+
+    console.log('  targetTarih (normalized):', JSON.stringify(targetTarih));
+    console.log('  motors (normalized):', JSON.stringify(motors));
+    console.log('  startHour:', startHour, 'endHour:', endHour);
 
     if (isNaN(startHour) || isNaN(endHour) || startHour < 0 || endHour > 23 || endHour < startHour) {
       return { success: false, error: 'Saat araligi hatali. Ornek: 00:00 - 23:00' };
@@ -1601,9 +1669,9 @@ function fillMissingMotorFullDay(tarih, motor, startSaat, endSaat) {
         var scanSheet = getMotorSheetIfExists(motors[scanMotorIndex]);
         if (!scanSheet || scanSheet.getLastRow() < 2) continue;
 
-        var scanDates = scanSheet.getRange(2, 1, scanSheet.getLastRow() - 1, 1).getDisplayValues();
-        for (var scanRow = 0; scanRow < scanDates.length; scanRow++) {
-          var recordDate = normalizeDateTR(scanDates[scanRow][0] || '');
+        var scanValues = scanSheet.getRange(2, 1, scanSheet.getLastRow() - 1, 1).getDisplayValues();
+        for (var scanRow = 0; scanRow < scanValues.length; scanRow++) {
+          var recordDate = normalizeDateTR(scanValues[scanRow][0] || '');
           if (recordDate) dateMap[recordDate] = true;
         }
       }
@@ -1620,6 +1688,10 @@ function fillMissingMotorFullDay(tarih, motor, startSaat, endSaat) {
     var totalColored = 0;
     var allErrors = [];
     var motorResults = [];
+
+    // DEBUG: Taranacak tarihler
+    console.log('🔍 fillMissingMotorFullDay - Taranacak tarihler: ' + JSON.stringify(dates));
+
     var perDate = dates.map(function(currentDate) {
       return {
         tarih: currentDate,
@@ -1694,7 +1766,7 @@ function fillMissingMotorFullDay(tarih, motor, startSaat, endSaat) {
             saat,
             currentMotor,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            normalizeMotorDurum('MOTOR CALISMIYOR'),
+            normalizeMotorDurum('MOTOR ÇALIŞMIYOR'),
             'OTOMATIK SISTEM',
             Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss')
           ]);
@@ -1719,6 +1791,7 @@ function fillMissingMotorFullDay(tarih, motor, startSaat, endSaat) {
       }
 
       if (rowsToAdd.length) {
+        // Satırları sona ekle, sonra tarih/saat sırasına göre sort et
         var appendStartRow = sheet.getLastRow() + 1;
         sheet.getRange(appendStartRow, 1, rowsToAdd.length, 22).setValues(rowsToAdd);
         var addedRange = sheet.getRange(appendStartRow, 1, rowsToAdd.length, 22);
@@ -2004,6 +2077,65 @@ function getTriggerHealth() {
       triggers: hourlyTriggers,
       lastLog: logs.success && logs.data.length ? logs.data[0] : null,
       checkedAt: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss')
+    };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+// 🧹 HATALI KAYITLARI TEMİZLE
+function cleanupInvalidRecords() {
+  try {
+    var motors = ['GM-1', 'GM-2', 'GM-3'];
+    var cleanedCount = 0;
+    var results = [];
+
+    for (var m = 0; m < motors.length; m++) {
+      var sheet = getMotorSheetIfExists(motors[m]);
+      if (!sheet || sheet.getLastRow() < 2) {
+        results.push({ motor: motors[m], cleaned: 0, message: 'Sayfa bulunamadı' });
+        continue;
+      }
+
+      var lastRow = sheet.getLastRow();
+      var dates = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
+      var rowsToDelete = [];
+
+      // Hatalı tarihli satırları bul (2027 gibi gelecek yıllar)
+      for (var rowIndex = lastRow - 1; rowIndex >= 1; rowIndex--) {
+        var recordDate = normalizeDateTR(dates[rowIndex][0] || '');
+
+        // Eğer yıl > 2026 ise silin
+        if (recordDate) {
+          var parts = recordDate.split('.');
+          var year = parseInt(parts[2], 10);
+          if (year > 2026) {
+            console.log('🗑️ Silinecek satır: ' + motors[m] + ' - ' + recordDate + ' (satır ' + (rowIndex + 2) + ')');
+            rowsToDelete.push(rowIndex + 2);
+            cleanedCount++;
+          }
+        }
+      }
+
+      // Satırları sil (aşağıdan yukarıya)
+      rowsToDelete.sort(function(a, b) { return b - a; });
+      for (var d = 0; d < rowsToDelete.length; d++) {
+        sheet.deleteRow(rowsToDelete[d]);
+        console.log('✅ Satır silindi: ' + rowsToDelete[d]);
+      }
+
+      results.push({
+        motor: motors[m],
+        cleaned: rowsToDelete.length,
+        message: rowsToDelete.length + ' satır silindi'
+      });
+    }
+
+    return {
+      success: true,
+      totalCleaned: cleanedCount,
+      results: results,
+      message: 'Hatalı kayıtlar temizlendi'
     };
   } catch (error) {
     return { success: false, error: error.toString() };
