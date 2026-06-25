@@ -1479,55 +1479,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Otomatik ayarları yap
     async function otomatikAyarlar() {
-        // 🔥 BUGÜNÜN TARİHİNİ BACKEND'DEN AL (server tarihi, client tarihi DEĞİL!)
-        try {
-            const serverResponse = await fetch(KOJEN_MOTOR_API_URL + '?action=getServerTime');
-            const serverResult = await serverResponse.json();
+        // Bugünün tarihini ayarla (TR formatı)
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        tarihSecimi.value = `${day}.${month}.${year}`;
 
-            let day, month, year;
-
-            if (serverResult && serverResult.success && serverResult.currentDate) {
-                // Server tarihini kullan (dd.MM.yyyy formatında)
-                const parts = serverResult.currentDate.split('.');
-                day = parts[0];
-                month = parts[1];
-                year = parts[2];
-                console.log('📅 Server tarihinden ayarlandı:', { day, month, year, serverDate: serverResult.currentDate });
-            } else {
-                // Fallback: Local tarih kullan
-                const today = new Date();
-                year = today.getFullYear();
-                month = String(today.getMonth() + 1).padStart(2, '0');
-                day = String(today.getDate()).padStart(2, '0');
-                console.log('📅 Local tarihinden ayarlandı:', { day, month, year });
-            }
-
-            tarihSecimi.value = `${day}.${month}.${year}`;
-            console.log('📅 tarihSecimi set edildi:', tarihSecimi.value);
-
-            // Saate göre vardiya ayarla
-            const currentHour = new Date().getHours();
-            if (currentHour >= 8 && currentHour < 16) {
-                vardiyaSecimi.value = '08-16';
-            } else if (currentHour >= 16 && currentHour < 24) {
-                vardiyaSecimi.value = '16-24';
-            } else {
-                vardiyaSecimi.value = '24-08';
-            }
-
-            // Mevcut saati güncelle
-            updateCurrentHour();
-
-        } catch (error) {
-            console.error('otomatikAyarlar hatası:', error);
-            // Fallback: Local tarih kullan
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            tarihSecimi.value = `${day}.${month}.${year}`;
+        // Saate göre vardiya ayarla
+        const currentHour = today.getHours();
+        if (currentHour >= 8 && currentHour < 16) {
+            vardiyaSecimi.value = '08-16';
+        } else if (currentHour >= 16 && currentHour < 24) {
+            vardiyaSecimi.value = '16-24';
+        } else {
+            vardiyaSecimi.value = '24-08';
         }
-    }
+        
+        // Mevcut saati güncelle
+        updateCurrentHour();
         
         // Vardiya bilgisini güncelle
         guncelleVardiyaBilgisi();
@@ -1776,31 +1746,16 @@ function openMotorCalismiyorModal() {
     const modal = document.getElementById('motorCalismiyorModal');
     const modalTarih = document.getElementById('modalTarih');
     const modalVardiya = document.getElementById('modalVardiya');
-
-    // 🔥 TARİH: tarihSecimi input'undan al YOKSA bugünü kullan
-    let htmlDateStr = '';
-    let displayDateStr = '';
-
-    const tarihSecimi = document.getElementById('tarihSecimi');
-    if (tarihSecimi && tarihSecimi.value) {
-        // Kullanıcı seçmiş bir tarih varsa (DD.MM.YYYY formatında)
-        displayDateStr = tarihSecimi.value; // DD.MM.YYYY formatında
-        const parts = displayDateStr.split('.');
-        // DD.MM.YYYY -> YYYY-MM-DD'ye çevir
-        htmlDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`; // yyyy-MM-dd
-        console.log('📅 Modal tarihi set edildi (tarihSecimi\'den):', { htmlDateStr, displayDateStr });
-    } else {
-        // Yoksa bugünü kullan
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        htmlDateStr = `${year}-${month}-${day}`; // HTML input formatı (yyyy-MM-dd)
-        displayDateStr = `${day}.${month}.${year}`; // Display formatı (DD.MM.YYYY)
-        console.log('📅 Modal tarihi bugünün tarihine set edildi:', { htmlDateStr, displayDateStr });
-    }
-
-    // Modal alanını doldur (HTML input formatı - yyyy-MM-dd)
+    
+    // 🔥 OTOMATİK BUGÜN TARİHİNİ GETİR (HTML input için yyyy-MM-dd formatında)
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const htmlDateStr = `${year}-${month}-${day}`; // HTML input formatı
+    const displayDateStr = `${day}.${month}.${year}`; // Display formatı
+    
+    // Modal alanını doldur (HTML input formatı)
     modalTarih.value = htmlDateStr;
     console.log('📅 Modal tarihi ayarlandı (HTML):', htmlDateStr);
     console.log('📅 Modal tarihi (Display):', displayDateStr);

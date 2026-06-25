@@ -3,7 +3,7 @@
 
     const SCRIPT_URLS = {
         saatlik: 'https://script.google.com/macros/s/AKfycbxLg9svHtuKZ5jXP0fzFc1opOFwmzwjkHB9PZS61oG_wgH14dGerwnP1CaBMFEQFiMz/exec',
-        motor: 'https://script.google.com/macros/s/AKfycbwwSPKPJCo2Xia4kgXQhjfn4ZMQq8ulDl6YQaXjLNUSVeC183NZ-qLeOmJiPRpm-KuJ/exec',
+        motor: 'https://script.google.com/macros/s/AKfycbwh9mNNpPHtkWNfVIG7SGekiZTPEo16QNm_23LnWiqgpxE3MsjfsKVPCT_KIE1U5hJr/exec',
         enerji: 'https://script.google.com/macros/s/AKfycbxtekkSAWTq2ExH9mvzqLqkFU5kvjv8dgb0Y1l-HTj3Nwit7rckCC1gN-VHy2dzDyCo/exec',
         enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbwSno62Ijw1RgvUdZTOCoBXV9NY3H-5bg1Po4WRG-sSuWM_nyZzP307scsyRvwZT1Ux/exec',
         yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxY0_SxJyIWp0TaDABKdhnPFmHmw7pRMUp33AQ7AujZN26mESmpTNr4Bqu81SY5u0F_/exec',
