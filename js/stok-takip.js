@@ -14,7 +14,16 @@ async function fetchStockMaterials(forceRefresh = false) {
     }
 
     stockMaterialsPromise = fetch(SCRIPT_URL + '?action=getMaterials')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Response is not JSON');
+            }
+            return response.json();
+        })
         .then(result => {
             if (!result.success) {
                 throw new Error(result.error || 'Malzemeler alinamadi');
@@ -43,8 +52,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Son işlemleri yükle
     await loadRecentTransactions();
     
-    // Özet kartları güncelle (fonksiyon tanımlı değil, geçici olarak kaldırıldı)
-    // await updateSummaryCards();
+    // Özet kartları güncelle
+    await updateSummaryCards();
     
     // Kullanıcı adını göster
     displayUserName();
@@ -137,6 +146,14 @@ async function handleStockSubmit(e) {
             })
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
         const result = await response.json();
         
         if (result.success) {
@@ -146,7 +163,7 @@ async function handleStockSubmit(e) {
             e.target.reset();
             await loadStockList(true);
             populateMaterialSelect(stockMaterialsCache);
-            // await updateSummaryCards(); // Fonksiyon tanımlı değil
+            await updateSummaryCards();
         } else {
             showNotification('error', 'Hata', result.error || 'Malzeme eklenemedi!');
         }
@@ -183,6 +200,14 @@ async function handleTransactionSubmit(e) {
             })
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
         const result = await response.json();
         
         if (result.success) {
@@ -194,7 +219,7 @@ async function handleTransactionSubmit(e) {
             await loadStockList(true);
             populateMaterialSelect(stockMaterialsCache);
             await loadRecentTransactions();
-            // await updateSummaryCards(); // Fonksiyon tanımlı değil
+            await updateSummaryCards();
         } else {
             showNotification('error', 'Hata', result.error || 'İşlem kaydedilemedi!');
         }
@@ -361,6 +386,17 @@ async function loadRecentTransactions() {
     try {
         // Backend'den işlemleri getir
         const response = await fetch(SCRIPT_URL + '?action=getTransactions');
+        
+        // Check if response is OK and is JSON
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
         const result = await response.json();
         
         if (result.success) {
@@ -382,7 +418,7 @@ async function loadRecentTransactions() {
         
     } catch (error) {
         console.error('Son işlemler yükleme hatası:', error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #e74c3c;">Bağlantı hatası! Lütfen sayfayı yenileyin.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #e74c3c;">Bağlantı hatası! Backend yanıt vermiyor veya yanlış format döndürüyor.</td></tr>';
     }
 }
 
@@ -455,7 +491,7 @@ function deleteMaterial(id, showConfirm = true) {
         showNotification('success', 'Başarılı', 'Malzeme silindi!');
         loadStockList();
         populateMaterialSelect();
-        // updateSummaryCards(); // Fonksiyon tanımlı değil, geçici olarak kaldırıldı
+        updateSummaryCards();
     }
 }
 
@@ -631,5 +667,54 @@ function closeNotification() {
     const modal = document.getElementById('notification-modal');
     if (modal) {
         modal.classList.remove('show');
+    }
+}
+
+// Özet kartları güncelle
+async function updateSummaryCards() {
+    try {
+        const response = await fetch(SCRIPT_URL + '?action=getStockSummary');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const data = result.data;
+            
+            // Toplam Malzeme
+            const totalMaterialsEl = document.getElementById('total-materials');
+            if (totalMaterialsEl) {
+                totalMaterialsEl.textContent = data.totalMaterials || 0;
+            }
+            
+            // Kritik Stok
+            const lowStockEl = document.getElementById('low-stock-count');
+            if (lowStockEl) {
+                lowStockEl.textContent = data.lowStockCount || 0;
+            }
+            
+            // Bu Ay Giriş
+            const monthlyInEl = document.getElementById('monthly-in');
+            if (monthlyInEl) {
+                monthlyInEl.textContent = data.monthlyIn || 0;
+            }
+            
+            // Bu Ay Çıkış
+            const monthlyOutEl = document.getElementById('monthly-out');
+            if (monthlyOutEl) {
+                monthlyOutEl.textContent = data.monthlyOut || 0;
+            }
+        } else {
+            console.error('Özet kartları güncellenemedi:', result.error);
+        }
+    } catch (error) {
+        console.error('Özet kartları güncelleme hatası:', error);
     }
 }

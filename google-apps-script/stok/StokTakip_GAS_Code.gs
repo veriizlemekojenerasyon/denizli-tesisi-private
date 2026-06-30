@@ -473,9 +473,9 @@ function getStockSummary() {
         var transDate = new Date(trans.date.split('.').reverse().join('-'));
         
         if (transDate.getMonth() === currentMonth && transDate.getFullYear() === currentYear) {
-          if (trans.type === 'in') {
+          if (trans.type === 'GİRİŞ') {
             monthlyIn += trans.quantity;
-          } else if (trans.type === 'out') {
+          } else if (trans.type === 'ÇIKIŞ') {
             monthlyOut += trans.quantity;
           }
         }
