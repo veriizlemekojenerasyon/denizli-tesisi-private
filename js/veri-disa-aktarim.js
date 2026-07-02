@@ -542,7 +542,8 @@
 
     function downloadWorkbook(sections, fileName) {
         const xml = buildExcelXml(sections);
-        const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const bom = '\uFEFF'; // UTF-8 BOM for Excel compatibility
+        const blob = new Blob([bom + xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
