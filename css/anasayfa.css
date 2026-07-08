@@ -372,7 +372,7 @@ body {
     gap: 34px;
     white-space: nowrap;
     min-width: max-content;
-    animation: tickerScroll 36s linear infinite;
+    animation: tickerScroll 180s linear infinite;
 }
 
 .announcement-ticker:hover .ticker-track {
