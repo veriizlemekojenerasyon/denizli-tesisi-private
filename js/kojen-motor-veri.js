@@ -650,7 +650,39 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(async () => {
         await checkAndUnlockOrLockForm();
     }, 1000);
+ // Klavye ile yazma sırasında büyük tablo render'ları ve arka-plan işlemlerini azaltmak için
+ // typing mode handlers ekle (focus/blur).
+ let typingModeTimer = null;
+ window.isUserTyping = false;
 
+ function enableTypingMode() {
+     if (typingModeTimer) { clearTimeout(typingModeTimer); typingModeTimer = null; }
+     window.isUserTyping = true;
+     // Büyük tabloları gizle (reflow maliyetini azaltır)
+     const vardiyaTable = document.getElementById('vardiyaTable');
+     const kojenBody = document.getElementById('kojen-table-body');
+     if (vardiyaTable) vardiyaTable.style.display = 'none';
+     if (kojenBody) kojenBody.style.display = 'none';
+ }
+
+ function disableTypingMode() {
+     if (typingModeTimer) clearTimeout(typingModeTimer);
+     typingModeTimer = setTimeout(() => {
+         window.isUserTyping = false;
+         const vardiyaTable = document.getElementById('vardiyaTable');
+         const kojenBody = document.getElementById('kojen-table-body');
+         if (vardiyaTable) vardiyaTable.style.display = '';
+         if (kojenBody) kojenBody.style.display = '';
+         // Kullanıcı yazmayı bitirdikten sonra form durumunu yeniden kontrol et
+         try { checkAndUpdateFormStatus(); } catch (e) { /* ignore */ }
+     }, 700);
+ }
+
+ // Tüm input'lara odak/blur listener ekle
+ document.querySelectorAll('.data-input').forEach(inp => {
+     inp.addEventListener('focus', enableTypingMode);
+     inp.addEventListener('blur', disableTypingMode);
+ });
     // Mevcut saati güncelleme fonksiyonu
     function updateCurrentHour() {
         const now = new Date();
