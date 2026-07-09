@@ -986,24 +986,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 🔥 HIZLI Kayıt kontrolü ve form durumunu güncelleme - Cache ile
     async function checkAndUpdateFormStatus() {
+        // Eğer kullanıcı şu an bir input üzerinde yazıyorsa (tablet klavye), ağır kontrol işlemlerini atla
+        try {
+            const active = document.activeElement;
+            if (active && active.classList && (active.classList.contains('data-input') || active.classList.contains('kojen-input'))) {
+                // Kullanıcı yazıyor, kontrolü atla
+                // console.log('checkAndUpdateFormStatus: input odaklıyken atlandı');
+                return;
+            }
+        } catch (e) {
+            // ignore
+        }
+
         if (!selectedMotor || !tarihSecimi.value || !currentHourElement.textContent) {
             console.log('Form durumu: Eksik parametre', { selectedMotor, tarih: tarihSecimi.value, saat: currentHourElement.textContent });
             return;
         }
-        
+
         console.log('🔥 Hızlı kayıt kontrolü yapılıyor:', { motor: selectedMotor, tarih: tarihSecimi.value, saat: currentHourElement.textContent });
-        
+
         try {
             // ⚡ Önce cache'den kontrol et
             const existingRecord = await checkExistingRecord(selectedMotor, tarihSecimi.value, currentHourElement.textContent);
-            
+
             if (existingRecord) {
                 console.log('🔥 Cache hit - Kayıt bulundu, form kilitleniyor:', existingRecord);
                 lockForm(false);
                 loadExistingRecord(existingRecord);
                 return;
             }
-            
+
             console.log('🔥 Cache miss - Form açılıyor');
             unlockForm();
         } catch (error) {
