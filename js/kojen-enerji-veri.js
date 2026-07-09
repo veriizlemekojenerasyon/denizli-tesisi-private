@@ -1145,6 +1145,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const result = await saveEnerjiEndOfDayValues({
                 motor: selectedMotor,
                 tarih: tarih,
+                vardiya: vardiyaSecimi.value || '24-08',
                 toplamAktifEnerji: toplamAktifEnerji,
                 calismaSaati: calismaSaati,
                 kalkisSayisi: kalkisSayisi,
