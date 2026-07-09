@@ -204,6 +204,7 @@ async function saveEnerjiEndOfDayValues(data) {
         const params = new URLSearchParams({
             action: 'addEndOfDayValues',
             tarih: formattedTarih || '',
+            vardiya: data.vardiya || '24-08',
             motor: data.motor || '',
             toplamAktifEnerji: data.toplamAktifEnerji || '',
             calismaSaati: data.calismaSaati || '',
