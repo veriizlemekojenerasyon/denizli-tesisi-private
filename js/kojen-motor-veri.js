@@ -645,44 +645,46 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ⚡ CACHE BAŞLAT
     setTimeout(() => refreshCache(), 100);
-    
+
     // 🔍 1 SN SONRA KAYIT KONTROLÜ VE AÇ/KİLİTLE
     setTimeout(async () => {
         await checkAndUnlockOrLockForm();
     }, 1000);
- // Klavye ile yazma sırasında büyük tablo render'ları ve arka-plan işlemlerini azaltmak için
- // typing mode handlers ekle (focus/blur).
- let typingModeTimer = null;
- window.isUserTyping = false;
 
- function enableTypingMode() {
-     if (typingModeTimer) { clearTimeout(typingModeTimer); typingModeTimer = null; }
-     window.isUserTyping = true;
-     // Büyük tabloları gizle (reflow maliyetini azaltır)
-     const vardiyaTable = document.getElementById('vardiyaTable');
-     const kojenBody = document.getElementById('kojen-table-body');
-     if (vardiyaTable) vardiyaTable.style.display = 'none';
-     if (kojenBody) kojenBody.style.display = 'none';
- }
+    // Klavye ile yazma sırasında büyük tablo render'ları ve arka-plan işlemlerini azaltmak için
+    // typing mode handlers ekle (focus/blur).
+    let typingModeTimer = null;
+    window.isUserTyping = false;
 
- function disableTypingMode() {
-     if (typingModeTimer) clearTimeout(typingModeTimer);
-     typingModeTimer = setTimeout(() => {
-         window.isUserTyping = false;
-         const vardiyaTable = document.getElementById('vardiyaTable');
-         const kojenBody = document.getElementById('kojen-table-body');
-         if (vardiyaTable) vardiyaTable.style.display = '';
-         if (kojenBody) kojenBody.style.display = '';
-         // Kullanıcı yazmayı bitirdikten sonra form durumunu yeniden kontrol et
-         try { checkAndUpdateFormStatus(); } catch (e) { /* ignore */ }
-     }, 700);
- }
+    function enableTypingMode() {
+        if (typingModeTimer) { clearTimeout(typingModeTimer); typingModeTimer = null; }
+        window.isUserTyping = true;
+        // Büyük tabloları gizle (reflow maliyetini azaltır)
+        const vardiyaTable = document.getElementById('vardiyaTable');
+        const kojenBody = document.getElementById('kojen-table-body');
+        if (vardiyaTable) vardiyaTable.style.display = 'none';
+        if (kojenBody) kojenBody.style.display = 'none';
+    }
 
- // Tüm input'lara odak/blur listener ekle
- document.querySelectorAll('.data-input').forEach(inp => {
-     inp.addEventListener('focus', enableTypingMode);
-     inp.addEventListener('blur', disableTypingMode);
- });
+    function disableTypingMode() {
+        if (typingModeTimer) clearTimeout(typingModeTimer);
+        typingModeTimer = setTimeout(() => {
+            window.isUserTyping = false;
+            const vardiyaTable = document.getElementById('vardiyaTable');
+            const kojenBody = document.getElementById('kojen-table-body');
+            if (vardiyaTable) vardiyaTable.style.display = '';
+            if (kojenBody) kojenBody.style.display = '';
+            // Kullanıcı yazmayı bitirdikten sonra form durumunu yeniden kontrol et
+            try { checkAndUpdateFormStatus(); } catch (e) { /* ignore */ }
+        }, 700);
+    }
+
+    // Tüm input'lara odak/blur listener ekle
+    document.querySelectorAll('.data-input').forEach(inp => {
+        inp.addEventListener('focus', enableTypingMode);
+        inp.addEventListener('blur', disableTypingMode);
+    });
+
     // Mevcut saati güncelleme fonksiyonu
     function updateCurrentHour() {
         const now = new Date();
@@ -1554,9 +1556,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Tarih ve vardiya değişiminde kontrol et
-    tarihSecimi.addEventListener('input', async function() {
+    let tarihInputDebounce = null;
+    tarihSecimi.addEventListener('input', function() {
         autoFormatTarih(this);
-        await checkAndUpdateFormStatus();
+        // Debounce: Kullanıcı yazmayı bitirdikten 500ms sonra kontrol et
+        if (tarihInputDebounce) clearTimeout(tarihInputDebounce);
+        tarihInputDebounce = setTimeout(async () => {
+            await checkAndUpdateFormStatus();
+        }, 500);
     });
     
     tarihSecimi.addEventListener('change', async function() {
@@ -1754,7 +1761,7 @@ document.addEventListener('DOMContentLoaded', function() {
     otomatikAyarlar();
     startMissingMotorMailCheck();
 
-    // Her saniyede bir saati güncelle
+    // Her 5 saniyede bir saati güncelle (tablet performansı için 1s'den 5s'e çıkarıldı)
     setInterval(async () => {
         const previousHour = currentHourElement.textContent;
         updateCurrentHour();
@@ -1763,7 +1770,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (previousHour !== currentHour) {
             await checkAndUpdateFormStatus();
         }
-    }, 1000);
+    }, 5000);
 
     // Her 30 saniyede bir vardiya ayarını kontrol et
     setInterval(() => {
