@@ -917,6 +917,94 @@ body {
     overflow-y: auto;
 }
 
+/* Image Popup Styles */
+.image-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 10040;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.image-popup.is-open {
+    display: flex;
+}
+
+.image-popup__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+}
+
+.image-popup__panel {
+    position: relative;
+    width: min(900px, 100%);
+    max-height: min(90vh, 800px);
+    overflow: hidden;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 32px 100px rgba(15, 23, 42, 0.35);
+    display: flex;
+    flex-direction: column;
+}
+
+.image-popup__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.image-popup__header h3 {
+    font-size: 18px;
+    color: #1f2937;
+    font-weight: 600;
+    margin: 0;
+}
+
+.image-popup__close {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.image-popup__close:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.image-popup__body {
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+}
+
+.image-popup__image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
 .energy-report-modal {
     position: fixed;
     inset: 0;
@@ -1266,6 +1354,38 @@ body {
     font-size: 13px;
     font-weight: 700;
     text-decoration: none;
+}
+
+.announcement-item__image-container {
+    margin-top: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    display: block;
+    min-height: 100px;
+    position: relative;
+}
+
+.announcement-item__iframe {
+    width: 100%;
+    height: 300px;
+    border: none;
+    border-radius: 6px;
+    display: block;
+}
+
+.announcement-item__image {
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    background: #f8fafc;
+    display: block;
+}
+
+.announcement-item__image:hover {
+    transform: scale(1.02);
 }
 
 .announcement-empty {
