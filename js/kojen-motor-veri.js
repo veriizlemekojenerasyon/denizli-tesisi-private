@@ -675,8 +675,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (vardiyaTable) vardiyaTable.style.display = '';
             if (kojenBody) kojenBody.style.display = '';
             // Kullanıcı yazmayı bitirdikten sonra form durumunu yeniden kontrol et
-            try { checkAndUpdateFormStatus(); } catch (e) { /* ignore */ }
-        }, 700);
+            // Daha uzun gecikme ile performans için
+            try { 
+                setTimeout(() => {
+                    checkAndUpdateFormStatus(); 
+                }, 100);
+            } catch (e) { /* ignore */ }
+        }, 1200);
     }
 
     // Tüm input'lara odak/blur listener ekle
