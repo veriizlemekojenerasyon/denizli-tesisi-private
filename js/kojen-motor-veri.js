@@ -683,6 +683,21 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.data-input').forEach(inp => {
         inp.addEventListener('focus', enableTypingMode);
         inp.addEventListener('blur', disableTypingMode);
+        
+        // Input event'i için debounce ekle
+        let inputDebounce = null;
+        inp.addEventListener('input', function() {
+            // Yazma sırasında tabloları gizle
+            if (!window.isUserTyping) {
+                enableTypingMode();
+            }
+            
+            // Debounce: Kullanıcı yazmayı bitirdikten 300ms sonra kontrol et
+            if (inputDebounce) clearTimeout(inputDebounce);
+            inputDebounce = setTimeout(() => {
+                disableTypingMode();
+            }, 300);
+        });
     });
 
     // Mevcut saati güncelleme fonksiyonu
