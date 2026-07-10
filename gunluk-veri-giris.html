@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Günlük Veri Girişi - Kojenerasyon</title>
-    <link rel="stylesheet" href="css/gunluk-veri-giris.css">
+    <title>Kojen Motor Veri - Kojenerasyon</title>
+    <link rel="stylesheet" href="css/kojen-motor-veri.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/mobile-system.css">
 </head>
@@ -20,6 +22,9 @@
             </div>
             <ul class="sidebar-menu"></ul>
             <div class="sidebar-footer">
+                <div class="user-info" style="padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
+                    <span id="userNameDisplay" style="color: white; font-size: 13px; font-weight: 500;">Yükleniyor...</span>
+                </div>
                 <button class="logout-btn" id="sidebarLogout">Çıkış Yap</button>
             </div>
         </nav>
@@ -34,124 +39,165 @@
                         <h2>KOJENERASYON BÖLÜMÜ</h2>
                     </div>
                     <div class="user-info">
-                        <span class="welcome-text">Hoşgeldin, <span id="user-name-display">Admin</span></span>
+                        <span class="welcome-text">Hoşgeldin, <span id="userNameDisplay">Admin</span></span>
                         <button class="logout-btn" id="headerLogout">Çıkış Yap</button>
                     </div>
                 </div>
                 <div class="header-bottom">
-                    <h3>Günlük Veri Girişi</h3>
+                    <h3>Kojen Motor Veri</h3>
+                    <div class="motor-selector-buttons">
+                        <button type="button" class="motor-btn active" data-motor="GM-1">GM-1</button>
+                        <button type="button" class="motor-btn" data-motor="GM-2">GM-2</button>
+                        <button type="button" class="motor-btn" data-motor="GM-3">GM-3</button>
+                    </div>
                 </div>
             </header>
 
-            <!-- Form İçeriği -->
+            <!-- Ana İçerik -->
             <main class="dashboard-content">
-                <section class="data-entry-section">
-                    <h2 class="section-title">Günlük Veri Giriş Formu</h2>
+                <section class="kojen-selector-section">
+                    <h2 class="section-title">Kojen Motor Verileri</h2>
 
-                    <form id="gunlukVeriForm" class="data-form">
-                        <!-- Tarih Bilgisi -->
+                    <div class="selector-form">
+                        <!-- Tarih ve Vardiya Seçimi -->
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="TARIH">TARIH</label>
-                                <input type="date" id="TARIH" name="TARIH" required>
+                                <label for="tarihSecimi">TARİH</label>
+                                <input type="text" id="tarihSecimi" name="tarihSecimi" placeholder="GG.AA.YYYY" pattern="\d{2}\.\d{2}\.\d{4}" maxlength="10" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="vardiyaSecimi">VARDİYA</label>
+                                <select id="vardiyaSecimi" name="vardiyaSecimi" required>
+                                    <option value="">Vardiya seçin...</option>
+                                    <option value="08-16">08:00 - 16:00</option>
+                                    <option value="16-24">16:00 - 24:00</option>
+                                    <option value="24-08">24:00 - 08:00</option>
+                                </select>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Günlük Değerler -->
-                        <div class="form-section">
-                            <h3>Günlük Değerler</h3>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="YAGSEVIYESI">YAG SEVIYESI (LT)</label>
-                                    <input type="number" id="YAGSEVIYESI" name="YAGSEVIYESI" step="0.1" placeholder="0.0" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="KUPLAJ">KUPLAJ (MWH)</label>
-                                    <input type="number" id="KUPLAJ" name="KUPLAJ" step="0.001" placeholder="0.000" required>
-                                </div>
+                    <!-- Motor Veri Tablosu -->
+                    <div class="kojen-table-container">
+                        <div class="kojen-table-header">
+                            <div class="kojen-table-row">
+                                <div class="kojen-table-cell header-cell sticky-col current-hour">SAAT</div>
+                                <div class="kojen-table-cell header-cell">JEN. YATAK SICAKLIĞI (DE)</div>
+                                <div class="kojen-table-cell header-cell">JEN. YATAK SICAKLIĞI (NDE)</div>
+                                <div class="kojen-table-cell header-cell">SOĞUTMA SUYU SICAKLIĞI</div>
+                                <div class="kojen-table-cell header-cell">SOĞUTMA SUYU BASINCI</div>
+                                <div class="kojen-table-cell header-cell">YAĞ SICAKLIĞI</div>
+                                <div class="kojen-table-cell header-cell">YAĞ BASINCI</div>
+                                <div class="kojen-table-cell header-cell">ŞARJ SICAKLIĞI</div>
+                                <div class="kojen-table-cell header-cell">ŞARJ BASINCI</div>
+                                <div class="kojen-table-cell header-cell">GAZ REGÜLATÖRÜ(λ)</div>
+                                <div class="kojen-table-cell header-cell">MAKİNE DAİRESİ SICAKLIĞI</div>
+                                <div class="kojen-table-cell header-cell">KARTER BASINCI</div>
+                                <div class="kojen-table-cell header-cell">ÖN KAMARA FARK BASINCI</div>
+                                <div class="kojen-table-cell header-cell">SARGI SICAKLIĞI -1-</div>
+                                <div class="kojen-table-cell header-cell">SARGI SICAKLIĞI -2-</div>
+                                <div class="kojen-table-cell header-cell">SARGI SICAKLIĞI -3-</div>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="GM1">GM-1 (MWH)</label>
-                                    <input type="number" id="GM1" name="GM1" step="0.001" placeholder="0.000" required>
+                            <div class="kojen-table-row input-row">
+                                <div class="kojen-table-cell sticky-col" id="currentHour">13:00</div>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="jenYatakSicaklikDE" placeholder="0.0" step="0.1">
                                 </div>
-                                <div class="form-group">
-                                    <label for="GM2">GM-2 (MWH)</label>
-                                    <input type="number" id="GM2" name="GM2" step="0.001" placeholder="0.000" required>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="jenYatakSicaklikNDE" placeholder="0.0" step="0.1">
                                 </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="GM3">GM-3 (MWH)</label>
-                                    <input type="number" id="GM3" name="GM3" step="0.001" placeholder="0.000" required>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="sogutmaSuyuSicaklik" placeholder="0.0" step="0.1">
                                 </div>
-                                <div class="form-group">
-                                    <label for="ICIHTIYAC">İÇ İHTİYAC (MWH)</label>
-                                    <input type="number" id="ICIHTIYAC" name="ICIHTIYAC" step="0.001" placeholder="0.000" required>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="sogutmaSuyuBasinc" placeholder="0.0" step="0.1">
                                 </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="REDRESOR1">REDRESOR-1 (116-117) (MWH)</label>
-                                    <input type="number" id="REDRESOR1" name="REDRESOR1" step="0.001" placeholder="0.000" required>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="yagSicaklik" placeholder="0.0" step="0.1">
                                 </div>
-                                <div class="form-group">
-                                    <label for="REDRESOR2">REDRESOR-2 (119-121) (MWH)</label>
-                                    <input type="number" id="REDRESOR2" name="REDRESOR2" step="0.001" placeholder="0.000" required>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="yagBasinc" placeholder="0.0" step="0.1">
                                 </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="KOJENICIHTIYAC">KOJEN İÇ İHTIYAC (KWH)</label>
-                                    <input type="number" id="KOJENICIHTIYAC" name="KOJENICIHTIYAC" step="0.001" placeholder="0.000" required>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="sarjSicaklik" placeholder="0.0" step="0.1">
                                 </div>
-                                <div class="form-group">
-                                    <label for="SERVISTRAFO">SERVIS TRAFO (MWH)</label>
-                                    <input type="number" id="SERVISTRAFO" name="SERVISTRAFO" step="0.001" placeholder="0.000" required>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="sarjBasinc" placeholder="0.0" step="0.1">
+                                </div>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="gazRegulatoru" placeholder="0.00" step="0.01">
+                                </div>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="makineDairesiSicaklik" placeholder="0.0" step="0.1">
+                                </div>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="karterBasinc" placeholder="Negatif" step="0.01" min="-999">
+                                </div>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="onKamaraFarkBasinc" placeholder="Negatif" step="0.01" min="-999">
+                                </div>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="sargiSicaklik1" placeholder="0.0" step="0.1">
+                                </div>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="sargiSicaklik2" placeholder="0.0" step="0.1">
+                                </div>
+                                <div class="kojen-table-cell">
+                                    <input type="number" class="data-input" id="sargiSicaklik3" placeholder="0.0" step="0.1">
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Butonlar -->
-                        <div class="form-actions">
-                            <button type="reset" class="reset-btn">TEMIZLE</button>
-                            <button type="submit" class="submit-btn">KAYDET</button>
+                        <div class="kojen-table-body" id="kojen-table-body">
+                            <!-- JavaScript tarafından doldurulacak -->
                         </div>
-                    </form>
+                    </div>
 
-                    <!-- Son 32 Günlük Kayıtlar -->
-                    <div class="recent-records">
-                        <h3 class="subsection-title">Son 32 Günlük Kayıt</h3>
-                        <div class="table-container">
-                            <table class="records-table" id="recordsTable">
+                    <!-- Butonlar -->
+                    <div class="form-actions">
+                        <button type="button" class="btn-primary" id="kaydetBtn">💾 KAYDET</button>
+                        <button type="button" class="btn-secondary" id="temizleBtn">🔄 TEMİZLE</button>
+                        <button type="button" class="btn-danger" id="motorCalismiyorKaydetBtn">⚠️ MOTOR ÇALIŞMIYOR KAYDET</button>
+                    </div>
+
+                    <!-- Vardiya Verileri Görüntüleme Bölümü -->
+                    <div class="vardiya-verileri-section" id="vardiyaVerileriSection">
+                        <h3 class="vardiya-title">📊 Mevcut Vardiya Verileri</h3>
+                        <div class="vardiya-info" id="vardiyaInfo">
+                            <span class="vardiya-badge" id="vardiyaBadge">08-16</span>
+                            <span class="saat-araligi">Görüntülenen Saat Aralığı: <span id="saatAraligi">07:00 - 15:00</span></span>
+                        </div>
+                        <div class="vardiya-table-container">
+                            <table class="vardiya-table" id="vardiyaTable">
                                 <thead>
-                                    <tr class="group-header">
-                                        <th>Sıra</th>
-                                        <th>Tarih</th>
-                                        <th>Yağ Seviyesi (LT)</th>
-                                        <th>Kuplaj (MWH)</th>
-                                        <th colspan="3" class="group-production">MOTOR ÜRETİM (MWH)</th>
-                                        <th colspan="5" class="group-consumption">TÜKETİM (MWH / KWH)</th>
-                                    </tr>
-                                    <tr class="sub-header">
-                                        <th>Sıra</th>
-                                        <th>Tarih</th>
-                                        <th>Yağ Seviyesi (LT)</th>
-                                        <th>Kuplaj (MWH)</th>
-                                        <th class="group-production">GM-1</th>
-                                        <th class="group-production">GM-2</th>
-                                        <th class="group-production">GM-3</th>
-                                        <th class="group-consumption">İç İhtiyaç</th>
-                                        <th class="group-consumption">Redresör-1</th>
-                                        <th class="group-consumption">Redresör-2</th>
-                                        <th class="group-consumption">Kojen İç İhtiyaç</th>
-                                        <th class="group-consumption">Servis Trafo</th>
+                                    <tr>
+                                        <th>Saat</th>
+                                        <th>Motor</th>
+                                        <th>JEN. YATAK SIC. (DE)</th>
+                                        <th>JEN. YATAK SIC. (NDE)</th>
+                                        <th>SOĞUTMA SUYU SIC.</th>
+                                        <th>SOĞUTMA SUYU BAS.</th>
+                                        <th>YAĞ SIC.</th>
+                                        <th>YAĞ BAS.</th>
+                                        <th>ŞARJ SIC.</th>
+                                        <th>ŞARJ BAS.</th>
+                                        <th>GAZ REG. (λ)</th>
+                                        <th>MAKİNE DAİRESİ SIC.</th>
+                                        <th>KARTER BAS.</th>
+                                        <th>ÖN KAMARA FARK BAS.</th>
+                                        <th>SARGI SIC. -1-</th>
+                                        <th>SARGI SIC. -2-</th>
+                                        <th>SARGI SIC. -3-</th>
+                                        <th>Durum</th>
                                     </tr>
                                 </thead>
-                                <tbody id="recordsTableBody">
-                                    <!-- Kayıtlar JavaScript ile doldurulacak -->
+                                <tbody id="vardiyaTableBody">
+                                    <!-- JavaScript ile doldurulacak -->
                                 </tbody>
                             </table>
+                            <div class="no-data-message" id="noDataMessage" style="display: none;">
+                                Bu vardiya saat aralığında henüz kayıt bulunmamaktadır.
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -162,11 +208,176 @@
 
 <script src="js/app-config.js"></script>
 <script src="js/sidebar-menu.js"></script>
-<script src="js/gunluk-veri-sheets.js"></script>
+<script src="js/kojen-motor-sheets.js"></script>
+
+<script src="js/kojen-motor-veri.js?v=3"></script>
+<!-- 🔥 MOTOR ÇALIŞMIYOR KAYDET MODALI -->
+    <div id="motorCalismiyorModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ MOTOR ÇALIŞMIYOR KAYDET</h3>
+                <button class="modal-close" onclick="closeMotorCalismiyorModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Motor Seçimi:</label>
+                    <div class="motor-selection">
+                        <label class="motor-checkbox">
+                            <input type="checkbox" name="motor" value="GM-1" checked>
+                            <span>GM-1</span>
+                        </label>
+                        <label class="motor-checkbox">
+                            <input type="checkbox" name="motor" value="GM-2">
+                            <span>GM-2</span>
+                        </label>
+                        <label class="motor-checkbox">
+                            <input type="checkbox" name="motor" value="GM-3">
+                            <span>GM-3</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Tarih:</label>
+                    <input type="date" id="modalTarih" class="modal-input" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Vardiya:</label>
+                    <select id="modalVardiya" class="modal-input">
+                        <option value="08-16">08:00 - 16:00</option>
+                        <option value="16-24">16:00 - 24:00</option>
+                        <option value="24-08">24:00 - 08:00</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Veri Giriş Saatleri:</label>
+                    <div class="saat-selection">
+                        <div class="saat-group">
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="08:00" checked>
+                                <span>08:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="09:00" checked>
+                                <span>09:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="10:00" checked>
+                                <span>10:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="11:00" checked>
+                                <span>11:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="12:00" checked>
+                                <span>12:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="13:00" checked>
+                                <span>13:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="14:00" checked>
+                                <span>14:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="15:00" checked>
+                                <span>15:00</span>
+                            </label>
+                        </div>
+
+                        <div class="saat-group">
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="16:00" checked>
+                                <span>16:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="17:00" checked>
+                                <span>17:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="18:00" checked>
+                                <span>18:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="19:00" checked>
+                                <span>19:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="20:00" checked>
+                                <span>20:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="21:00" checked>
+                                <span>21:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="22:00" checked>
+                                <span>22:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="23:00" checked>
+                                <span>23:00</span>
+                            </label>
+                        </div>
+
+                        <div class="saat-group">
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="00:00" checked>
+                                <span>00:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="01:00" checked>
+                                <span>01:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="02:00" checked>
+                                <span>02:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="03:00" checked>
+                                <span>03:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="04:00" checked>
+                                <span>04:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="05:00" checked>
+                                <span>05:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="06:00" checked>
+                                <span>06:00</span>
+                            </label>
+                            <label class="saat-checkbox">
+                                <input type="checkbox" name="saat" value="07:00" checked>
+                                <span>07:00</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Not:</label>
+                    <textarea id="modalNot" class="modal-input" rows="3" placeholder="Motor çalışmama nedeni..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeMotorCalismiyorModal()">İPTAL</button>
+                <button type="button" class="btn-danger" id="modalKaydetBtn">⚠️ KAYDET</button>
+            </div>
+        </div>
+    </div>
+
+
 
 <script src="js/global-duyurular.js"></script>
-
-<script src="js/auto-refresh.js"></script>
 
 <script src="js/admin-menu-visibility.js"></script>
 
