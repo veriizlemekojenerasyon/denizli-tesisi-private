@@ -940,6 +940,95 @@ document.addEventListener('DOMContentLoaded', async function() {
             showMessage(`Bu tarih, saat ve motor (${selectedMotor}) için kayıt zaten var!\nMevcut kayıt: ${existingRecord.durum || 'NORMAL'}`, 'error');
             return;
         }
+
+        // 🔍 BİR ÖNCEKİ KAYIT KONTROLÜ
+        const lastRecord = await getLastRecordForMotor(selectedMotor);
+        if (lastRecord) {
+            const errors = [];
+            
+            // Toplam Aktif Enerji kontrolü (azalmamalı)
+            const currentEnerji = parseFloat(data.toplamAktifEnerji) || 0;
+            const lastEnerji = parseFloat(lastRecord.toplamAktifEnerji) || 0;
+            if (currentEnerji < lastEnerji) {
+                errors.push(`Toplam Aktif Enerji bir önceki kayıttan küçük! Önceki: ${lastEnerji}, Şu an: ${currentEnerji}`);
+            }
+            
+            // Çalışma Saati kontrolü (azalmamalı)
+            const currentSaat = parseFloat(data.calismaSaati) || 0;
+            const lastSaat = parseFloat(lastRecord.calismaSaati) || 0;
+            if (currentSaat < lastSaat) {
+                errors.push(`Çalışma Saati bir önceki kayıttan küçük! Önceki: ${lastSaat}, Şu an: ${currentSaat}`);
+            }
+            
+            // Kalkış Sayısı kontrolü (azalmamalı)
+            const currentKalkis = parseFloat(data.kalkisSayisi) || 0;
+            const lastKalkis = parseFloat(lastRecord.kalkisSayisi) || 0;
+            if (currentKalkis < lastKalkis) {
+                errors.push(`Kalkış Sayısı bir önceki kayıttan küçük! Önceki: ${lastKalkis}, Şu an: ${currentKalkis}`);
+            }
+            
+            if (errors.length > 0) {
+                showMessage('⚠️ DEĞER HATASI:\n\n' + errors.join('\n'), 'error');
+                return;
+            }
+        }
+
+        // 🔍 MOTORLAR ARASI KARŞILAŞTIRMA KONTROLÜ
+        const motors = ['GM-1', 'GM-2', 'GM-3'];
+        const motorRecords = {};
+        
+        for (const motor of motors) {
+            const record = await getLastRecordForMotor(motor);
+            if (record) {
+                motorRecords[motor] = {
+                    enerji: parseFloat(record.toplamAktifEnerji) || 0,
+                    saat: parseFloat(record.calismaSaati) || 0,
+                    kalkis: parseFloat(record.kalkisSayisi) || 0
+                };
+            }
+        }
+
+        // Mevcut motorun değerleri
+        const currentMotorEnerji = parseFloat(data.toplamAktifEnerji) || 0;
+        const currentMotorSaat = parseFloat(data.calismaSaati) || 0;
+        const currentMotorKalkis = parseFloat(data.kalkisSayisi) || 0;
+
+        // Diğer motorlarla karşılaştır
+        const comparisonErrors = [];
+        
+        for (const motor of motors) {
+            if (motor === selectedMotor || !motorRecords[motor]) continue;
+            
+            const otherMotor = motorRecords[motor];
+            
+            // Toplam Aktif Enerji çok farklıysa uyarı (>%50 fark)
+            const enerjiFark = Math.abs(currentMotorEnerji - otherMotor.enerji);
+            const enerjiOran = otherMotor.enerji > 0 ? (enerjiFark / otherMotor.enerji) * 100 : 0;
+            
+            if (enerjiOran > 50 && currentMotorEnerji > 0 && otherMotor.enerji > 0) {
+                comparisonErrors.push(
+                    `${selectedMotor} Toplam Enerji (${currentMotorEnerji}), ${motor} (${otherMotor.enerji}) ile %${enerjiOran.toFixed(1)} fark var!`
+                );
+            }
+            
+            // Çalışma Saati çok farklıysa uyarı (>%50 fark)
+            const saatFark = Math.abs(currentMotorSaat - otherMotor.saat);
+            const saatOran = otherMotor.saat > 0 ? (saatFark / otherMotor.saat) * 100 : 0;
+            
+            if (saatOran > 50 && currentMotorSaat > 0 && otherMotor.saat > 0) {
+                comparisonErrors.push(
+                    `${selectedMotor} Çalışma Saati (${currentMotorSaat}), ${motor} (${otherMotor.saat}) ile %${saatOran.toFixed(1)} fark var!`
+                );
+            }
+        }
+
+        if (comparisonErrors.length > 0) {
+            const confirmMsg = '⚠️ MOTORLAR ARASI FARK UYARISI:\n\n' + comparisonErrors.join('\n') + '\n\nYine de kaydetmek istiyor musunuz?';
+            if (!confirm(confirmMsg)) {
+                showMessage('Kayıt iptal edildi.', 'info');
+                return;
+            }
+        }
         if (Object.values(data).filter(v => !v).length > 0) { showMessage('Lütfen tüm alanları doldurun!', 'error'); return; }
         
         kaydetBtn.disabled = true; kaydetBtn.textContent = '💾 KAYDEDİLİYOR...';
