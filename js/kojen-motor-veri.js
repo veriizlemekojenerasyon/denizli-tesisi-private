@@ -813,8 +813,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form kilit durumu
     let isLocked = false; // Form kilit durumu
+
     let isEditMode = false; // Düzenleme modu
     let editingRecordId = null; // Düzenlenen kayıt ID'si
+
     
     // 🔥 GLOBAL MOTOR DEĞİŞKENİ - Yönlendirme varsa onu kullan
     let selectedMotor = redirectMotor || 'GM-1';
