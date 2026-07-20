@@ -1082,8 +1082,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 lockForm(false);
                 
                 // 🔥 OTOMATİK MOTOR VERİ SAYFASINA YÖNLENDİRME
-                setTimeout(() => {
-                    redirectToMotorVeri(selectedMotor);
+                setTimeout(async () => {
+                    await redirectToMotorVeri(selectedMotor);
                 }, 500);
                 
                 setTimeout(() => loadVardiyaData(), 800);
@@ -1202,8 +1202,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 lockForm(false);
                 
                 // 🔥 OTOMATİK MOTOR VERİ SAYFASINA YÖNLENDİRME
-                setTimeout(() => {
-                    redirectToMotorVeri(selectedMotor);
+                setTimeout(async () => {
+                    await redirectToMotorVeri(selectedMotor);
                 }, 500);
                 
                 setTimeout(() => loadVardiyaData(), 800);
