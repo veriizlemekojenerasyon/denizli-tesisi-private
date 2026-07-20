@@ -391,7 +391,7 @@
                 gap: 34px;
                 white-space: nowrap;
                 min-width: max-content;
-                animation: globalTickerScroll 36s linear infinite;
+                animation: globalTickerScroll 180s linear infinite;
             }
 
             .global-announcement-ticker:hover .global-ticker-track {

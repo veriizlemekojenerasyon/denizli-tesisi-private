@@ -232,6 +232,161 @@ function rememberMotorRecord(record) {
     cacheTimestamp = Date.now();
 }
 
+// 🔥 KAYDI DÜZENLEME MODUNA ALMA FONKSİYONU
+function loadRecordForEdit(record) {
+    isEditMode = true;
+    editingRecordId = record;
+    
+    // Formu kilitle
+    isLocked = false;
+    
+    // Motor seçim butonunu güncelle
+    const motorButtons = document.querySelectorAll('.motor-btn');
+    motorButtons.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.motor === record.motor) {
+            btn.classList.add('active');
+        }
+    });
+    selectedMotor = record.motor;
+    
+    // Tarih ve vardiya değerlerini güncelle
+    document.getElementById('tarihSecimi').value = record.tarih;
+    document.getElementById('vardiyaSecimi').value = record.vardiya;
+    
+    // 🔥 SAAT INPUT'UNU GÜNCELLE
+    const currentHourElement = document.getElementById('currentHour');
+    if (currentHourElement) {
+        currentHourElement.textContent = record.saat;
+    }
+    
+    // Inputları mevcut değerlerle doldur (virgül-nokta dönüşümü ile)
+    const inputMapping = {
+        'jenYatakSicaklikDE': record.jenYatakSicaklikDE,
+        'jenYatakSicaklikNDE': record.jenYatakSicaklikNDE,
+        'sogutmaSuyuSicaklik': record.sogutmaSuyuSicaklik,
+        'sogutmaSuyuBasinc': record.sogutmaSuyuBasinc,
+        'yagSicaklik': record.yagSicaklik,
+        'yagBasinc': record.yagBasinc,
+        'sarjSicaklik': record.sarjSicaklik,
+        'sarjBasinc': record.sarjBasinc,
+        'gazRegulatoru': record.gazRegulatoru,
+        'makineDairesiSicaklik': record.makineDairesiSicaklik,
+        'karterBasinc': record.karterBasinc,
+        'onKamaraFarkBasinc': record.onKamaraFarkBasinc,
+        'sargiSicaklik1': record.sargiSicaklik1,
+        'sargiSicaklik2': record.sargiSicaklik2,
+        'sargiSicaklik3': record.sargiSicaklik3
+    };
+    
+    Object.keys(inputMapping).forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input && inputMapping[inputId] !== undefined) {
+            // Virgülü noktaya çevir
+            let value = inputMapping[inputId];
+            if (typeof value === 'string' && value.includes(',')) {
+                value = value.replace(',', '.');
+            }
+            input.value = value;
+            input.style.background = '#fff9c4'; // Düzenleme modunda sarı arka plan
+        }
+    });
+    
+    // Kaydet butonunu güncelleme moduna al
+    const kaydetBtn = document.getElementById('kaydetBtn');
+    if (kaydetBtn) {
+        kaydetBtn.textContent = '✏️ GÜNCELLE';
+        kaydetBtn.style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
+    }
+    
+    showMessage(`${record.motor} motoru ${record.saat} kaydı düzenleme moduna alındı!`, 'info');
+    
+    // Formu aktif et
+    enableAllFormElements();
+}
+
+// 🔥 DÜZENLEME MODUNDAN ÇIKIŞ FONKSİYONU
+function exitEditMode() {
+    isEditMode = false;
+    editingRecordId = null;
+    
+    // Inputları temizle ve arka planı sıfırla
+    const allInputs = document.querySelectorAll('.data-input');
+    allInputs.forEach(input => {
+        input.value = '';
+        input.style.background = 'white';
+    });
+    
+    // Kaydet butonunu normal moda al
+    const kaydetBtn = document.getElementById('kaydetBtn');
+    if (kaydetBtn) {
+        kaydetBtn.textContent = '💾 KAYDET';
+        kaydetBtn.style.background = '';
+    }
+    
+    showMessage('Düzenleme modundan çıkıldı!', 'info');
+}
+
+// 🔥 MEVCUT KAYDI GÜNCELLEME FONKSİYONU
+async function updateExistingRecord() {
+    const data = getAllInputValues();
+    const motor = selectedMotor;
+    const tarih = document.getElementById('tarihSecimi').value;
+    const vardiya = document.getElementById('vardiyaSecimi').value;
+    
+    if (!motor || !tarih || !vardiya) {
+        showMessage('Lütfen motor, tarih ve vardiya seçin!', 'error');
+        return;
+    }
+    
+    // Tüm input'ların dolu olup olmadığını kontrol et
+    const allInputs = document.querySelectorAll('.data-input');
+    const emptyInputs = Array.from(allInputs).filter(input => !input.value);
+    
+    if (emptyInputs.length > 0) {
+        showMessage('Lütfen tüm veri alanlarını doldurun!', 'error');
+        return;
+    }
+    
+    kaydetBtn.disabled = true;
+    kaydetBtn.textContent = 'GÜNCELLENIYOR...';
+    
+    try {
+        // Kayıt güncelleme işlemi için Google Sheets API çağrısı
+        const updateData = {
+            ...data.veriler,
+            motor: motor,
+            tarih: tarih,
+            vardiya: vardiya,
+            saat: editingRecordId.saat,
+            kaydeden: getCurrentUserName()
+        };
+        
+        const result = await updateMotorRecord(updateData);
+        
+        if (result.success) {
+            showMessage(`${motor} motoru ${editingRecordId.saat} kaydı başarıyla güncellendi!`, 'success');
+            
+            // Cache'i güncelle
+            refreshCache();
+            
+            // Vardiya tablosunu yeniden yükle
+            await loadVardiyaData();
+            
+            // Düzenleme modundan çık
+            exitEditMode();
+        } else {
+            showMessage('Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
+        }
+    } catch (error) {
+        console.error('Güncelleme hatası:', error);
+        showMessage('Bağlantı hatası: ' + error.message, 'error');
+    } finally {
+        kaydetBtn.disabled = false;
+        kaydetBtn.textContent = '✏️ GÜNCELLE';
+    }
+}
+
 async function loadVardiyaData() {
     const vardiya = vardiyaSecimi.value;
     const tarih = tarihSecimi.value;
@@ -402,6 +557,13 @@ async function loadVardiyaData() {
                 <td>${sargiSicaklik3}</td>
                 <td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td>
             `;
+            
+            // 🔥 SATIRA TIKLAMA OLAYI - DÜZENLEME MODU
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', () => {
+                loadRecordForEdit(record);
+            });
+            
             tbody.appendChild(row);
         });
         
@@ -412,7 +574,8 @@ async function loadVardiyaData() {
     }
 }
 
-// 🔄 YARDIMCI FONKSİYONLAR (GLOBAL)
+
+// � YARDIMCI FONKSİYONLAR (GLOBAL)
 function kayitVardiyaAraligindaMi(saat, vardiya) {
     const aralik = {
         '08-16': { basla: '08:00', bit: '16:00' },
@@ -617,6 +780,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Önce kimlik dogrulama kontrolü
     checkAuth();
     
+    // 🔥 ENERJİ VERİ SAYFASINDAN GELEN YÖNLENDİRME KONTROLÜ
+    const redirectMotor = localStorage.getItem('redirectMotor');
+    const redirectFrom = localStorage.getItem('redirectFrom');
+    
+    if (redirectFrom === 'enerji-veri' && redirectMotor) {
+        console.log(`🔥 Enerji veri sayfasından yönlendirme: ${redirectMotor}`);
+        // Motor seçimi daha sonra yapılacak, localStorage'dan temizle
+        localStorage.removeItem('redirectMotor');
+        localStorage.removeItem('redirectFrom');
+    }
+    
     // 🔥 Vardiya verileri bölümünü göster
     showVardiyaVerileriSection();
     
@@ -639,17 +813,76 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form kilit durumu
     let isLocked = false; // Form kilit durumu
+    let isEditMode = false; // Düzenleme modu
+    let editingRecordId = null; // Düzenlenen kayıt ID'si
+    
+    // 🔥 GLOBAL MOTOR DEĞİŞKENİ - Yönlendirme varsa onu kullan
+    let selectedMotor = redirectMotor || 'GM-1';
 
     // 🔒 BAŞLANGIÇTA TÜM FORM PASİF YAP
     disableAllFormElements();
     
     // ⚡ CACHE BAŞLAT
     setTimeout(() => refreshCache(), 100);
-    
+
     // 🔍 1 SN SONRA KAYIT KONTROLÜ VE AÇ/KİLİTLE
     setTimeout(async () => {
         await checkAndUnlockOrLockForm();
     }, 1000);
+
+    // Klavye ile yazma sırasında büyük tablo render'ları ve arka-plan işlemlerini azaltmak için
+    // typing mode handlers ekle (focus/blur).
+    let typingModeTimer = null;
+    window.isUserTyping = false;
+
+    function enableTypingMode() {
+        if (typingModeTimer) { clearTimeout(typingModeTimer); typingModeTimer = null; }
+        window.isUserTyping = true;
+        // Büyük tabloları gizle (reflow maliyetini azaltır)
+        const vardiyaTable = document.getElementById('vardiyaTable');
+        const kojenBody = document.getElementById('kojen-table-body');
+        if (vardiyaTable) vardiyaTable.style.display = 'none';
+        if (kojenBody) kojenBody.style.display = 'none';
+    }
+
+    function disableTypingMode() {
+        if (typingModeTimer) clearTimeout(typingModeTimer);
+        typingModeTimer = setTimeout(() => {
+            window.isUserTyping = false;
+            const vardiyaTable = document.getElementById('vardiyaTable');
+            const kojenBody = document.getElementById('kojen-table-body');
+            if (vardiyaTable) vardiyaTable.style.display = '';
+            if (kojenBody) kojenBody.style.display = '';
+            // Kullanıcı yazmayı bitirdikten sonra form durumunu yeniden kontrol et
+            // Daha uzun gecikme ile performans için
+            try { 
+                setTimeout(() => {
+                    checkAndUpdateFormStatus(); 
+                }, 100);
+            } catch (e) { /* ignore */ }
+        }, 1200);
+    }
+
+    // Tüm input'lara odak/blur listener ekle
+    document.querySelectorAll('.data-input').forEach(inp => {
+        inp.addEventListener('focus', enableTypingMode);
+        inp.addEventListener('blur', disableTypingMode);
+        
+        // Input event'i için debounce ekle
+        let inputDebounce = null;
+        inp.addEventListener('input', function() {
+            // Yazma sırasında tabloları gizle
+            if (!window.isUserTyping) {
+                enableTypingMode();
+            }
+            
+            // Debounce: Kullanıcı yazmayı bitirdikten 300ms sonra kontrol et
+            if (inputDebounce) clearTimeout(inputDebounce);
+            inputDebounce = setTimeout(() => {
+                disableTypingMode();
+            }, 300);
+        });
+    });
 
     // Mevcut saati güncelleme fonksiyonu
     function updateCurrentHour() {
@@ -986,24 +1219,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 🔥 HIZLI Kayıt kontrolü ve form durumunu güncelleme - Cache ile
     async function checkAndUpdateFormStatus() {
+        // Eğer kullanıcı şu an bir input üzerinde yazıyorsa (tablet klavye), ağır kontrol işlemlerini atla
+        try {
+            const active = document.activeElement;
+            if (active && active.classList && (active.classList.contains('data-input') || active.classList.contains('kojen-input'))) {
+                // Kullanıcı yazıyor, kontrolü atla
+                // console.log('checkAndUpdateFormStatus: input odaklıyken atlandı');
+                return;
+            }
+        } catch (e) {
+            // ignore
+        }
+
         if (!selectedMotor || !tarihSecimi.value || !currentHourElement.textContent) {
             console.log('Form durumu: Eksik parametre', { selectedMotor, tarih: tarihSecimi.value, saat: currentHourElement.textContent });
             return;
         }
-        
+
         console.log('🔥 Hızlı kayıt kontrolü yapılıyor:', { motor: selectedMotor, tarih: tarihSecimi.value, saat: currentHourElement.textContent });
-        
+
         try {
             // ⚡ Önce cache'den kontrol et
             const existingRecord = await checkExistingRecord(selectedMotor, tarihSecimi.value, currentHourElement.textContent);
-            
+
             if (existingRecord) {
                 console.log('🔥 Cache hit - Kayıt bulundu, form kilitleniyor:', existingRecord);
                 lockForm(false);
                 loadExistingRecord(existingRecord);
                 return;
             }
-            
+
             console.log('🔥 Cache miss - Form açılıyor');
             unlockForm();
         } catch (error) {
@@ -1081,6 +1326,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Motor butonu event listener'ları - Async güncelleme
     motorButtons.forEach(button => {
         button.addEventListener('click', async function() {
+            // 🔥 DÜZENLEME MODUNDAN ÇIKIŞ
+            if (isEditMode) {
+                exitEditMode();
+            }
+            
             // Active class'ını kaldır
             motorButtons.forEach(btn => btn.classList.remove('active'));
             // Tıklanana active class'ını ekle
@@ -1129,6 +1379,12 @@ document.addEventListener('DOMContentLoaded', function() {
     kaydetBtn.addEventListener('click', async function() {
         if (isLocked) {
             showMessage('Bu kayıt zaten mevcut!', 'error');
+            return;
+        }
+        
+        // 🔥 DÜZENLEME MODU KONTROLÜ
+        if (isEditMode && editingRecordId) {
+            await updateExistingRecord();
             return;
         }
         
@@ -1254,10 +1510,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Formu kilitle (mesaj göstermeden)
                 lockForm(false);
                 
-                // 🔥 OTOMATİK SONRAKİ MOTORA GEÇİŞ
-                setTimeout(() => {
-                    moveToNextMotor(data.motor);
-                }, 250);
+                // 🔥 OTOMATİK ENERJİ VERİ SAYFASINA YÖNLENDİRME
+                setTimeout(async () => {
+                    await redirectToEnerjiVeri(data.motor);
+                }, 500);
             } else {
                 kaydetTimerStatus = `hata: ${result.error || 'Bilinmeyen hata'}`;
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
@@ -1277,6 +1533,39 @@ document.addEventListener('DOMContentLoaded', function() {
             kaydetBtn.textContent = '💾 KAYDET';
         }
     });
+
+    // 🔥 AKILLI ENERJİ VERİ SAYFASINA YÖNLENDİRME FONKSİYONU
+    async function redirectToEnerjiVeri(motor) {
+        const tarih = document.getElementById('tarihSecimi').value;
+        const saat = document.getElementById('currentHour').textContent;
+        
+        // Enerji kaydı kontrolü
+        const enerjiKayitVar = await checkExistingEnerjiRecord(motor, tarih, saat);
+        
+        if (enerjiKayitVar && enerjiKayitVar.exists) {
+            // Enerji kaydı varsa, sonraki motorun enerji sayfasına geç
+            const motorOrder = ['GM-1', 'GM-2', 'GM-3'];
+            const currentIndex = motorOrder.indexOf(motor);
+            
+            if (currentIndex < motorOrder.length - 1) {
+                const nextMotor = motorOrder[currentIndex + 1];
+                localStorage.setItem('redirectMotor', nextMotor);
+                localStorage.setItem('redirectFrom', 'motor-veri');
+                showMessage(`${motor} enerji kaydı zaten var. ${nextMotor} enerji sayfasına geçiliyor...`, 'info');
+                window.location.href = 'kojen-enerji-veri.html';
+            } else {
+                // Son motor ise aynı motorun enerji sayfasına yönlendir
+                localStorage.setItem('redirectMotor', motor);
+                localStorage.setItem('redirectFrom', 'motor-veri');
+                window.location.href = 'kojen-enerji-veri.html';
+            }
+        } else {
+            // Enerji kaydı yoksa, enerji sayfasına yönlendir
+            localStorage.setItem('redirectMotor', motor);
+            localStorage.setItem('redirectFrom', 'motor-veri');
+            window.location.href = 'kojen-enerji-veri.html';
+        }
+    }
 
     // 🔥 SONRAKİ MOTORA OTOMATİK GEÇİŞ FONKSİYONU
     function moveToNextMotor(currentMotor) {
@@ -1377,6 +1666,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Eğer düzenleme modundaysa, düzenleme modundan çık
+        if (isEditMode) {
+            exitEditMode();
+            return;
+        }
+        
         // Tüm input'ları temizle
         const allInputs = document.querySelectorAll('.data-input');
         allInputs.forEach(input => input.value = '');
@@ -1453,10 +1748,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 lockForm(false);
                 
-                // 🔥 OTOMATİK SONRAKİ MOTORA GEÇİŞ
-                setTimeout(() => {
-                    moveToNextMotor(data.motor);
-                }, 250);
+                // 🔥 OTOMATİK ENERJİ VERİ SAYFASINA YÖNLENDİRME
+                setTimeout(async () => {
+                    await redirectToEnerjiVeri(data.motor);
+                }, 500);
             } else {
                 kaydetTimerStatus = `hata: ${result.error || 'Bilinmeyen hata'}`;
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
@@ -1502,6 +1797,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Vardiya bilgisini güncelle
         guncelleVardiyaBilgisi();
         
+        // 🔥 YÖNLENDİRİLEN MOTORU OTOMATİK SEÇ
+        if (redirectMotor) {
+            const targetButton = document.querySelector(`[data-motor="${redirectMotor}"]`);
+            if (targetButton) {
+                // Active class'ını kaldır
+                motorButtons.forEach(btn => btn.classList.remove('active'));
+                // Yeni motora active class'ını ekle
+                targetButton.classList.add('active');
+                // Seçili motoru güncelle
+                selectedMotor = redirectMotor;
+                showMessage(`${redirectMotor} motoru için motor verileri sayfasına yönlendirildiniz!`, 'info');
+            }
+        }
+        
         // Vardiya verilerini yükle
         await loadVardiyaData();
         
@@ -1510,9 +1819,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Tarih ve vardiya değişiminde kontrol et
-    tarihSecimi.addEventListener('input', async function() {
+    let tarihInputDebounce = null;
+    tarihSecimi.addEventListener('input', function() {
         autoFormatTarih(this);
-        await checkAndUpdateFormStatus();
+        // Debounce: Kullanıcı yazmayı bitirdikten 500ms sonra kontrol et
+        if (tarihInputDebounce) clearTimeout(tarihInputDebounce);
+        tarihInputDebounce = setTimeout(async () => {
+            await checkAndUpdateFormStatus();
+        }, 500);
     });
     
     tarihSecimi.addEventListener('change', async function() {
@@ -1710,7 +2024,7 @@ document.addEventListener('DOMContentLoaded', function() {
     otomatikAyarlar();
     startMissingMotorMailCheck();
 
-    // Her saniyede bir saati güncelle
+    // Her 5 saniyede bir saati güncelle (tablet performansı için 1s'den 5s'e çıkarıldı)
     setInterval(async () => {
         const previousHour = currentHourElement.textContent;
         updateCurrentHour();
@@ -1719,7 +2033,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (previousHour !== currentHour) {
             await checkAndUpdateFormStatus();
         }
-    }, 1000);
+    }, 5000);
 
     // Her 30 saniyede bir vardiya ayarını kontrol et
     setInterval(() => {

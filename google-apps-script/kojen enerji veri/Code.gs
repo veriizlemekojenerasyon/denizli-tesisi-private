@@ -188,6 +188,9 @@ function handleRequest(e) {
       case 'getSystemLogs':
         result = getSystemLogs(parseInt(params.count, 10) || 100);
         break;
+      case 'updateRecord':
+        result = updateRecord(params);
+        break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
@@ -741,7 +744,150 @@ function checkExistingRecord(motor, tarih, saat) {
   }
 }
 
-// 🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
+// 🔥 DÜZENLEME GEÇMİŞİ LOG FONKSİYONU
+function logEnerjiEditHistory(motor, tarih, saat, kaydeden, kayitTarihi, values) {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var logSheet = spreadsheet.getSheetByName('EnerjiDuzenlemeGecmisi');
+    
+    if (!logSheet) {
+      logSheet = spreadsheet.insertSheet('EnerjiDuzenlemeGecmisi');
+      var headers = [
+        'Düzenleme Zamanı',
+        'Motor',
+        'Tarih',
+        'Saat',
+        'Vardiya',
+        'Kaydeden',
+        'L1-L2 AYDEM VOLTAJI',
+        '(P) AKTİF GÜÇ',
+        '(Q) REAKTİF GÜÇ',
+        'Cos φ',
+        'ORT.AKIM',
+        'ORT.GERİLİM',
+        'NÖTR AKIMI',
+        'TAHRİK GERİLİMİ',
+        'TOPLAM AKTİF ENERJİ',
+        'ÇALIŞMA SAATİ',
+        'KALKIŞ SAYISI',
+        'Durum'
+      ];
+      logSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+      logSheet.setColumnWidth(1, 150);
+      logSheet.setColumnWidth(2, 80);
+      logSheet.setColumnWidth(3, 100);
+      logSheet.setColumnWidth(4, 80);
+      logSheet.setColumnWidth(5, 80);
+      logSheet.setColumnWidth(6, 100);
+    }
+    
+    var logRow = [
+      kayitTarihi,
+      motor,
+      tarih,
+      saat,
+      values[1], // Vardiya
+      kaydeden,
+      values[5], // L1-L2 AYDEM VOLTAJI
+      values[6], // (P) AKTİF GÜÇ
+      values[7], // (Q) REAKTİF GÜÇ
+      values[8], // Cos φ
+      values[9], // ORT.AKIM
+      values[10], // ORT.GERİLİM
+      values[11], // NÖTR AKIMI
+      values[12], // TAHRİK GERİLİMİ
+      values[13], // TOPLAM AKTİF ENERJİ
+      values[14], // ÇALIŞMA SAATİ
+      values[15], // KALKIŞ SAYISI
+      values[16]  // Durum
+    ];
+    
+    var lastRow = logSheet.getLastRow() + 1;
+    logSheet.getRange(lastRow, 1, 1, logRow.length).setValues([logRow]);
+    logSheet.getRange(lastRow, 1, 1, logRow.length).setHorizontalAlignment('center');
+    
+  } catch (error) {
+    Logger.log('Düzenleme geçmişi kaydedilemedi: ' + error.toString());
+  }
+}
+
+// 🔥 MEVCUT KAYDI GÜNCELLEME FONKSİYONU
+function updateRecord(data) {
+  try {
+    var motor = normalizeEnerjiMotorLabel(data.motor);
+    var sheet = getEnerjiSheetIfExists(motor);
+    if (!sheet) {
+      return { success: false, error: 'Enerji sayfası bulunamadı: ' + motor };
+    }
+
+    var searchTarih = normalizeDateTR(data.tarih);
+    var searchSaat = normalizeEnerjiSaat(data.saat);
+    var dataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getDisplayValues();
+    var existingRow = -1;
+
+    for (var i = 0; i < dataRange.length; i++) {
+      var record = mapEnerjiRow(dataRange[i]);
+      var recMotor = normalizeEnerjiMotorLabel(record.motor);
+      var recTarih = normalizeDateTR(record.tarih || '');
+      var recSaat = normalizeEnerjiSaat(record.saat || '');
+
+      if (recMotor === motor && recTarih === searchTarih && recSaat === searchSaat) {
+        existingRow = i + 2; // +2 çünkü başlık satırı var ve index 0'dan başlıyor
+        break;
+      }
+    }
+
+    if (existingRow === -1) {
+      return { success: false, error: 'Kayıt bulunamadı: ' + motor + ' ' + searchTarih + ' ' + searchSaat };
+    }
+
+    var kayitTarihi = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss');
+    var durum = data.durum || 'NORMAL';
+    var kaydeden = data.kaydeden || 'Admin';
+
+    var values = [
+      searchTarih,
+      data.vardiya,
+      searchSaat,
+      motor,
+      parseFloat(data.aydemVoltaji) || 0,
+      parseFloat(data.aktifGuc) || 0,
+      parseFloat(data.reaktifGuc) || 0,
+      parseFloat(data.cosPhi) || 0,
+      parseFloat(data.ortAkim) || 0,
+      parseFloat(data.ortGerilim) || 0,
+      parseFloat(data.notrAkim) || 0,
+      parseFloat(data.tahrikGerilimi) || 0,
+      parseFloat(data.toplamAktifEnerji) || 0,
+      parseFloat(data.calismaSaati) || 0,
+      parseFloat(data.kalkisSayisi) || 0,
+      durum,
+      kaydeden,
+      kayitTarihi
+    ];
+
+    sheet.getRange(existingRow, 1, 1, 18).setValues([values]);
+
+    var updateRange = sheet.getRange(existingRow, 1, 1, 18);
+    updateRange.setHorizontalAlignment('center');
+    updateRange.setFontSize(10);
+    updateRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+
+    // 🔥 DÜZENLEME GEÇMİŞİNE KAYDET
+    logEnerjiEditHistory(motor, searchTarih, searchSaat, kaydeden, kayitTarihi, values);
+
+    return {
+      success: true,
+      message: motor + ' motoru ' + searchSaat + ' kaydı başarıyla güncellendi!',
+      record: mapEnerjiRow(values)
+    };
+
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+// �🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
 function checkMultipleRecords(data) {
   try {
     var kombinasyonlar = data.split(',');

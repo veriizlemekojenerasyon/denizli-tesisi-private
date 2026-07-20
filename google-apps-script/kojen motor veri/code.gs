@@ -100,6 +100,9 @@ function handleRequest(e) {
       case 'getSystemLogs':
         result = getSystemLogs(parseInt(params.count, 10) || 100);
         break;
+      case 'updateRecord':
+        result = updateRecord(params);
+        break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
     }
@@ -944,7 +947,164 @@ function checkExistingRecord(motor, tarih, saat) {
   }
 }
 
-// 🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
+// 🔥 DÜZENLEME GEÇMİŞİ LOG FONKSİYONU
+function logMotorEditHistory(motor, tarih, saat, kaydeden, kayitTarihi, values) {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var logSheet = spreadsheet.getSheetByName('MotorDuzenlemeGecmisi');
+    
+    if (!logSheet) {
+      logSheet = spreadsheet.insertSheet('MotorDuzenlemeGecmisi');
+      var headers = [
+        'Düzenleme Zamanı',
+        'Motor',
+        'Tarih',
+        'Saat',
+        'Vardiya',
+        'Kaydeden',
+        'JEN. YATAK SIC. (DE)',
+        'JEN. YATAK SIC. (NDE)',
+        'SOĞUTMA SUYU SIC.',
+        'SOĞUTMA SUYU BAS.',
+        'YAĞ SIC.',
+        'YAĞ BAS.',
+        'ŞARJ SIC.',
+        'ŞARJ BAS.',
+        'GAZ REG. (λ)',
+        'MAKİNE DAİRESİ SIC.',
+        'KARTER BAS.',
+        'ÖN KAMARA FARK BAS.',
+        'SARGI SIC. -1-',
+        'SARGI SIC. -2-',
+        'SARGI SIC. -3-',
+        'Durum'
+      ];
+      logSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+      logSheet.setColumnWidth(1, 150);
+      logSheet.setColumnWidth(2, 80);
+      logSheet.setColumnWidth(3, 100);
+      logSheet.setColumnWidth(4, 80);
+      logSheet.setColumnWidth(5, 80);
+      logSheet.setColumnWidth(6, 100);
+    }
+    
+    var logRow = [
+      kayitTarihi,
+      motor,
+      tarih,
+      saat,
+      values[1], // Vardiya
+      kaydeden,
+      values[4], // JEN. YATAK SIC. (DE)
+      values[5], // JEN. YATAK SIC. (NDE)
+      values[6], // SOĞUTMA SUYU SIC.
+      values[7], // SOĞUTMA SUYU BAS.
+      values[8], // YAĞ SIC.
+      values[9], // YAĞ BAS.
+      values[10], // ŞARJ SIC.
+      values[11], // ŞARJ BAS.
+      values[12], // GAZ REG. (λ)
+      values[13], // MAKİNE DAİRESİ SIC.
+      values[14], // KARTER BAS.
+      values[15], // ÖN KAMARA FARK BAS.
+      values[16], // SARGI SIC. -1-
+      values[17], // SARGI SIC. -2-
+      values[18], // SARGI SIC. -3-
+      values[19]  // Durum
+    ];
+    
+    var lastRow = logSheet.getLastRow() + 1;
+    logSheet.getRange(lastRow, 1, 1, logRow.length).setValues([logRow]);
+    logSheet.getRange(lastRow, 1, 1, logRow.length).setHorizontalAlignment('center');
+    
+  } catch (error) {
+    Logger.log('Düzenleme geçmişi kaydedilemedi: ' + error.toString());
+  }
+}
+
+// 🔥 MEVCUT KAYDI GÜNCELLEME FONKSİYONU
+function updateRecord(data) {
+  try {
+    var motor = normalizeMotorLabel(data.motor);
+    var sheet = getMotorSheetIfExists(motor);
+    if (!sheet) {
+      return { success: false, error: 'Motor sayfası bulunamadı: ' + motor };
+    }
+
+    var searchTarih = normalizeDateTR(data.tarih);
+    var searchSaat = normalizeMotorSaat(data.saat);
+    var insertInfo = findMotorInsertInfoByDateTime(sheet, searchTarih, searchSaat);
+    
+    if (!insertInfo.exists) {
+      return { success: false, error: 'Kayıt bulunamadı: ' + motor + ' ' + searchTarih + ' ' + searchSaat };
+    }
+
+    var row = insertInfo.insertRow;
+    var kayitTarihi = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss');
+    var durum = normalizeMotorDurum(data.durum || 'NORMAL');
+    var kaydeden = data.kaydeden || 'Admin';
+
+    var values;
+    if (durum === 'MOTOR ÇALIŞMIYOR') {
+      values = [
+        searchTarih, data.vardiya, searchSaat, motor,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        durum, kaydeden, kayitTarihi
+      ];
+    } else {
+      values = [
+        searchTarih,
+        data.vardiya,
+        searchSaat,
+        motor,
+        parseFloat(data.jenYatakSicaklikDE) || 0,
+        parseFloat(data.jenYatakSicaklikNDE) || 0,
+        parseFloat(data.sogutmaSuyuSicaklik) || 0,
+        parseFloat(data.sogutmaSuyuBasinc) || 0,
+        parseFloat(data.yagSicaklik) || 0,
+        parseFloat(data.yagBasinc) || 0,
+        parseFloat(data.sarjSicaklik) || 0,
+        parseFloat(data.sarjBasinc) || 0,
+        parseFloat(data.gazRegulatoru) || 0,
+        parseFloat(data.makineDairesiSicaklik) || 0,
+        parseFloat(data.karterBasinc) || 0,
+        parseFloat(data.onKamaraFarkBasinc) || 0,
+        parseFloat(data.sargiSicaklik1) || 0,
+        parseFloat(data.sargiSicaklik2) || 0,
+        parseFloat(data.sargiSicaklik3) || 0,
+        durum,
+        kaydeden,
+        kayitTarihi
+      ];
+    }
+
+    sheet.getRange(row, 1, 1, 22).setValues([values]);
+
+    var dataRange = sheet.getRange(row, 1, 1, 22);
+    dataRange.setHorizontalAlignment('center');
+    dataRange.setFontSize(10);
+    dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+    safeSetMotorNumericFormat_(sheet, row, 1);
+
+    if (durum === 'MOTOR ÇALIŞMIYOR') {
+      dataRange.setFontColor('#c62828');
+    }
+
+    // 🔥 DÜZENLEME GEÇMİŞİNE KAYDET
+    logMotorEditHistory(motor, searchTarih, searchSaat, kaydeden, kayitTarihi, values);
+
+    return {
+      success: true,
+      message: motor + ' motoru ' + searchSaat + ' kaydı başarıyla güncellendi!',
+      record: mapMotorRow(values)
+    };
+
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+// �🚀 TOPLU KAYIT KONTROLÜ - Tek seferde çoklu kayıt kontrolü
 function checkMultipleRecords(data) {
   try {
     var kombinasyonlar = data.split(',');

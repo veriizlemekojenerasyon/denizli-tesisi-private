@@ -534,6 +534,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Önce kimlik dogrulama kontrolü
     checkAuth();
     
+    // 🔥 MOTOR VERİ SAYFASINDAN GELEN YÖNLENDİRME KONTROLÜ
+    const redirectMotor = localStorage.getItem('redirectMotor');
+    const redirectFrom = localStorage.getItem('redirectFrom');
+    
+    if (redirectFrom === 'motor-veri' && redirectMotor) {
+        console.log(`🔥 Motor veri sayfasından yönlendirme: ${redirectMotor}`);
+        // Motor seçimi daha sonra yapılacak, localStorage'dan temizle
+        localStorage.removeItem('redirectMotor');
+        localStorage.removeItem('redirectFrom');
+    }
+    
     // ⏰ Otomatik yönlendirme kontrolünü başlat (her dakika kontrol et)
     checkAutoRedirect();
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
@@ -544,9 +555,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Motor seçim butonları
     const motorButtons = document.querySelectorAll('.motor-btn');
-    let selectedMotor = 'GM-1';
+    let selectedMotor = redirectMotor || 'GM-1'; // Yönlendirme varsa onu kullan, yoksa GM-1
     window.selectedMotor = selectedMotor;
     let isLocked = false;
+    let isEditMode = false; // Düzenleme modu
+    let editingRecordId = null; // Düzenlenen kayıt ID'si
     
     // Elementler
     const tarihSecimi = document.getElementById('tarihSecimi');
@@ -940,7 +953,102 @@ document.addEventListener('DOMContentLoaded', async function() {
             showMessage(`Bu tarih, saat ve motor (${selectedMotor}) için kayıt zaten var!\nMevcut kayıt: ${existingRecord.durum || 'NORMAL'}`, 'error');
             return;
         }
+
+        // 🔍 BİR ÖNCEKİ KAYIT KONTROLÜ
+        const lastRecord = await getLastRecordForMotor(selectedMotor);
+        if (lastRecord) {
+            const errors = [];
+            
+            // Toplam Aktif Enerji kontrolü (azalmamalı)
+            const currentEnerji = parseFloat(data.toplamAktifEnerji) || 0;
+            const lastEnerji = parseFloat(lastRecord.toplamAktifEnerji) || 0;
+            if (currentEnerji < lastEnerji) {
+                errors.push(`Toplam Aktif Enerji bir önceki kayıttan küçük! Önceki: ${lastEnerji}, Şu an: ${currentEnerji}`);
+            }
+            
+            // Çalışma Saati kontrolü (azalmamalı)
+            const currentSaat = parseFloat(data.calismaSaati) || 0;
+            const lastSaat = parseFloat(lastRecord.calismaSaati) || 0;
+            if (currentSaat < lastSaat) {
+                errors.push(`Çalışma Saati bir önceki kayıttan küçük! Önceki: ${lastSaat}, Şu an: ${currentSaat}`);
+            }
+            
+            // Kalkış Sayısı kontrolü (azalmamalı)
+            const currentKalkis = parseFloat(data.kalkisSayisi) || 0;
+            const lastKalkis = parseFloat(lastRecord.kalkisSayisi) || 0;
+            if (currentKalkis < lastKalkis) {
+                errors.push(`Kalkış Sayısı bir önceki kayıttan küçük! Önceki: ${lastKalkis}, Şu an: ${currentKalkis}`);
+            }
+            
+            if (errors.length > 0) {
+                showMessage('⚠️ DEĞER HATASI:\n\n' + errors.join('\n'), 'error');
+                return;
+            }
+        }
+
+        // 🔍 MOTORLAR ARASI KARŞILAŞTIRMA KONTROLÜ
+        const motors = ['GM-1', 'GM-2', 'GM-3'];
+        const motorRecords = {};
+        
+        for (const motor of motors) {
+            const record = await getLastRecordForMotor(motor);
+            if (record) {
+                motorRecords[motor] = {
+                    enerji: parseFloat(record.toplamAktifEnerji) || 0,
+                    saat: parseFloat(record.calismaSaati) || 0,
+                    kalkis: parseFloat(record.kalkisSayisi) || 0
+                };
+            }
+        }
+
+        // Mevcut motorun değerleri
+        const currentMotorEnerji = parseFloat(data.toplamAktifEnerji) || 0;
+        const currentMotorSaat = parseFloat(data.calismaSaati) || 0;
+        const currentMotorKalkis = parseFloat(data.kalkisSayisi) || 0;
+
+        // Diğer motorlarla karşılaştır
+        const comparisonErrors = [];
+        
+        for (const motor of motors) {
+            if (motor === selectedMotor || !motorRecords[motor]) continue;
+            
+            const otherMotor = motorRecords[motor];
+            
+            // Toplam Aktif Enerji çok farklıysa uyarı (>%50 fark)
+            const enerjiFark = Math.abs(currentMotorEnerji - otherMotor.enerji);
+            const enerjiOran = otherMotor.enerji > 0 ? (enerjiFark / otherMotor.enerji) * 100 : 0;
+            
+            if (enerjiOran > 50 && currentMotorEnerji > 0 && otherMotor.enerji > 0) {
+                comparisonErrors.push(
+                    `${selectedMotor} Toplam Enerji (${currentMotorEnerji}), ${motor} (${otherMotor.enerji}) ile %${enerjiOran.toFixed(1)} fark var!`
+                );
+            }
+            
+            // Çalışma Saati çok farklıysa uyarı (>%50 fark)
+            const saatFark = Math.abs(currentMotorSaat - otherMotor.saat);
+            const saatOran = otherMotor.saat > 0 ? (saatFark / otherMotor.saat) * 100 : 0;
+            
+            if (saatOran > 50 && currentMotorSaat > 0 && otherMotor.saat > 0) {
+                comparisonErrors.push(
+                    `${selectedMotor} Çalışma Saati (${currentMotorSaat}), ${motor} (${otherMotor.saat}) ile %${saatOran.toFixed(1)} fark var!`
+                );
+            }
+        }
+
+        if (comparisonErrors.length > 0) {
+            const confirmMsg = '⚠️ MOTORLAR ARASI FARK UYARISI:\n\n' + comparisonErrors.join('\n') + '\n\nYine de kaydetmek istiyor musunuz?';
+            if (!confirm(confirmMsg)) {
+                showMessage('Kayıt iptal edildi.', 'info');
+                return;
+            }
+        }
         if (Object.values(data).filter(v => !v).length > 0) { showMessage('Lütfen tüm alanları doldurun!', 'error'); return; }
+        
+        // 🔥 DÜZENLEME MODU KONTROLÜ
+        if (isEditMode && editingRecordId) {
+            await updateExistingRecord();
+            return;
+        }
         
         kaydetBtn.disabled = true; kaydetBtn.textContent = '💾 KAYDEDİLİYOR...';
         try {
@@ -980,7 +1088,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 setTimeout(() => refreshCache(), 800);
                 showMessage(`${selectedMotor} motoru için enerji verileri kaydedildi!`, 'success');
                 lockForm(false);
-                goToNextMotorAfterNormalSave(selectedMotor);
+                
+                // 🔥 OTOMATİK MOTOR VERİ SAYFASINA YÖNLENDİRME
+                setTimeout(async () => {
+                    await redirectToMotorVeri(selectedMotor);
+                }, 500);
+                
                 setTimeout(() => loadVardiyaData(), 800);
                 setTimeout(() => checkAndUpdateFormStatus(), 1200);
                 
@@ -1012,6 +1125,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Temizle butonu
     temizleBtn?.addEventListener('click', () => {
         if (isLocked) { showMessage('Form kilitli!', 'error'); return; }
+        
+        // Eğer düzenleme modundaysa, düzenleme modundan çık
+        if (isEditMode) {
+            exitEditMode();
+            return;
+        }
+        
         document.querySelectorAll('.kojen-input').forEach(input => { input.value = ''; input.style.background = 'white'; input.style.color = '#2c3e50'; });
         showMessage('Tüm veriler temizlendi!', 'info');
     });
@@ -1095,6 +1215,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 setTimeout(() => refreshCache(), 800);
                 showMessage(`${selectedMotor} motoru için "ÇALIŞMIYOR" durumu kaydedildi! (Son değerler: Enerji ${toplamAktifEnerji}, Saat ${calismaSaati}, Kalkış ${kalkisSayisi})`, 'warning');
                 lockForm(false);
+                
+                // 🔥 OTOMATİK MOTOR VERİ SAYFASINA YÖNLENDİRME
+                setTimeout(async () => {
+                    await redirectToMotorVeri(selectedMotor);
+                }, 500);
+                
                 setTimeout(() => loadVardiyaData(), 800);
                 setTimeout(() => checkAndUpdateFormStatus(), 1200);
             } else {
@@ -1145,6 +1271,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const result = await saveEnerjiEndOfDayValues({
                 motor: selectedMotor,
                 tarih: tarih,
+                vardiya: vardiyaSecimi.value || '24-08',
                 toplamAktifEnerji: toplamAktifEnerji,
                 calismaSaati: calismaSaati,
                 kalkisSayisi: kalkisSayisi,
@@ -1180,6 +1307,157 @@ document.addEventListener('DOMContentLoaded', async function() {
         const badge = document.getElementById('vardiyaBadge'), saatAraligi = document.getElementById('saatAraligi');
         if (badge && aralik) badge.textContent = vardiya;
         if (saatAraligi && aralik) saatAraligi.textContent = `${aralik.baslangicSaat} - ${aralik.bitisSaat}`;
+    }
+
+    // 🔥 KAYDI DÜZENLEME MODUNA ALMA FONKSİYONU
+    function loadRecordForEdit(record) {
+        isEditMode = true;
+        editingRecordId = record;
+        
+        // Formu kilitle
+        isLocked = false;
+        
+        // Motor seçim butonunu güncelle
+        motorButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.motor === record.motor) {
+                btn.classList.add('active');
+            }
+        });
+        selectedMotor = record.motor;
+        
+        // Tarih ve vardiya değerlerini güncelle
+        document.getElementById('tarihSecimi').value = record.tarih;
+        document.getElementById('vardiyaSecimi').value = record.vardiya;
+        
+        // 🔥 SAAT INPUT'UNU GÜNCELLE
+        const currentHourElement = document.querySelector('.kojen-enerji-table-body .sticky-col');
+        if (currentHourElement) {
+            currentHourElement.textContent = record.saat;
+        }
+        
+        // Inputları mevcut değerlerle doldur (virgül-nokta dönüşümü ile)
+        const inputs = document.querySelectorAll('.kojen-input');
+        const inputValues = [
+            record.aydemVoltaji,
+            record.aktifGuc,
+            record.reaktifGuc,
+            record.cosPhi,
+            record.ortAkim,
+            record.ortGerilim,
+            record.notrAkim,
+            record.tahrikGerilimi,
+            record.toplamAktifEnerji,
+            record.calismaSaati,
+            record.kalkisSayisi
+        ];
+        
+        inputs.forEach((input, index) => {
+            if (inputValues[index] !== undefined) {
+                // Virgülü noktaya çevir
+                let value = inputValues[index];
+                if (typeof value === 'string' && value.includes(',')) {
+                    value = value.replace(',', '.');
+                }
+                input.value = value;
+                input.style.background = '#fff9c4'; // Düzenleme modunda sarı arka plan
+            }
+        });
+        
+        // Kaydet butonunu güncelleme moduna al
+        const kaydetBtn = document.getElementById('kaydetBtn');
+        if (kaydetBtn) {
+            kaydetBtn.textContent = '✏️ GÜNCELLE';
+            kaydetBtn.style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
+        }
+        
+        showMessage(`${record.motor} motoru ${record.saat} kaydı düzenleme moduna alındı!`, 'info');
+        
+        // Formu aktif et
+        document.querySelectorAll('.kojen-input').forEach(input => {
+            input.disabled = false;
+        });
+    }
+
+    // 🔥 DÜZENLEME MODUNDAN ÇIKIŞ FONKSİYONU
+    function exitEditMode() {
+        isEditMode = false;
+        editingRecordId = null;
+        
+        // Inputları temizle ve arka planı sıfırla
+        document.querySelectorAll('.kojen-input').forEach(input => {
+            input.value = '';
+            input.style.background = 'white';
+        });
+        
+        // Kaydet butonunu normal moda al
+        const kaydetBtn = document.getElementById('kaydetBtn');
+        if (kaydetBtn) {
+            kaydetBtn.textContent = '💾 KAYDET';
+            kaydetBtn.style.background = '';
+        }
+        
+        showMessage('Düzenleme modundan çıkıldı!', 'info');
+    }
+
+    // 🔥 MEVCUT KAYDI GÜNCELLEME FONKSİYONU
+    async function updateExistingRecord() {
+        const data = getAllInputValues();
+        const motor = selectedMotor;
+        const tarih = document.getElementById('tarihSecimi').value;
+        const vardiya = document.getElementById('vardiyaSecimi').value;
+        
+        if (!motor || !tarih || !vardiya) {
+            showMessage('Lütfen motor, tarih ve vardiya seçin!', 'error');
+            return;
+        }
+        
+        // Tüm input'ların dolu olup olmadığını kontrol et
+        const allInputs = document.querySelectorAll('.kojen-input');
+        const emptyInputs = Array.from(allInputs).filter(input => !input.value);
+        
+        if (emptyInputs.length > 0) {
+            showMessage('Lütfen tüm veri alanlarını doldurun!', 'error');
+            return;
+        }
+        
+        kaydetBtn.disabled = true;
+        kaydetBtn.textContent = 'GÜNCELLENIYOR...';
+        
+        try {
+            // Kayıt güncelleme işlemi için Google Sheets API çağrısı
+            const updateData = {
+                ...data,
+                motor: motor,
+                tarih: tarih,
+                vardiya: vardiya,
+                saat: editingRecordId.saat,
+                kaydeden: getCurrentUserName()
+            };
+            
+            const result = await updateEnerjiRecord(updateData);
+            
+            if (result.success) {
+                showMessage(`${motor} motoru ${editingRecordId.saat} kaydı başarıyla güncellendi!`, 'success');
+                
+                // Cache'i güncelle
+                refreshCache();
+                
+                // Vardiya tablosunu yeniden yükle
+                await loadVardiyaData();
+                
+                // Düzenleme modundan çık
+                exitEditMode();
+            } else {
+                showMessage('Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
+            }
+        } catch (error) {
+            console.error('Güncelleme hatası:', error);
+            showMessage('Bağlantı hatası: ' + error.message, 'error');
+        } finally {
+            kaydetBtn.disabled = false;
+            kaydetBtn.textContent = '✏️ GÜNCELLE';
+        }
     }
 
     async function loadVardiyaData() {
@@ -1245,6 +1523,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
                 
                 row.innerHTML = `<td>${record.saat || '-'}</td><td>${record.motor || '-'}</td><td>${record.aydemVoltaji || '-'}</td><td>${record.aktifGuc || '-'}</td><td>${record.reaktifGuc || '-'}</td><td>${record.cosPhi || '-'}</td><td>${record.ortAkim || '-'}</td><td>${record.ortGerilim || '-'}</td><td>${record.notrAkim || '-'}</td><td>${record.tahrikGerilimi || '-'}</td><td>${toplamAktifEnerji}</td><td>${calismaSaati}</td><td>${kalkisSayisi}</td><td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td>`;
+                
+                // 🔥 SATIRA TIKLAMA OLAYI - DÜZENLEME MODU
+                row.style.cursor = 'pointer';
+                row.addEventListener('click', () => {
+                    loadRecordForEdit(record);
+                });
+                
                 tableBody.appendChild(row);
             });
         } catch (error) { console.error('Vardiya verileri yüklenirken hata:', error); }
@@ -1252,6 +1537,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function selectMotorButton(button, options = {}) {
         if (!button) return;
+        
+        // 🔥 DÜZENLEME MODUNDAN ÇIKIŞ
+        if (isEditMode) {
+            exitEditMode();
+        }
+        
         motorButtons.forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
         selectedMotor = button.dataset.motor;
@@ -1277,6 +1568,39 @@ document.addEventListener('DOMContentLoaded', async function() {
             selectMotorButton(nextButton, { silent: true });
             showMessage(`${savedMotor} kaydedildi. ${nextButton.dataset.motor} motoruna gecildi.`, 'info');
         }, 900);
+    }
+
+    // 🔥 AKILLI MOTOR VERİ SAYFASINA YÖNLENDİRME FONKSİYONU
+    async function redirectToMotorVeri(motor) {
+        const tarih = document.getElementById('tarihSecimi').value;
+        const saat = `${String(new Date().getHours()).padStart(2, '0')}:00`;
+        
+        // Motor kaydı kontrolü
+        const motorKayitVar = await checkExistingMotorRecord(motor, tarih, saat);
+        
+        if (motorKayitVar && motorKayitVar.exists) {
+            // Motor kaydı varsa, sonraki motorun enerji sayfasına geç
+            const motorOrder = ['GM-1', 'GM-2', 'GM-3'];
+            const currentIndex = motorOrder.indexOf(motor);
+            
+            if (currentIndex < motorOrder.length - 1) {
+                const nextMotor = motorOrder[currentIndex + 1];
+                localStorage.setItem('redirectMotor', nextMotor);
+                localStorage.setItem('redirectFrom', 'enerji-veri');
+                showMessage(`${motor} motor kaydı zaten var. ${nextMotor} enerji sayfasına geçiliyor...`, 'info');
+                window.location.href = 'kojen-enerji-veri.html';
+            } else {
+                // Son motor ise aynı motorun motor sayfasına yönlendir
+                localStorage.setItem('redirectMotor', motor);
+                localStorage.setItem('redirectFrom', 'enerji-veri');
+                window.location.href = 'kojen-motor-veri.html';
+            }
+        } else {
+            // Motor kaydı yoksa, motor sayfasına yönlendir
+            localStorage.setItem('redirectMotor', motor);
+            localStorage.setItem('redirectFrom', 'enerji-veri');
+            window.location.href = 'kojen-motor-veri.html';
+        }
     }
 
     // Event listeners
@@ -1318,6 +1642,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentHourElement) currentHourElement.textContent = `${String(hour).padStart(2,'0')}:00`;
         updateGunSonuEnerjiMeta();
         guncelleVardiyaBilgisi();
+        
+        // 🔥 YÖNLENDİRİLEN MOTORU OTOMATİK SEÇ
+        if (redirectMotor) {
+            const targetButton = document.querySelector(`[data-motor="${redirectMotor}"]`);
+            if (targetButton) {
+                await selectMotorButton(targetButton);
+                showMessage(`${redirectMotor} motoru için enerji verileri sayfasına yönlendirildiniz!`, 'info');
+            }
+        }
+        
         await loadVardiyaData();
         await checkAndUpdateFormStatus();
     }

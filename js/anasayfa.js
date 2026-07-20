@@ -1243,14 +1243,99 @@ document.addEventListener('DOMContentLoaded', function() {
             row.appendChild(meta);
             row.appendChild(text);
 
+            // Görsel varsa otomatik göster
             if (item.attachmentUrl) {
-                const attachment = document.createElement('a');
-                attachment.className = 'announcement-item__attachment';
-                attachment.href = item.attachmentUrl;
-                attachment.target = '_blank';
-                attachment.rel = 'noopener noreferrer';
-                attachment.textContent = 'Eki ac';
-                row.appendChild(attachment);
+                // Google Drive linkini görsel URL'sine çevir
+                let imageUrl = item.attachmentUrl;
+                let isImage = /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(item.attachmentUrl);
+                
+                // Google Drive link kontrolü ve dönüşüm
+                if (!isImage && item.attachmentUrl.includes('drive.google.com/file/d/')) {
+                    const match = item.attachmentUrl.match(/\/file\/d\/([^\/]+)/);
+                    if (match && match[1]) {
+                        // Google Drive preview kullan (iframe için)
+                        imageUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+                        isImage = true;
+                        console.log('Google Drive linki preview URL\'sine çevrildi:', imageUrl);
+                    }
+                }
+                
+                console.log('Duyuru ek kontrolü:', { url: item.attachmentUrl, isImage: isImage, imageUrl: imageUrl });
+                
+                if (isImage) {
+                    // Google Drive dosyası için iframe kullan
+                    if (imageUrl.includes('drive.google.com')) {
+                        const imageContainer = document.createElement('div');
+                        imageContainer.className = 'announcement-item__image-container';
+                        imageContainer.style.cursor = 'pointer';
+                        
+                        const iframe = document.createElement('iframe');
+                        iframe.src = imageUrl;
+                        iframe.className = 'announcement-item__iframe';
+                        iframe.style.width = '100%';
+                        iframe.style.height = '300px';
+                        iframe.style.border = 'none';
+                        iframe.style.borderRadius = '6px';
+                        iframe.style.pointerEvents = 'none'; // Tıklamayı container'a ilet
+                        
+                        // Container'a tıklandığında popup aç
+                        imageContainer.addEventListener('click', function() {
+                            console.log('Google Drive iframe tıklandı, popup açılıyor...');
+                            showImagePopup(imageUrl, getAnnouncementText(item));
+                        });
+                        
+                        imageContainer.appendChild(iframe);
+                        row.appendChild(imageContainer);
+                        console.log('Google Drive iframe eklendi');
+                    } else {
+                        // Normal görsel için img kullan
+                        const imageContainer = document.createElement('div');
+                        imageContainer.className = 'announcement-item__image-container';
+                        
+                        const image = document.createElement('img');
+                        image.src = imageUrl;
+                        image.alt = getAnnouncementText(item);
+                        image.className = 'announcement-item__image';
+                        
+                        // Görsel yükleme hatası kontrolü
+                        image.addEventListener('error', function() {
+                            console.error('Görsel yüklenemedi:', imageUrl);
+                            image.style.display = 'none';
+                            const errorMsg = document.createElement('div');
+                            errorMsg.className = 'announcement-item__error';
+                            errorMsg.textContent = 'Görsel yüklenemedi';
+                            errorMsg.style.color = '#dc2626';
+                            errorMsg.style.fontSize = '12px';
+                            errorMsg.style.padding = '8px';
+                            imageContainer.appendChild(errorMsg);
+                        });
+                        
+                        // Görsel başarıyla yüklendiğinde
+                        image.addEventListener('load', function() {
+                            console.log('Görsel başarıyla yüklendi:', imageUrl);
+                        });
+                        
+                        // Görseli tıklandığında popup'ta büyük göster
+                        image.addEventListener('click', function() {
+                            console.log('Görsel tıklandı, popup açılıyor...');
+                            showImagePopup(imageUrl, getAnnouncementText(item));
+                        });
+                        
+                        imageContainer.appendChild(image);
+                        row.appendChild(imageContainer);
+                        console.log('Görsel container eklendi');
+                    }
+                } else {
+                    // Görsel değilse eki aç linki ekle
+                    const attachment = document.createElement('a');
+                    attachment.className = 'announcement-item__attachment';
+                    attachment.href = item.attachmentUrl;
+                    attachment.target = '_blank';
+                    attachment.rel = 'noopener noreferrer';
+                    attachment.textContent = 'Eki aç';
+                    row.appendChild(attachment);
+                    console.log('Eki aç linki eklendi (görsel değil)');
+                }
             }
 
             list.appendChild(row);
@@ -1263,6 +1348,86 @@ document.addEventListener('DOMContentLoaded', function() {
         const body = document.getElementById('announcementModalBody');
         if (!modal || !body || !modal.classList.contains('is-open')) return;
         renderAnnouncementModalItems(body, announcements);
+    }
+
+    function showImagePopup(imageUrl, title) {
+        // Mevcut popup varsa kaldır
+        const existingPopup = document.getElementById('imagePopup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+
+        // Google Drive URL'si için iframe kullan
+        const isGoogleDrive = imageUrl.includes('drive.google.com');
+        
+        // Popup oluştur
+        const popup = document.createElement('div');
+        popup.id = 'imagePopup';
+        popup.className = 'image-popup';
+        
+        let contentHtml = '';
+        if (isGoogleDrive) {
+            contentHtml = `
+                <div class="image-popup__backdrop"></div>
+                <div class="image-popup__panel">
+                    <div class="image-popup__header">
+                        <h3>${title || 'Duyuru Görseli'}</h3>
+                        <button type="button" class="image-popup__close" aria-label="Kapat">×</button>
+                    </div>
+                    <div class="image-popup__body">
+                        <iframe src="${imageUrl}" class="image-popup__iframe" style="width: 100%; height: 600px; border: none; border-radius: 8px;"></iframe>
+                    </div>
+                </div>
+            `;
+        } else {
+            contentHtml = `
+                <div class="image-popup__backdrop"></div>
+                <div class="image-popup__panel">
+                    <div class="image-popup__header">
+                        <h3>${title || 'Duyuru Görseli'}</h3>
+                        <button type="button" class="image-popup__close" aria-label="Kapat">×</button>
+                    </div>
+                    <div class="image-popup__body">
+                        <img src="${imageUrl}" alt="${title || 'Duyuru Görseli'}" class="image-popup__image">
+                    </div>
+                </div>
+            `;
+        }
+        
+        popup.innerHTML = contentHtml;
+
+        document.body.appendChild(popup);
+
+        // Animasyonla göster
+        setTimeout(() => {
+            popup.classList.add('is-open');
+        }, 10);
+
+        // Kapatma fonksiyonları
+        const closePopup = () => {
+            popup.classList.remove('is-open');
+            setTimeout(() => {
+                popup.remove();
+            }, 300);
+        };
+
+        // Event listener'lar
+        popup.querySelector('.image-popup__backdrop').addEventListener('click', closePopup);
+        popup.querySelector('.image-popup__close').addEventListener('click', closePopup);
+        popup.addEventListener('click', function(e) {
+            if (e.target === popup) {
+                closePopup();
+            }
+        });
+
+        // ESC tuşu ile kapat
+        const escHandler = function(e) {
+            if (e.key === 'Escape') {
+                closePopup();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     }
 
     async function openMonthlyEnergyModal() {
