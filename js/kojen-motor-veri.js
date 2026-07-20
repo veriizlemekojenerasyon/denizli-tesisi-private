@@ -617,6 +617,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Önce kimlik dogrulama kontrolü
     checkAuth();
     
+    // 🔥 ENERJİ VERİ SAYFASINDAN GELEN YÖNLENDİRME KONTROLÜ
+    const redirectMotor = localStorage.getItem('redirectMotor');
+    const redirectFrom = localStorage.getItem('redirectFrom');
+    
+    if (redirectFrom === 'enerji-veri' && redirectMotor) {
+        console.log(`🔥 Enerji veri sayfasından yönlendirme: ${redirectMotor}`);
+        // Motor seçimi daha sonra yapılacak, localStorage'dan temizle
+        localStorage.removeItem('redirectMotor');
+        localStorage.removeItem('redirectFrom');
+    }
+    
     // 🔥 Vardiya verileri bölümünü göster
     showVardiyaVerileriSection();
     
@@ -639,6 +650,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form kilit durumu
     let isLocked = false; // Form kilit durumu
+    
+    // 🔥 GLOBAL MOTOR DEĞİŞKENİ - Yönlendirme varsa onu kullan
+    let selectedMotor = redirectMotor || 'GM-1';
 
     // 🔒 BAŞLANGIÇTA TÜM FORM PASİF YAP
     disableAllFormElements();
@@ -1344,14 +1358,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 🔥 ENERJİ VERİ SAYFASINA YÖNLENDİRME FONKSİYONU
-    function redirectToEnerjiVeri(motor) {
-        // Motor bilgisini localStorage'a kaydet
-        localStorage.setItem('redirectMotor', motor);
-        localStorage.setItem('redirectFrom', 'motor-veri');
+    // 🔥 AKILLI ENERJİ VERİ SAYFASINA YÖNLENDİRME FONKSİYONU
+    async function redirectToEnerjiVeri(motor) {
+        const tarih = document.getElementById('tarihSecimi').value;
+        const saat = document.getElementById('currentHour').textContent;
         
-        // Enerji veri sayfasına yönlendir
-        window.location.href = 'kojen-enerji-veri.html';
+        // Enerji kaydı kontrolü
+        const enerjiKayitVar = await checkExistingEnerjiRecord(motor, tarih, saat);
+        
+        if (enerjiKayitVar && enerjiKayitVar.exists) {
+            // Enerji kaydı varsa, sonraki motora geç
+            const motorOrder = ['GM-1', 'GM-2', 'GM-3'];
+            const currentIndex = motorOrder.indexOf(motor);
+            
+            if (currentIndex < motorOrder.length - 1) {
+                const nextMotor = motorOrder[currentIndex + 1];
+                localStorage.setItem('redirectMotor', nextMotor);
+                localStorage.setItem('redirectFrom', 'motor-veri');
+                showMessage(`${motor} enerji kaydı zaten var. ${nextMotor} motoruna geçiliyor...`, 'info');
+                window.location.href = 'kojen-motor-veri.html';
+            } else {
+                // Son motor ise enerji sayfasına yönlendir
+                localStorage.setItem('redirectMotor', motor);
+                localStorage.setItem('redirectFrom', 'motor-veri');
+                window.location.href = 'kojen-enerji-veri.html';
+            }
+        } else {
+            // Enerji kaydı yoksa, enerji sayfasına yönlendir
+            localStorage.setItem('redirectMotor', motor);
+            localStorage.setItem('redirectFrom', 'motor-veri');
+            window.location.href = 'kojen-enerji-veri.html';
+        }
     }
 
     // 🔥 SONRAKİ MOTORA OTOMATİK GEÇİŞ FONKSİYONU
@@ -1577,6 +1614,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Vardiya bilgisini güncelle
         guncelleVardiyaBilgisi();
+        
+        // 🔥 YÖNLENDİRİLEN MOTORU OTOMATİK SEÇ
+        if (redirectMotor) {
+            const targetButton = document.querySelector(`[data-motor="${redirectMotor}"]`);
+            if (targetButton) {
+                // Active class'ını kaldır
+                motorButtons.forEach(btn => btn.classList.remove('active'));
+                // Yeni motora active class'ını ekle
+                targetButton.classList.add('active');
+                // Seçili motoru güncelle
+                selectedMotor = redirectMotor;
+                showMessage(`${redirectMotor} motoru için motor verileri sayfasına yönlendirildiniz!`, 'info');
+            }
+        }
         
         // Vardiya verilerini yükle
         await loadVardiyaData();
