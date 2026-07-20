@@ -1080,7 +1080,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 setTimeout(() => refreshCache(), 800);
                 showMessage(`${selectedMotor} motoru için enerji verileri kaydedildi!`, 'success');
                 lockForm(false);
-                goToNextMotorAfterNormalSave(selectedMotor);
+                
+                // 🔥 OTOMATİK MOTOR VERİ SAYFASINA YÖNLENDİRME
+                setTimeout(() => {
+                    redirectToMotorVeri(selectedMotor);
+                }, 500);
+                
                 setTimeout(() => loadVardiyaData(), 800);
                 setTimeout(() => checkAndUpdateFormStatus(), 1200);
                 
@@ -1195,6 +1200,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 setTimeout(() => refreshCache(), 800);
                 showMessage(`${selectedMotor} motoru için "ÇALIŞMIYOR" durumu kaydedildi! (Son değerler: Enerji ${toplamAktifEnerji}, Saat ${calismaSaati}, Kalkış ${kalkisSayisi})`, 'warning');
                 lockForm(false);
+                
+                // 🔥 OTOMATİK MOTOR VERİ SAYFASINA YÖNLENDİRME
+                setTimeout(() => {
+                    redirectToMotorVeri(selectedMotor);
+                }, 500);
+                
                 setTimeout(() => loadVardiyaData(), 800);
                 setTimeout(() => checkAndUpdateFormStatus(), 1200);
             } else {
@@ -1378,6 +1389,39 @@ document.addEventListener('DOMContentLoaded', async function() {
             selectMotorButton(nextButton, { silent: true });
             showMessage(`${savedMotor} kaydedildi. ${nextButton.dataset.motor} motoruna gecildi.`, 'info');
         }, 900);
+    }
+
+    // 🔥 AKILLI MOTOR VERİ SAYFASINA YÖNLENDİRME FONKSİYONU
+    async function redirectToMotorVeri(motor) {
+        const tarih = document.getElementById('tarihSecimi').value;
+        const saat = `${String(new Date().getHours()).padStart(2, '0')}:00`;
+        
+        // Motor kaydı kontrolü
+        const motorKayitVar = await checkExistingMotorRecord(motor, tarih, saat);
+        
+        if (motorKayitVar && motorKayitVar.exists) {
+            // Motor kaydı varsa, sonraki motora geç
+            const motorOrder = ['GM-1', 'GM-2', 'GM-3'];
+            const currentIndex = motorOrder.indexOf(motor);
+            
+            if (currentIndex < motorOrder.length - 1) {
+                const nextMotor = motorOrder[currentIndex + 1];
+                localStorage.setItem('redirectMotor', nextMotor);
+                localStorage.setItem('redirectFrom', 'enerji-veri');
+                showMessage(`${motor} motor kaydı zaten var. ${nextMotor} motoruna geçiliyor...`, 'info');
+                window.location.href = 'kojen-enerji-veri.html';
+            } else {
+                // Son motor ise motor sayfasına yönlendir
+                localStorage.setItem('redirectMotor', motor);
+                localStorage.setItem('redirectFrom', 'enerji-veri');
+                window.location.href = 'kojen-motor-veri.html';
+            }
+        } else {
+            // Motor kaydı yoksa, motor sayfasına yönlendir
+            localStorage.setItem('redirectMotor', motor);
+            localStorage.setItem('redirectFrom', 'enerji-veri');
+            window.location.href = 'kojen-motor-veri.html';
+        }
     }
 
     // Event listeners
