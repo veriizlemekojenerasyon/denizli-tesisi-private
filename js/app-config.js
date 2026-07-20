@@ -3,8 +3,8 @@
 
     const SCRIPT_URLS = {
         saatlik: 'https://script.google.com/macros/s/AKfycbxLg9svHtuKZ5jXP0fzFc1opOFwmzwjkHB9PZS61oG_wgH14dGerwnP1CaBMFEQFiMz/exec',
-        motor: 'https://script.google.com/macros/s/AKfycbz-Ipx_lGRL4_OE7Z-phV6JkXzyykIokf9ifNltl14ERl2NzyKFfIYXcWmklFnJemCm/exec',
-  enerji: 'https://script.google.com/macros/s/AKfycbwF8Qck03Def4rd4dFm9gG89tAC5noXyYAANkONbO4zOZynNGRncqcQ5G9WLxmOjyEp/exec',
+        motor: 'https://script.google.com/macros/s/AKfycbzVl10NVvrcQ9kxuMwW7aDb6iaTs6FgtwHVpYc_83AhEwyOIsYZAGTtnlm_pmu-JwOO/exec',
+        enerji: 'https://script.google.com/macros/s/AKfycbyiULDEaklYKRnO9QSm16z_maXlhSJAPb6qPKqIgMjJXWHemjYNCMkBjO4lttwOreVi/exec',
         enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbwSno62Ijw1RgvUdZTOCoBXV9NY3H-5bg1Po4WRG-sSuWM_nyZzP307scsyRvwZT1Ux/exec',
         yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxY0_SxJyIWp0TaDABKdhnPFmHmw7pRMUp33AQ7AujZN26mESmpTNr4Bqu81SY5u0F_/exec',
         buhar: 'https://script.google.com/macros/s/AKfycbwKIqhZDvxJDWmFPf0CupJEke2eey9RkTl-WJ-Z8a9zTrdi9L8geBX9C-KCUHnc3s68/exec',

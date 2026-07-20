@@ -195,7 +195,6 @@
                                         <th>ÇALIŞMA SAATİ</th>
                                         <th>KALKIŞ SAYISI</th>
                                         <th>Durum</th>
-                                        <th>İşlemler</th>
                                     </tr>
                                 </thead>
                                 <tbody id="vardiyaTableBody">
@@ -216,9 +215,8 @@
 <script src="js/app-config.js"></script>
 <script src="js/sidebar-menu.js"></script>
 <script src="js/kojen-enerji-sheets.js"></script>
-<script src="js/kojen-motor-sheets.js"></script>
 
-<script src="js/kojen-enerji-veri.js?v=4"></script>
+<script src="js/kojen-enerji-veri.js"></script>
 <!-- 🔥 MOTOR ÇALIŞMIYOR KAYDET MODALI -->
     <div id="motorCalismiyorModal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
@@ -383,85 +381,7 @@
         </div>
     </div>
 
-<!-- 🔥 DÜZENLEME MODALI -->
-<div id="editModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
-        <div class="modal-header">
-            <h3>✏️ Kayıt Düzenle</h3>
-            <button class="modal-close" onclick="closeEditModal()">&times;</button>
-        </div>
 
-        <div class="modal-body">
-            <div class="modal-info" style="background: #f5f5f5; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
-                <p><strong>Motor:</strong> <span id="editMotor"></span></p>
-                <p><strong>Tarih:</strong> <span id="editTarih"></span></p>
-                <p><strong>Vardiya:</strong> <span id="editVardiya"></span></p>
-                <p><strong>Saat:</strong> <span id="editSaat"></span></p>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>L1-L2 AYDEM VOLTAJI</label>
-                    <input type="number" class="modal-input" id="editL1L2AydemVoltaji" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>(P) AKTİF GÜÇ</label>
-                    <input type="number" class="modal-input" id="editAktifGuc" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>(Q) REAKTİF GÜÇ</label>
-                    <input type="number" class="modal-input" id="editReaktifGuc" step="0.1">
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Cos φ</label>
-                    <input type="number" class="modal-input" id="editCosFi" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>ORT.AKIM</label>
-                    <input type="number" class="modal-input" id="editOrtAkim" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>ORT.GERİLİM</label>
-                    <input type="number" class="modal-input" id="editOrtGerilim" step="0.1">
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>NÖTR AKIMI</label>
-                    <input type="number" class="modal-input" id="editNotrAkimi" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>TAHRİK GERİLİMİ</label>
-                    <input type="number" class="modal-input" id="editTahrikGerilimi" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>TOPLAM AKTİF ENERJİ</label>
-                    <input type="number" class="modal-input" id="editToplamAktifEnerji" step="0.1">
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>ÇALIŞMA SAATİ</label>
-                    <input type="number" class="modal-input" id="editCalismaSaati" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>KALKIŞ SAYISI</label>
-                    <input type="number" class="modal-input" id="editKalkisSayisi" step="1">
-                </div>
-            </div>
-        </div>
-
-        <div class="modal-footer">
-            <button type="button" class="btn-secondary" onclick="closeEditModal()">İPTAL</button>
-            <button type="button" class="btn-primary" id="editModalKaydetBtn">💾 KAYDET</button>
-        </div>
-    </div>
-</div>
 
 <script src="js/global-duyurular.js"></script>
 

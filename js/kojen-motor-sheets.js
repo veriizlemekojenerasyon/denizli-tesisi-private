@@ -373,78 +373,10 @@ async function addMultipleMotorRecords(records) {
     }
 }
 
-/**
- * Mevcut motor kaydını güncelle
- * @param {Object} data - Güncellenecek motor verileri
- * @returns {Promise<Object>} - Güncelleme sonucu
- */
-async function updateMotorRecord(data) {
-    try {
-        const url = KojenMotorSheetsConfig.WEB_APP_URL;
-        
-        // Tarih formatını düzelt (dd.MM.yyyy -> yyyy-MM-dd)
-        let formattedTarih = data.tarih;
-        if (formattedTarih.includes('.')) {
-            const parts = formattedTarih.split('.');
-            formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-        
-        // Parametreleri hazırla
-        const urlParams = new URLSearchParams({
-            action: 'updateRecord',
-            motor: data.motor,
-            tarih: formattedTarih,
-            vardiya: data.vardiya,
-            saat: data.saat,
-            kaydeden: data.kaydeden || 'Admin',
-            durum: data.durum || 'NORMAL',
-            jenYatakSicaklikDE: data.jenYatakSicaklikDE || '0',
-            jenYatakSicaklikNDE: data.jenYatakSicaklikNDE || '0',
-            sogutmaSuyuSicaklik: data.sogutmaSuyuSicaklik || '0',
-            sogutmaSuyuBasinc: data.sogutmaSuyuBasinc || '0',
-            yagSicaklik: data.yagSicaklik || '0',
-            yagBasinc: data.yagBasinc || '0',
-            sarjSicaklik: data.sarjSicaklik || '0',
-            sarjBasinc: data.sarjBasinc || '0',
-            gazRegulatoru: data.gazRegulatoru || '0',
-            makineDairesiSicaklik: data.makineDairesiSicaklik || '0',
-            karterBasinc: data.karterBasinc || '0',
-            onKamaraFarkBasinc: data.onKamaraFarkBasinc || '0',
-            sargiSicaklik1: data.sargiSicaklik1 || '0',
-            sargiSicaklik2: data.sargiSicaklik2 || '0',
-            sargiSicaklik3: data.sargiSicaklik3 || '0'
-        });
-        
-        console.log('🔥 Motor kaydı güncelleniyor:', data.motor, data.saat);
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: urlParams.toString()
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('🔥 Motor kayıt güncelleme sonucu:', result);
-        
-        return result;
-        
-    } catch (error) {
-        console.error('Motor kayıt güncelleme hatası:', error);
-        return { success: false, error: error.message };
-    }
-}
-
 // Global scope'a ekle (HTML dosyasından erişim için)
 window.KojenMotorSheetsConfig = KojenMotorSheetsConfig;
 window.saveMotorToSheets = saveMotorToSheets;
 window.checkExistingMotorRecord = checkExistingMotorRecord;
-window.updateMotorRecord = updateMotorRecord;
 window.getMotorRecordsByMotorAndDate = getMotorRecordsByMotorAndDate;
 window.getLastMotorRecords = getLastMotorRecords;
 window.getAllMotorRecords = getAllMotorRecords;

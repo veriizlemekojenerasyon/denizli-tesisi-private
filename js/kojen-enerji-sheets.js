@@ -479,69 +479,6 @@ async function addMultipleEnerjiRecords(records) {
     }
 }
 
-/**
- * Mevcut enerji kaydını güncelle
- * @param {Object} data - Güncellenecek enerji verileri
- * @returns {Promise<Object>} - Güncelleme sonucu
- */
-async function updateEnerjiRecord(data) {
-    try {
-        const url = KojenEnerjiSheetsConfig.WEB_APP_URL;
-        
-        // Tarih formatını düzelt (dd.MM.yyyy -> yyyy-MM-dd)
-        let formattedTarih = data.tarih;
-        if (formattedTarih.includes('.')) {
-            const parts = formattedTarih.split('.');
-            formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-        
-        // Parametreleri hazırla
-        const urlParams = new URLSearchParams({
-            action: 'updateRecord',
-            motor: data.motor,
-            tarih: formattedTarih,
-            vardiya: data.vardiya,
-            saat: data.saat,
-            kaydeden: data.kaydeden || 'Admin',
-            durum: data.durum || 'NORMAL',
-            aydemVoltaji: data.aydemVoltaji || '0',
-            aktifGuc: data.aktifGuc || '0',
-            reaktifGuc: data.reaktifGuc || '0',
-            cosPhi: data.cosPhi || '0',
-            ortAkim: data.ortAkim || '0',
-            ortGerilim: data.ortGerilim || '0',
-            notrAkim: data.notrAkim || '0',
-            tahrikGerilimi: data.tahrikGerilimi || '0',
-            toplamAktifEnerji: data.toplamAktifEnerji || '0',
-            calismaSaati: data.calismaSaati || '0',
-            kalkisSayisi: data.kalkisSayisi || '0'
-        });
-        
-        console.log('🔥 Enerji kaydı güncelleniyor:', data.motor, data.saat);
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: urlParams.toString()
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('🔥 Enerji kayıt güncelleme sonucu:', result);
-        
-        return result;
-        
-    } catch (error) {
-        console.error('Enerji kayıt güncelleme hatası:', error);
-        return { success: false, error: error.message };
-    }
-}
-
 window.KojenEnerjiSheetsConfig = KojenEnerjiSheetsConfig;
 window.saveEnerjiToSheets = saveEnerjiToSheets;
 window.saveEnerjiEndOfDayValues = saveEnerjiEndOfDayValues;
@@ -550,7 +487,6 @@ window.scheduleYearlyEnergyUpdateForRecords = scheduleYearlyEnergyUpdateForRecor
 window.getEnerjiEndOfDayValues = getEnerjiEndOfDayValues;
 window.checkExistingEnerjiRecord = checkExistingEnerjiRecord;
 window.checkMultipleEnerjiRecords = checkMultipleEnerjiRecords;
-window.updateEnerjiRecord = updateEnerjiRecord;
 window.getEnerjiRecordsByMotorAndDate = getEnerjiRecordsByMotorAndDate;
 window.getLastEnerjiRecords = getLastEnerjiRecords;
 window.getAllEnerjiRecords = getAllEnerjiRecords;
