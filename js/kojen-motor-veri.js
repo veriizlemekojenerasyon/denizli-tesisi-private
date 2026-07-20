@@ -1320,10 +1320,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Formu kilitle (mesaj göstermeden)
                 lockForm(false);
                 
-                // 🔥 OTOMATİK SONRAKİ MOTORA GEÇİŞ
+                // 🔥 OTOMATİK ENERJİ VERİ SAYFASINA YÖNLENDİRME
                 setTimeout(() => {
-                    moveToNextMotor(data.motor);
-                }, 250);
+                    redirectToEnerjiVeri(data.motor);
+                }, 500);
             } else {
                 kaydetTimerStatus = `hata: ${result.error || 'Bilinmeyen hata'}`;
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
@@ -1343,6 +1343,16 @@ document.addEventListener('DOMContentLoaded', function() {
             kaydetBtn.textContent = '💾 KAYDET';
         }
     });
+
+    // 🔥 ENERJİ VERİ SAYFASINA YÖNLENDİRME FONKSİYONU
+    function redirectToEnerjiVeri(motor) {
+        // Motor bilgisini localStorage'a kaydet
+        localStorage.setItem('redirectMotor', motor);
+        localStorage.setItem('redirectFrom', 'motor-veri');
+        
+        // Enerji veri sayfasına yönlendir
+        window.location.href = 'kojen-enerji-veri.html';
+    }
 
     // 🔥 SONRAKİ MOTORA OTOMATİK GEÇİŞ FONKSİYONU
     function moveToNextMotor(currentMotor) {
@@ -1519,10 +1529,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 lockForm(false);
                 
-                // 🔥 OTOMATİK SONRAKİ MOTORA GEÇİŞ
+                // 🔥 OTOMATİK ENERJİ VERİ SAYFASINA YÖNLENDİRME
                 setTimeout(() => {
-                    moveToNextMotor(data.motor);
-                }, 250);
+                    redirectToEnerjiVeri(data.motor);
+                }, 500);
             } else {
                 kaydetTimerStatus = `hata: ${result.error || 'Bilinmeyen hata'}`;
                 showMessage('Kayıt hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
