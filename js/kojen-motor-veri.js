@@ -232,140 +232,132 @@ function rememberMotorRecord(record) {
     cacheTimestamp = Date.now();
 }
 
-// 🔥 KAYDI DÜZENLEME MODUNA ALMA FONKSİYONU
-function loadRecordForEdit(record) {
-    isEditMode = true;
-    editingRecordId = record;
-    
-    // Formu kilitle
-    isLocked = false;
-    
-    // Motor seçim butonunu güncelle
-    const motorButtons = document.querySelectorAll('.motor-btn');
-    motorButtons.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.motor === record.motor) {
-            btn.classList.add('active');
+// 🔥 CACHE YENİLEME FONKSİYONU (GLOBAL)
+async function refreshCache() {
+    try {
+        const result = await getLastMotorRecords(150);
+        if (result.success) {
+            cachedRecords = result.data || [];
+            recordMap.clear();
+            
+            cachedRecords.forEach(record => {
+                const mapKey = `${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`;
+                recordMap.set(mapKey, record);
+            });
+            
+            cacheTimestamp = Date.now();
+            console.log('⚡ Ultra hızlı cache yenilendi:', cachedRecords.length, 'kayıt, Map size:', recordMap.size);
+            
+            startBackgroundRefresh();
         }
-    });
-    selectedMotor = record.motor;
-    
-    // Tarih ve vardiya değerlerini güncelle
-    document.getElementById('tarihSecimi').value = record.tarih;
-    document.getElementById('vardiyaSecimi').value = record.vardiya;
-    
-    // 🔥 SAAT INPUT'UNU GÜNCELLE
-    const currentHourElement = document.getElementById('currentHour');
-    if (currentHourElement) {
-        currentHourElement.textContent = record.saat;
+    } catch (error) {
+        console.error('Cache yenileme hatası:', error);
     }
+}
+
+// 🔥 BACKGROUND CACHE YENİLEME FONKSİYONU (GLOBAL)
+function startBackgroundRefresh() {
+    if (cacheRefreshTimer) {
+        clearTimeout(cacheRefreshTimer);
+    }
+    cacheRefreshTimer = setTimeout(() => {
+        refreshCache();
+    }, 60000); // 60 saniyede bir yenile
+}
+
+// 🔥 DÜZENLEME MODAL FONKSİYONLARI
+let currentEditRecord = null;
+
+function openEditModal(record) {
+    currentEditRecord = record;
     
-    // Inputları mevcut değerlerle doldur (virgül-nokta dönüşümü ile)
+    // Modal bilgilerini doldur
+    document.getElementById('editMotor').textContent = record.motor;
+    document.getElementById('editTarih').textContent = record.tarih;
+    document.getElementById('editVardiya').textContent = record.vardiya;
+    document.getElementById('editSaat').textContent = record.saat;
+    
+    // Inputları mevcut değerlerle doldur
     const inputMapping = {
-        'jenYatakSicaklikDE': record.jenYatakSicaklikDE,
-        'jenYatakSicaklikNDE': record.jenYatakSicaklikNDE,
-        'sogutmaSuyuSicaklik': record.sogutmaSuyuSicaklik,
-        'sogutmaSuyuBasinc': record.sogutmaSuyuBasinc,
-        'yagSicaklik': record.yagSicaklik,
-        'yagBasinc': record.yagBasinc,
-        'sarjSicaklik': record.sarjSicaklik,
-        'sarjBasinc': record.sarjBasinc,
-        'gazRegulatoru': record.gazRegulatoru,
-        'makineDairesiSicaklik': record.makineDairesiSicaklik,
-        'karterBasinc': record.karterBasinc,
-        'onKamaraFarkBasinc': record.onKamaraFarkBasinc,
-        'sargiSicaklik1': record.sargiSicaklik1,
-        'sargiSicaklik2': record.sargiSicaklik2,
-        'sargiSicaklik3': record.sargiSicaklik3
+        'editJenYatakSicaklikDE': record.jenYatakSicaklikDE,
+        'editJenYatakSicaklikNDE': record.jenYatakSicaklikNDE,
+        'editSogutmaSuyuSicaklik': record.sogutmaSuyuSicaklik,
+        'editSogutmaSuyuBasinc': record.sogutmaSuyuBasinc,
+        'editYagSicaklik': record.yagSicaklik,
+        'editYagBasinc': record.yagBasinc,
+        'editSarjSicaklik': record.sarjSicaklik,
+        'editSarjBasinc': record.sarjBasinc,
+        'editGazRegulatoru': record.gazRegulatoru,
+        'editMakineDairesiSicaklik': record.makineDairesiSicaklik,
+        'editKarterBasinc': record.karterBasinc,
+        'editOnKamaraFarkBasinc': record.onKamaraFarkBasinc,
+        'editSargiSicaklik1': record.sargiSicaklik1,
+        'editSargiSicaklik2': record.sargiSicaklik2,
+        'editSargiSicaklik3': record.sargiSicaklik3
     };
     
     Object.keys(inputMapping).forEach(inputId => {
         const input = document.getElementById(inputId);
         if (input && inputMapping[inputId] !== undefined) {
-            // Virgülü noktaya çevir
             let value = inputMapping[inputId];
             if (typeof value === 'string' && value.includes(',')) {
                 value = value.replace(',', '.');
             }
             input.value = value;
-            input.style.background = '#fff9c4'; // Düzenleme modunda sarı arka plan
         }
     });
     
-    // Kaydet butonunu güncelleme moduna al
-    const kaydetBtn = document.getElementById('kaydetBtn');
-    if (kaydetBtn) {
-        kaydetBtn.textContent = '✏️ GÜNCELLE';
-        kaydetBtn.style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
-    }
-    
-    showMessage(`${record.motor} motoru ${record.saat} kaydı düzenleme moduna alındı!`, 'info');
-    
-    // Formu aktif et
-    enableAllFormElements();
+    // Modal'ı göster
+    document.getElementById('editModal').style.display = 'block';
 }
 
-// 🔥 DÜZENLEME MODUNDAN ÇIKIŞ FONKSİYONU
-function exitEditMode() {
-    isEditMode = false;
-    editingRecordId = null;
-    
-    // Inputları temizle ve arka planı sıfırla
-    const allInputs = document.querySelectorAll('.data-input');
-    allInputs.forEach(input => {
-        input.value = '';
-        input.style.background = 'white';
-    });
-    
-    // Kaydet butonunu normal moda al
-    const kaydetBtn = document.getElementById('kaydetBtn');
-    if (kaydetBtn) {
-        kaydetBtn.textContent = '💾 KAYDET';
-        kaydetBtn.style.background = '';
-    }
-    
-    showMessage('Düzenleme modundan çıkıldı!', 'info');
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    currentEditRecord = null;
 }
 
-// 🔥 MEVCUT KAYDI GÜNCELLEME FONKSİYONU
-async function updateExistingRecord() {
-    const data = getAllInputValues();
-    const motor = selectedMotor;
-    const tarih = document.getElementById('tarihSecimi').value;
-    const vardiya = document.getElementById('vardiyaSecimi').value;
+async function saveEditModal() {
+    if (!currentEditRecord) return;
     
-    if (!motor || !tarih || !vardiya) {
-        showMessage('Lütfen motor, tarih ve vardiya seçin!', 'error');
-        return;
-    }
+    const newData = {
+        jenYatakSicaklikDE: document.getElementById('editJenYatakSicaklikDE').value,
+        jenYatakSicaklikNDE: document.getElementById('editJenYatakSicaklikNDE').value,
+        sogutmaSuyuSicaklik: document.getElementById('editSogutmaSuyuSicaklik').value,
+        sogutmaSuyuBasinc: document.getElementById('editSogutmaSuyuBasinc').value,
+        yagSicaklik: document.getElementById('editYagSicaklik').value,
+        yagBasinc: document.getElementById('editYagBasinc').value,
+        sarjSicaklik: document.getElementById('editSarjSicaklik').value,
+        sarjBasinc: document.getElementById('editSarjBasinc').value,
+        gazRegulatoru: document.getElementById('editGazRegulatoru').value,
+        makineDairesiSicaklik: document.getElementById('editMakineDairesiSicaklik').value,
+        karterBasinc: document.getElementById('editKarterBasinc').value,
+        onKamaraFarkBasinc: document.getElementById('editOnKamaraFarkBasinc').value,
+        sargiSicaklik1: document.getElementById('editSargiSicaklik1').value,
+        sargiSicaklik2: document.getElementById('editSargiSicaklik2').value,
+        sargiSicaklik3: document.getElementById('editSargiSicaklik3').value
+    };
     
-    // Tüm input'ların dolu olup olmadığını kontrol et
-    const allInputs = document.querySelectorAll('.data-input');
-    const emptyInputs = Array.from(allInputs).filter(input => !input.value);
-    
-    if (emptyInputs.length > 0) {
-        showMessage('Lütfen tüm veri alanlarını doldurun!', 'error');
-        return;
-    }
-    
+    const kaydetBtn = document.getElementById('editModalKaydetBtn');
     kaydetBtn.disabled = true;
-    kaydetBtn.textContent = 'GÜNCELLENIYOR...';
+    kaydetBtn.textContent = 'KAYDEDİLİYOR...';
     
     try {
-        // Kayıt güncelleme işlemi için Google Sheets API çağrısı
         const updateData = {
-            ...data.veriler,
-            motor: motor,
-            tarih: tarih,
-            vardiya: vardiya,
-            saat: editingRecordId.saat,
+            ...newData,
+            motor: currentEditRecord.motor,
+            tarih: currentEditRecord.tarih,
+            vardiya: currentEditRecord.vardiya,
+            saat: currentEditRecord.saat,
             kaydeden: getCurrentUserName()
         };
+        
+        // Eski kaydı log'a kaydet
+        await logUpdate(currentEditRecord, newData);
         
         const result = await updateMotorRecord(updateData);
         
         if (result.success) {
-            showMessage(`${motor} motoru ${editingRecordId.saat} kaydı başarıyla güncellendi!`, 'success');
+            showMessage(`${currentEditRecord.motor} motoru ${currentEditRecord.saat} kaydı başarıyla güncellendi!`, 'success');
             
             // Cache'i güncelle
             refreshCache();
@@ -373,8 +365,8 @@ async function updateExistingRecord() {
             // Vardiya tablosunu yeniden yükle
             await loadVardiyaData();
             
-            // Düzenleme modundan çık
-            exitEditMode();
+            // Modal'ı kapat
+            closeEditModal();
         } else {
             showMessage('Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
         }
@@ -383,9 +375,37 @@ async function updateExistingRecord() {
         showMessage('Bağlantı hatası: ' + error.message, 'error');
     } finally {
         kaydetBtn.disabled = false;
-        kaydetBtn.textContent = '✏️ GÜNCELLE';
+        kaydetBtn.textContent = '💾 KAYDET';
     }
 }
+
+// 🔥 GÜNCELLEME LOG FONKSİYONU
+async function logUpdate(oldRecord, newRecord) {
+    try {
+        const logData = {
+            motor: oldRecord.motor,
+            tarih: oldRecord.tarih,
+            vardiya: oldRecord.vardiya,
+            saat: oldRecord.saat,
+            eskiKayit: oldRecord,
+            yeniKayit: newRecord,
+            guncelleyen: getCurrentUserName(),
+            guncellemeZamani: new Date().toISOString()
+        };
+        
+        // Google Sheets'e log kaydı gönder
+        await fetch('https://script.google.com/macros/s/AKfycbz-Ipx_lGRL4_OE7Z-phV6JkXzyykIokf9ifNltl14ERl2NzyKFfIYXcWmklFnJemCm/exec', {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'logUpdate',
+                data: logData
+            })
+        });
+    } catch (error) {
+        console.error('Log kaydı hatası:', error);
+    }
+}
+
 
 async function loadVardiyaData() {
     const vardiya = vardiyaSecimi.value;
@@ -556,13 +576,19 @@ async function loadVardiyaData() {
                 <td>${sargiSicaklik2}</td>
                 <td>${sargiSicaklik3}</td>
                 <td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td>
+                <td>
+                    <button class="edit-btn" data-record='${JSON.stringify(record)}' style="padding: 4px 8px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">✏️ Düzenle</button>
+                </td>
             `;
             
-            // 🔥 SATIRA TIKLAMA OLAYI - DÜZENLEME MODU
-            row.style.cursor = 'pointer';
-            row.addEventListener('click', () => {
-                loadRecordForEdit(record);
-            });
+            // 🔥 DÜZENLE BUTONU TIKLAMA OLAYI - MODAL AÇ
+            const editBtn = row.querySelector('.edit-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openEditModal(record);
+                });
+            }
             
             tbody.appendChild(row);
         });
@@ -814,14 +840,78 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form kilit durumu
     let isLocked = false; // Form kilit durumu
 
-    let isEditMode = false; // Düzenleme modu
-    let editingRecordId = null; // Düzenlenen kayıt ID'si
-
-    
     // 🔥 GLOBAL MOTOR DEĞİŞKENİ - Yönlendirme varsa onu kullan
-    let selectedMotor = redirectMotor || 'GM-1';
+    selectedMotor = redirectMotor || 'GM-1';
 
-    // 🔒 BAŞLANGIÇTA TÜM FORM PASİF YAP
+    // 🔥 DÜZENLEME MODAL KAYDET BUTONU
+    const editModalKaydetBtn = document.getElementById('editModalKaydetBtn');
+    if (editModalKaydetBtn) {
+        editModalKaydetBtn.addEventListener('click', saveEditModal);
+    }
+
+    // 🔒 TÜM FORM ELEMANLARINI PASİF YAP
+    function disableAllFormElements() {
+        console.log('🔒 Form pasif yapılıyor...');
+        
+        const allInputs = document.querySelectorAll('.data-input');
+        allInputs.forEach(input => {
+            input.disabled = true;
+            input.style.background = '#f5f5f5';
+            input.style.cursor = 'not-allowed';
+        });
+        
+        const buttons = [kaydetBtn, temizleBtn];
+        buttons.forEach(btn => {
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        });
+        
+        if (motorCalismiyorKaydetBtn) {
+            motorCalismiyorKaydetBtn.disabled = false;
+            motorCalismiyorKaydetBtn.style.opacity = '1';
+            motorCalismiyorKaydetBtn.style.cursor = 'pointer';
+        }
+        
+        motorButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        });
+    }
+    
+    // � TÜM FORM ELEMANLARINI AKTİF YAP
+    function enableAllFormElements() {
+        console.log('🔓 Form aktif yapılıyor...');
+        
+        const allInputs = document.querySelectorAll('.data-input');
+        allInputs.forEach(input => {
+            input.disabled = false;
+            input.style.background = 'white';
+            input.style.cursor = 'text';
+        });
+        
+        const buttons = [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn];
+        buttons.forEach(btn => {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+        });
+        
+        motorButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        });
+        
+        showMessage('Yeni kayıt yapabilirsiniz.', 'success');
+    }
+
+    // �🔒 BAŞLANGIÇTA TÜM FORM PASİF YAP
     disableAllFormElements();
     
     // ⚡ CACHE BAŞLAT
@@ -903,31 +993,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let cacheRefreshTimer = null;
 
     
-    // Cache'i yenile - ⚡ Optimize edilmiş
-    async function refreshCache() {
-        try {
-            const result = await getLastMotorRecords(150);
-            if (result.success) {
-                cachedRecords = result.data || [];
-                recordMap.clear(); // Map'i temizle
-                
-                // 🔥 Map'i hızlıca doldur
-                cachedRecords.forEach(record => {
-                    const mapKey = `${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`;
-                    recordMap.set(mapKey, record);
-                });
-                
-                cacheTimestamp = Date.now();
-                console.log('⚡ Ultra hızlı cache yenilendi:', cachedRecords.length, 'kayıt, Map size:', recordMap.size);
-                
-                // ⚡ Background timer'ı başlat
-                startBackgroundRefresh();
-            }
-        } catch (error) {
-            console.error('Cache yenileme hatası:', error);
-        }
-    }
-
     // ⚡ Background cache yenileme - sessizce günceller
     function startBackgroundRefresh() {
         if (cacheRefreshTimer) {
@@ -964,75 +1029,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // �� BAŞLANGIÇTA TÜM FORM PASİF YAP
-    function disableAllFormElements() {
-        console.log('🔒 Form başlangıçta pasif yapılıyor...');
-        
-        // Input'ları pasif yap
-        const allInputs = document.querySelectorAll('.data-input');
-        allInputs.forEach(input => {
-            input.disabled = true;
-            input.style.background = '#f5f5f5';
-            input.style.cursor = 'not-allowed';
-        });
-        
-        // Butonları pasif yap (AMA MOTOR ÇALIŞMIYOR BUTONUNU AKTİF TUT)
-        const buttons = [kaydetBtn, temizleBtn];
-        buttons.forEach(btn => {
-            if (btn) {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-                btn.style.cursor = 'not-allowed';
-            }
-        });
-        
-        // 🔥 MOTOR ÇALIŞMIYOR BUTONUNU HER ZAMAN AKTİF TUT
-        if (motorCalismiyorKaydetBtn) {
-            motorCalismiyorKaydetBtn.disabled = false;
-            motorCalismiyorKaydetBtn.style.opacity = '1';
-            motorCalismiyorKaydetBtn.style.cursor = 'pointer';
-        }
-        
-        // 🔥 MOTOR SEÇİM BUTONLARINI HER ZAMAN AKTIF TUT (BAŞLANGIÇTA DA)
-        motorButtons.forEach(btn => {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
-        });
-    }
-    
-    // 🔓 TÜM FORM ELEMANLARINI AKTİF YAP (kayıt yoksa)
-    function enableAllFormElements() {
-        console.log('🔓 Form aktif yapılıyor...');
-        
-        // Input'ları aktif yap
-        const allInputs = document.querySelectorAll('.data-input');
-        allInputs.forEach(input => {
-            input.disabled = false;
-            input.style.background = 'white';
-            input.style.cursor = 'text';
-        });
-        
-        // Butonları aktif yap
-        const buttons = [kaydetBtn, temizleBtn, motorCalismiyorKaydetBtn];
-        buttons.forEach(btn => {
-            if (btn) {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
-            }
-        });
-        
-        // Motor seçim butonlarını aktif yap
-        motorButtons.forEach(btn => {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
-        });
-        
-        showMessage('Yeni kayıt yapabilirsiniz.', 'success');
-    }
-    
     // 🔍 KAYIT KONTROLÜ SONRASI AÇ/KİLİTLE MANTIĞI
     async function checkAndUnlockOrLockForm() {
         if (!selectedMotor || !tarihSecimi?.value || !currentHourElement?.textContent) {
@@ -1296,43 +1292,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Tüm input'ları getir
-    function getAllInputValues() {
-        const inputs = {
-            jenYatakSicaklikDE: document.getElementById('jenYatakSicaklikDE').value,
-            jenYatakSicaklikNDE: document.getElementById('jenYatakSicaklikNDE').value,
-            sogutmaSuyuSicaklik: document.getElementById('sogutmaSuyuSicaklik').value,
-            sogutmaSuyuBasinc: document.getElementById('sogutmaSuyuBasinc').value,
-            yagSicaklik: document.getElementById('yagSicaklik').value,
-            yagBasinc: document.getElementById('yagBasinc').value,
-            sarjSicaklik: document.getElementById('sarjSicaklik').value,
-            sarjBasinc: document.getElementById('sarjBasinc').value,
-            gazRegulatoru: document.getElementById('gazRegulatoru').value,
-            makineDairesiSicaklik: document.getElementById('makineDairesiSicaklik').value,
-            karterBasinc: document.getElementById('karterBasinc').value,
-            onKamaraFarkBasinc: document.getElementById('onKamaraFarkBasinc').value,
-            sargiSicaklik1: document.getElementById('sargiSicaklik1').value,
-            sargiSicaklik2: document.getElementById('sargiSicaklik2').value,
-            sargiSicaklik3: document.getElementById('sargiSicaklik3').value
-        };
-        
-        return {
-            motor: selectedMotor,
-            tarih: tarihSecimi.value,
-            vardiya: vardiyaSecimi.value,
-            saat: currentHourElement.textContent,
-            veriler: inputs
-        };
-    }
-
     // Motor butonu event listener'ları - Async güncelleme
     motorButtons.forEach(button => {
         button.addEventListener('click', async function() {
-            // 🔥 DÜZENLEME MODUNDAN ÇIKIŞ
-            if (isEditMode) {
-                exitEditMode();
-            }
-            
             // Active class'ını kaldır
             motorButtons.forEach(btn => btn.classList.remove('active'));
             // Tıklanana active class'ını ekle
@@ -1381,12 +1343,6 @@ document.addEventListener('DOMContentLoaded', function() {
     kaydetBtn.addEventListener('click', async function() {
         if (isLocked) {
             showMessage('Bu kayıt zaten mevcut!', 'error');
-            return;
-        }
-        
-        // 🔥 DÜZENLEME MODU KONTROLÜ
-        if (isEditMode && editingRecordId) {
-            await updateExistingRecord();
             return;
         }
         
@@ -1668,11 +1624,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Eğer düzenleme modundaysa, düzenleme modundan çık
-        if (isEditMode) {
-            exitEditMode();
-            return;
-        }
         
         // Tüm input'ları temizle
         const allInputs = document.querySelectorAll('.data-input');

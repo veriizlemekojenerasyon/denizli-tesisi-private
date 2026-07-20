@@ -189,6 +189,7 @@
                                         <th>SARGI SIC. -2-</th>
                                         <th>SARGI SIC. -3-</th>
                                         <th>Durum</th>
+                                        <th>İşlemler</th>
                                     </tr>
                                 </thead>
                                 <tbody id="vardiyaTableBody">
@@ -376,7 +377,104 @@
         </div>
     </div>
 
+<!-- 🔥 DÜZENLEME MODALI -->
+<div id="editModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3>✏️ Kayıt Düzenle</h3>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
 
+        <div class="modal-body">
+            <div class="modal-info" style="background: #f5f5f5; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                <p><strong>Motor:</strong> <span id="editMotor"></span></p>
+                <p><strong>Tarih:</strong> <span id="editTarih"></span></p>
+                <p><strong>Vardiya:</strong> <span id="editVardiya"></span></p>
+                <p><strong>Saat:</strong> <span id="editSaat"></span></p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>JEN. YATAK SIC. (DE)</label>
+                    <input type="number" class="modal-input" id="editJenYatakSicaklikDE" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>JEN. YATAK SIC. (NDE)</label>
+                    <input type="number" class="modal-input" id="editJenYatakSicaklikNDE" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>SOĞUTMA SUYU SIC.</label>
+                    <input type="number" class="modal-input" id="editSogutmaSuyuSicaklik" step="0.1">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>SOĞUTMA SUYU BAS.</label>
+                    <input type="number" class="modal-input" id="editSogutmaSuyuBasinc" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>YAĞ SIC.</label>
+                    <input type="number" class="modal-input" id="editYagSicaklik" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>YAĞ BAS.</label>
+                    <input type="number" class="modal-input" id="editYagBasinc" step="0.1">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>ŞARJ SIC.</label>
+                    <input type="number" class="modal-input" id="editSarjSicaklik" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>ŞARJ BAS.</label>
+                    <input type="number" class="modal-input" id="editSarjBasinc" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>GAZ REG. (λ)</label>
+                    <input type="number" class="modal-input" id="editGazRegulatoru" step="0.01">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>MAKİNE DAİRESİ SIC.</label>
+                    <input type="number" class="modal-input" id="editMakineDairesiSicaklik" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>KARTER BAS.</label>
+                    <input type="number" class="modal-input" id="editKarterBasinc" step="0.01" min="-999">
+                </div>
+                <div class="form-group">
+                    <label>ÖN KAMARA FARK BAS.</label>
+                    <input type="number" class="modal-input" id="editOnKamaraFarkBasinc" step="0.01" min="-999">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>SARGI SIC. -1-</label>
+                    <input type="number" class="modal-input" id="editSargiSicaklik1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>SARGI SIC. -2-</label>
+                    <input type="number" class="modal-input" id="editSargiSicaklik2" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>SARGI SIC. -3-</label>
+                    <input type="number" class="modal-input" id="editSargiSicaklik3" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeEditModal()">İPTAL</button>
+            <button type="button" class="btn-primary" id="editModalKaydetBtn">💾 KAYDET</button>
+        </div>
+    </div>
+</div>
 
 <script src="js/global-duyurular.js"></script>
 

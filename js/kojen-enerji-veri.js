@@ -1,5 +1,141 @@
 // Kojen Enerji Veri JavaScript - Google Sheets Entegrasyonu
 
+// 🔥 DÜZENLEME MODAL FONKSİYONLARI
+let currentEditRecord = null;
+
+function openEditModal(record) {
+    currentEditRecord = record;
+    
+    // Modal bilgilerini doldur
+    document.getElementById('editMotor').textContent = record.motor;
+    document.getElementById('editTarih').textContent = record.tarih;
+    document.getElementById('editVardiya').textContent = record.vardiya;
+    document.getElementById('editSaat').textContent = record.saat;
+    
+    // Inputları mevcut değerlerle doldur
+    const inputMapping = {
+        'editL1L2AydemVoltaji': record.aydemVoltaji,
+        'editAktifGuc': record.aktifGuc,
+        'editReaktifGuc': record.reaktifGuc,
+        'editCosFi': record.cosPhi,
+        'editOrtAkim': record.ortAkim,
+        'editOrtGerilim': record.ortGerilim,
+        'editNotrAkim': record.notrAkim,
+        'editTahrikGerilimi': record.tahrikGerilimi,
+        'editToplamAktifEnerji': record.toplamAktifEnerji,
+        'editCalismaSaati': record.calismaSaati,
+        'editKalkisSayisi': record.kalkisSayisi
+    };
+    
+    Object.keys(inputMapping).forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input && inputMapping[inputId] !== undefined) {
+            let value = inputMapping[inputId];
+            if (typeof value === 'string' && value.includes(',')) {
+                value = value.replace(',', '.');
+            }
+            input.value = value;
+        }
+    });
+    
+    // Modal'ı göster
+    document.getElementById('editModal').style.display = 'block';
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    currentEditRecord = null;
+}
+
+async function saveEditModal() {
+    if (!currentEditRecord) return;
+    
+    // Elementlerin varlığını kontrol et
+    const getElementValue = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value : '';
+    };
+    
+    const newData = {
+        aydemVoltaji: getElementValue('editL1L2AydemVoltaji'),
+        aktifGuc: getElementValue('editAktifGuc'),
+        reaktifGuc: getElementValue('editReaktifGuc'),
+        cosPhi: getElementValue('editCosFi'),
+        ortAkim: getElementValue('editOrtAkim'),
+        ortGerilim: getElementValue('editOrtGerilim'),
+        notrAkim: getElementValue('editNotrAkim'),
+        tahrikGerilimi: getElementValue('editTahrikGerilimi'),
+        toplamAktifEnerji: getElementValue('editToplamAktifEnerji'),
+        calismaSaati: getElementValue('editCalismaSaati'),
+        kalkisSayisi: getElementValue('editKalkisSayisi')
+    };
+    
+    const kaydetBtn = document.getElementById('editModalKaydetBtn');
+    kaydetBtn.disabled = true;
+    kaydetBtn.textContent = 'KAYDEDİLİYOR...';
+    
+    try {
+        const updateData = {
+            ...newData,
+            motor: currentEditRecord.motor,
+            tarih: currentEditRecord.tarih,
+            vardiya: currentEditRecord.vardiya,
+            saat: currentEditRecord.saat,
+            kaydeden: getCurrentUserName()
+        };
+        
+        // Eski kaydı log'a kaydet
+        await logUpdate(currentEditRecord, newData);
+        
+        const result = await updateEnerjiRecord(updateData);
+        
+        if (result.success) {
+            showMessage(`${currentEditRecord.motor} motoru ${currentEditRecord.saat} kaydı başarıyla güncellendi!`, 'success');
+            
+            // Vardiya tablosunu yeniden yükle
+            await loadVardiyaData();
+            
+            // Modal'ı kapat
+            closeEditModal();
+        } else {
+            showMessage('Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
+        }
+    } catch (error) {
+        console.error('Güncelleme hatası:', error);
+        showMessage('Bağlantı hatası: ' + error.message, 'error');
+    } finally {
+        kaydetBtn.disabled = false;
+        kaydetBtn.textContent = '💾 KAYDET';
+    }
+}
+
+// 🔥 GÜNCELLEME LOG FONKSİYONU
+async function logUpdate(oldRecord, newRecord) {
+    try {
+        const logData = {
+            motor: oldRecord.motor,
+            tarih: oldRecord.tarih,
+            vardiya: oldRecord.vardiya,
+            saat: oldRecord.saat,
+            eskiKayit: oldRecord,
+            yeniKayit: newRecord,
+            guncelleyen: getCurrentUserName(),
+            guncellemeZamani: new Date().toISOString()
+        };
+        
+        // Google Sheets'e log kaydı gönder
+        await fetch('https://script.google.com/macros/s/AKfycbz-Ipx_lGRL4_OE7Z-phV6JkXzyykIokf9ifNltl14ERl2NzyKFfIYXcWmklFnJemCm/exec', {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'logEnerjiUpdate',
+                data: logData
+            })
+        });
+    } catch (error) {
+        console.error('Log kaydı hatası:', error);
+    }
+}
+
 // 🔥 OTOMATİK ENERJİ RAPORLAMA SİSTEMİ
 // Motor bazında saatlik enerji üretimini otomatik hesaplar ve kaydeder
 
@@ -558,8 +694,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     let selectedMotor = redirectMotor || 'GM-1'; // Yönlendirme varsa onu kullan, yoksa GM-1
     window.selectedMotor = selectedMotor;
     let isLocked = false;
-    let isEditMode = false; // Düzenleme modu
-    let editingRecordId = null; // Düzenlenen kayıt ID'si
     
     // Elementler
     const tarihSecimi = document.getElementById('tarihSecimi');
@@ -1044,12 +1178,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         if (Object.values(data).filter(v => !v).length > 0) { showMessage('Lütfen tüm alanları doldurun!', 'error'); return; }
         
-        // 🔥 DÜZENLEME MODU KONTROLÜ
-        if (isEditMode && editingRecordId) {
-            await updateExistingRecord();
-            return;
-        }
-        
         kaydetBtn.disabled = true; kaydetBtn.textContent = '💾 KAYDEDİLİYOR...';
         try {
             const result = await saveEnerjiToSheets({...data, motor: selectedMotor, tarih: tarihSecimi.value, vardiya: vardiyaSecimi.value, saat, kaydeden: getCurrentUserName(), durum: 'NORMAL'});
@@ -1125,12 +1253,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Temizle butonu
     temizleBtn?.addEventListener('click', () => {
         if (isLocked) { showMessage('Form kilitli!', 'error'); return; }
-        
-        // Eğer düzenleme modundaysa, düzenleme modundan çık
-        if (isEditMode) {
-            exitEditMode();
-            return;
-        }
         
         document.querySelectorAll('.kojen-input').forEach(input => { input.value = ''; input.style.background = 'white'; input.style.color = '#2c3e50'; });
         showMessage('Tüm veriler temizlendi!', 'info');
@@ -1309,156 +1431,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (saatAraligi && aralik) saatAraligi.textContent = `${aralik.baslangicSaat} - ${aralik.bitisSaat}`;
     }
 
-    // 🔥 KAYDI DÜZENLEME MODUNA ALMA FONKSİYONU
-    function loadRecordForEdit(record) {
-        isEditMode = true;
-        editingRecordId = record;
-        
-        // Formu kilitle
-        isLocked = false;
-        
-        // Motor seçim butonunu güncelle
-        motorButtons.forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.motor === record.motor) {
-                btn.classList.add('active');
-            }
-        });
-        selectedMotor = record.motor;
-        
-        // Tarih ve vardiya değerlerini güncelle
-        document.getElementById('tarihSecimi').value = record.tarih;
-        document.getElementById('vardiyaSecimi').value = record.vardiya;
-        
-        // 🔥 SAAT INPUT'UNU GÜNCELLE
-        const currentHourElement = document.querySelector('.kojen-enerji-table-body .sticky-col');
-        if (currentHourElement) {
-            currentHourElement.textContent = record.saat;
-        }
-        
-        // Inputları mevcut değerlerle doldur (virgül-nokta dönüşümü ile)
-        const inputs = document.querySelectorAll('.kojen-input');
-        const inputValues = [
-            record.aydemVoltaji,
-            record.aktifGuc,
-            record.reaktifGuc,
-            record.cosPhi,
-            record.ortAkim,
-            record.ortGerilim,
-            record.notrAkim,
-            record.tahrikGerilimi,
-            record.toplamAktifEnerji,
-            record.calismaSaati,
-            record.kalkisSayisi
-        ];
-        
-        inputs.forEach((input, index) => {
-            if (inputValues[index] !== undefined) {
-                // Virgülü noktaya çevir
-                let value = inputValues[index];
-                if (typeof value === 'string' && value.includes(',')) {
-                    value = value.replace(',', '.');
-                }
-                input.value = value;
-                input.style.background = '#fff9c4'; // Düzenleme modunda sarı arka plan
-            }
-        });
-        
-        // Kaydet butonunu güncelleme moduna al
-        const kaydetBtn = document.getElementById('kaydetBtn');
-        if (kaydetBtn) {
-            kaydetBtn.textContent = '✏️ GÜNCELLE';
-            kaydetBtn.style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
-        }
-        
-        showMessage(`${record.motor} motoru ${record.saat} kaydı düzenleme moduna alındı!`, 'info');
-        
-        // Formu aktif et
-        document.querySelectorAll('.kojen-input').forEach(input => {
-            input.disabled = false;
-        });
-    }
-
-    // 🔥 DÜZENLEME MODUNDAN ÇIKIŞ FONKSİYONU
-    function exitEditMode() {
-        isEditMode = false;
-        editingRecordId = null;
-        
-        // Inputları temizle ve arka planı sıfırla
-        document.querySelectorAll('.kojen-input').forEach(input => {
-            input.value = '';
-            input.style.background = 'white';
-        });
-        
-        // Kaydet butonunu normal moda al
-        const kaydetBtn = document.getElementById('kaydetBtn');
-        if (kaydetBtn) {
-            kaydetBtn.textContent = '💾 KAYDET';
-            kaydetBtn.style.background = '';
-        }
-        
-        showMessage('Düzenleme modundan çıkıldı!', 'info');
-    }
-
-    // 🔥 MEVCUT KAYDI GÜNCELLEME FONKSİYONU
-    async function updateExistingRecord() {
-        const data = getAllInputValues();
-        const motor = selectedMotor;
-        const tarih = document.getElementById('tarihSecimi').value;
-        const vardiya = document.getElementById('vardiyaSecimi').value;
-        
-        if (!motor || !tarih || !vardiya) {
-            showMessage('Lütfen motor, tarih ve vardiya seçin!', 'error');
-            return;
-        }
-        
-        // Tüm input'ların dolu olup olmadığını kontrol et
-        const allInputs = document.querySelectorAll('.kojen-input');
-        const emptyInputs = Array.from(allInputs).filter(input => !input.value);
-        
-        if (emptyInputs.length > 0) {
-            showMessage('Lütfen tüm veri alanlarını doldurun!', 'error');
-            return;
-        }
-        
-        kaydetBtn.disabled = true;
-        kaydetBtn.textContent = 'GÜNCELLENIYOR...';
-        
-        try {
-            // Kayıt güncelleme işlemi için Google Sheets API çağrısı
-            const updateData = {
-                ...data,
-                motor: motor,
-                tarih: tarih,
-                vardiya: vardiya,
-                saat: editingRecordId.saat,
-                kaydeden: getCurrentUserName()
-            };
-            
-            const result = await updateEnerjiRecord(updateData);
-            
-            if (result.success) {
-                showMessage(`${motor} motoru ${editingRecordId.saat} kaydı başarıyla güncellendi!`, 'success');
-                
-                // Cache'i güncelle
-                refreshCache();
-                
-                // Vardiya tablosunu yeniden yükle
-                await loadVardiyaData();
-                
-                // Düzenleme modundan çık
-                exitEditMode();
-            } else {
-                showMessage('Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
-            }
-        } catch (error) {
-            console.error('Güncelleme hatası:', error);
-            showMessage('Bağlantı hatası: ' + error.message, 'error');
-        } finally {
-            kaydetBtn.disabled = false;
-            kaydetBtn.textContent = '✏️ GÜNCELLE';
-        }
-    }
 
     async function loadVardiyaData() {
         const vardiya = vardiyaSecimi.value, tarih = tarihSecimi.value, motor = selectedMotor;
@@ -1522,13 +1494,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }
                 
-                row.innerHTML = `<td>${record.saat || '-'}</td><td>${record.motor || '-'}</td><td>${record.aydemVoltaji || '-'}</td><td>${record.aktifGuc || '-'}</td><td>${record.reaktifGuc || '-'}</td><td>${record.cosPhi || '-'}</td><td>${record.ortAkim || '-'}</td><td>${record.ortGerilim || '-'}</td><td>${record.notrAkim || '-'}</td><td>${record.tahrikGerilimi || '-'}</td><td>${toplamAktifEnerji}</td><td>${calismaSaati}</td><td>${kalkisSayisi}</td><td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td>`;
+                row.innerHTML = `<td>${record.saat || '-'}</td><td>${record.motor || '-'}</td><td>${record.aydemVoltaji || '-'}</td><td>${record.aktifGuc || '-'}</td><td>${record.reaktifGuc || '-'}</td><td>${record.cosPhi || '-'}</td><td>${record.ortAkim || '-'}</td><td>${record.ortGerilim || '-'}</td><td>${record.notrAkim || '-'}</td><td>${record.tahrikGerilimi || '-'}</td><td>${toplamAktifEnerji}</td><td>${calismaSaati}</td><td>${kalkisSayisi}</td><td class="${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'durum-calismiyor' : 'durum-normal'}">${record.durum === 'MOTOR ÇALIŞMIYOR' ? 'ÇALIŞMIYOR' : 'NORMAL'}</td><td><button class="edit-btn" data-record='${JSON.stringify(record)}' style="padding: 4px 8px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">✏️ Düzenle</button></td>`;
                 
-                // 🔥 SATIRA TIKLAMA OLAYI - DÜZENLEME MODU
-                row.style.cursor = 'pointer';
-                row.addEventListener('click', () => {
-                    loadRecordForEdit(record);
-                });
+                // 🔥 DÜZENLE BUTONU TIKLAMA OLAYI - MODAL AÇ
+                const editBtn = row.querySelector('.edit-btn');
+                if (editBtn) {
+                    editBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openEditModal(record);
+                    });
+                }
                 
                 tableBody.appendChild(row);
             });
@@ -1537,11 +1512,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function selectMotorButton(button, options = {}) {
         if (!button) return;
-        
-        // 🔥 DÜZENLEME MODUNDAN ÇIKIŞ
-        if (isEditMode) {
-            exitEditMode();
-        }
         
         motorButtons.forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
@@ -2055,6 +2025,12 @@ async function handleModalKaydetLegacyUnused() {
 
 // Event listener'ları ekle
 document.addEventListener('DOMContentLoaded', function() {
+    // 🔥 DÜZENLEME MODAL KAYDET BUTONU
+    const editModalKaydetBtn = document.getElementById('editModalKaydetBtn');
+    if (editModalKaydetBtn) {
+        editModalKaydetBtn.addEventListener('click', saveEditModal);
+    }
+    
     // Motor çalışmıyor butonuna modal açma事件 listener'ı ekle
     const motorCalismiyorKaydetBtn = document.getElementById('motorCalismiyorKaydetBtn');
     if (motorCalismiyorKaydetBtn) {
