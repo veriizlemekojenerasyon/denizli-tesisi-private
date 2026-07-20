@@ -1400,7 +1400,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const motorKayitVar = await checkExistingMotorRecord(motor, tarih, saat);
         
         if (motorKayitVar && motorKayitVar.exists) {
-            // Motor kaydı varsa, sonraki motora geç
+            // Motor kaydı varsa, sonraki motorun enerji sayfasına geç
             const motorOrder = ['GM-1', 'GM-2', 'GM-3'];
             const currentIndex = motorOrder.indexOf(motor);
             
@@ -1408,10 +1408,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const nextMotor = motorOrder[currentIndex + 1];
                 localStorage.setItem('redirectMotor', nextMotor);
                 localStorage.setItem('redirectFrom', 'enerji-veri');
-                showMessage(`${motor} motor kaydı zaten var. ${nextMotor} motoruna geçiliyor...`, 'info');
+                showMessage(`${motor} motor kaydı zaten var. ${nextMotor} enerji sayfasına geçiliyor...`, 'info');
                 window.location.href = 'kojen-enerji-veri.html';
             } else {
-                // Son motor ise motor sayfasına yönlendir
+                // Son motor ise aynı motorun motor sayfasına yönlendir
                 localStorage.setItem('redirectMotor', motor);
                 localStorage.setItem('redirectFrom', 'enerji-veri');
                 window.location.href = 'kojen-motor-veri.html';
