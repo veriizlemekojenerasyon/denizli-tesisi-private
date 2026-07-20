@@ -156,32 +156,10 @@ function parseDateTime(tarih, saat) {
     }
 }
 
-// ⚡ KAYIT KONTROLÜ - GLOBAL
+// ⚡ KAYIT KONTROLÜ - GLOBAL - DEVRE DIŞI
 async function checkExistingRecord(motor, tarih, saat) {
-    try {
-        // 🔥 ULTRA HIZLI KONTROL - Map'den ara (O(1) complexity)
-        const now = Date.now();
-        if (now - cacheTimestamp < CACHE_DURATION) {
-            const mapKey = `${motor}|${normalizeMotorDateForCache(tarih)}|${normalizeMotorSaatForCache(saat)}`;
-            const cached = recordMap.get(mapKey);
-            if (cached) {
-                console.log('⚡ Ultra hızlı Map hit!');
-                return cached;
-            }
-        }
-        
-        // Cache'de yoksa Google Sheets'den kontrol et
-        const result = await checkExistingMotorRecord(motor, tarih, saat);
-        if (result.success && result.exists) {
-            // Cache'e ve Map'e ekle
-            rememberMotorRecord(result.record);
-            return result.record;
-        }
-        return null;
-    } catch (error) {
-        console.error('Kayıt kontrolü hatası:', error);
-        return null;
-    }
+    // Cache devre dışı - her zaman null döndür
+    return null;
 }
 
 // � GLOBAL loadVardiyaData FONKSİYONU
@@ -1217,17 +1195,17 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('🔥 Hızlı kayıt kontrolü yapılıyor:', { motor: selectedMotor, tarih: tarihSecimi.value, saat: currentHourElement.textContent });
 
         try {
-            // ⚡ Önce cache'den kontrol et
+            // ⚡ Önce cache'den kontrol et (devre dışı)
             const existingRecord = await checkExistingRecord(selectedMotor, tarihSecimi.value, currentHourElement.textContent);
 
             if (existingRecord) {
-                console.log('🔥 Cache hit - Kayıt bulundu, form kilitleniyor:', existingRecord);
+                console.log('🔥 Kayıt bulundu, form kilitleniyor:', existingRecord);
                 lockForm(false);
                 loadExistingRecord(existingRecord);
                 return;
             }
 
-            console.log('🔥 Cache miss - Form açılıyor');
+            console.log('🔥 Kayıt bulunamadı, form açılıyor');
             unlockForm();
         } catch (error) {
             console.error('Form durumu güncelleme hatası:', error);
