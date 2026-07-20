@@ -534,6 +534,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Önce kimlik dogrulama kontrolü
     checkAuth();
     
+    // 🔥 MOTOR VERİ SAYFASINDAN GELEN YÖNLENDİRME KONTROLÜ
+    const redirectMotor = localStorage.getItem('redirectMotor');
+    const redirectFrom = localStorage.getItem('redirectFrom');
+    
+    if (redirectFrom === 'motor-veri' && redirectMotor) {
+        console.log(`🔥 Motor veri sayfasından yönlendirme: ${redirectMotor}`);
+        // Motor seçimi daha sonra yapılacak, localStorage'dan temizle
+        localStorage.removeItem('redirectMotor');
+        localStorage.removeItem('redirectFrom');
+    }
+    
     // ⏰ Otomatik yönlendirme kontrolünü başlat (her dakika kontrol et)
     checkAutoRedirect();
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
@@ -544,7 +555,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Motor seçim butonları
     const motorButtons = document.querySelectorAll('.motor-btn');
-    let selectedMotor = 'GM-1';
+    let selectedMotor = redirectMotor || 'GM-1'; // Yönlendirme varsa onu kullan, yoksa GM-1
     window.selectedMotor = selectedMotor;
     let isLocked = false;
     
@@ -1408,6 +1419,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentHourElement) currentHourElement.textContent = `${String(hour).padStart(2,'0')}:00`;
         updateGunSonuEnerjiMeta();
         guncelleVardiyaBilgisi();
+        
+        // 🔥 YÖNLENDİRİLEN MOTORU OTOMATİK SEÇ
+        if (redirectMotor) {
+            const targetButton = document.querySelector(`[data-motor="${redirectMotor}"]`);
+            if (targetButton) {
+                await selectMotorButton(targetButton);
+                showMessage(`${redirectMotor} motoru için enerji verileri sayfasına yönlendirildiniz!`, 'info');
+            }
+        }
+        
         await loadVardiyaData();
         await checkAndUpdateFormStatus();
     }
