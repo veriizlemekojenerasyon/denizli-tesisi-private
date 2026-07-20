@@ -204,65 +204,45 @@ function normalizeMotorSaatForCache(value) {
 }
 
 function getCachedMotorRecord(motor, tarih, saat) {
-    const mapKey = `${motor}|${normalizeMotorDateForCache(tarih)}|${normalizeMotorSaatForCache(saat)}`;
-    return recordMap.get(mapKey) || null;
+    // Cache devre dışı - her zaman null döndür
+    return null;
 }
 
 function rememberMotorRecord(record) {
-    if (!record) return;
-
-    const normalizedRecord = {
-        ...record,
-        motor: record.motor || selectedMotor,
-        tarih: normalizeMotorDateForCache(record.tarih),
-        saat: normalizeMotorSaatForCache(record.saat)
-    };
-    const mapKey = `${normalizedRecord.motor}|${normalizedRecord.tarih}|${normalizedRecord.saat}`;
-    const existingIndex = cachedRecords.findIndex(item =>
-        `${item.motor}|${normalizeMotorDateForCache(item.tarih)}|${normalizeMotorSaatForCache(item.saat)}` === mapKey
-    );
-
-    if (existingIndex >= 0) {
-        cachedRecords[existingIndex] = normalizedRecord;
-    } else {
-        cachedRecords.unshift(normalizedRecord);
-    }
-
-    recordMap.set(mapKey, normalizedRecord);
-    cacheTimestamp = Date.now();
+    // Cache devre dışı - hiçbir şey yapma
+    return;
 }
 
-// 🔥 CACHE YENİLEME FONKSİYONU (GLOBAL)
+// 🔥 CACHE YENİLEME FONKSİYONU (GLOBAL) - DEVRE DIŞI
 async function refreshCache() {
-    try {
-        const result = await getLastMotorRecords(150);
-        if (result.success) {
-            cachedRecords = result.data || [];
-            recordMap.clear();
-            
-            cachedRecords.forEach(record => {
-                const mapKey = `${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`;
-                recordMap.set(mapKey, record);
-            });
-            
-            cacheTimestamp = Date.now();
-            console.log('⚡ Ultra hızlı cache yenilendi:', cachedRecords.length, 'kayıt, Map size:', recordMap.size);
-            
-            startBackgroundRefresh();
-        }
-    } catch (error) {
-        console.error('Cache yenileme hatası:', error);
-    }
+    // Cache devre dışı - hiçbir şey yapma
+    return;
 }
 
-// 🔥 BACKGROUND CACHE YENİLEME FONKSİYONU (GLOBAL)
+// 🔥 BACKGROUND CACHE YENİLEME FONKSİYONU (GLOBAL) - DEVRE DIŞI
+let cacheRefreshTimer = null;
+
 function startBackgroundRefresh() {
-    if (cacheRefreshTimer) {
-        clearTimeout(cacheRefreshTimer);
-    }
-    cacheRefreshTimer = setTimeout(() => {
-        refreshCache();
-    }, 60000); // 60 saniyede bir yenile
+    // Cache devre dışı - hiçbir şey yapma
+    return;
+}
+
+// 🔥 TÜM INPUT DEĞERLERİNİ GETİR FONKSİYONU
+function getAllInputValues() {
+    const inputs = document.querySelectorAll('.data-input');
+    const values = {};
+    
+    inputs.forEach(input => {
+        values[input.id] = input.value;
+    });
+    
+    return {
+        motor: selectedMotor,
+        tarih: document.getElementById('tarihSecimi').value,
+        vardiya: document.getElementById('vardiyaSecimi').value,
+        saat: document.querySelector('.sticky-col')?.textContent || '',
+        veriler: values
+    };
 }
 
 // 🔥 DÜZENLEME MODAL FONKSİYONLARI
@@ -914,8 +894,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // �🔒 BAŞLANGIÇTA TÜM FORM PASİF YAP
     disableAllFormElements();
     
-    // ⚡ CACHE BAŞLAT
-    setTimeout(() => refreshCache(), 100);
+    // ⚡ CACHE BAŞLAT - DEVRE DIŞI
+    // setTimeout(() => refreshCache(), 100);
 
     // 🔍 1 SN SONRA KAYIT KONTROLÜ VE AÇ/KİLİTLE
     setTimeout(async () => {
@@ -1445,10 +1425,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 kaydetTimerStatus = 'basarili';
                 console.log('Google Sheets kaydı:', result);
-                rememberMotorRecord(result.record || sheetsData);
                 
-                // Kayıt tamamlandıktan sonra kullanıcıyı bekletmeden arka planda yenile.
-                setTimeout(() => refreshCache(), 800);
+                // Sadece Google Sheets'ten dönen gerçek kaydı cache'e ekle
+                if (result.record) {
+                    rememberMotorRecord(result.record);
+                }
+                
+                // Cache devre dışı - refresh çağrısı kaldırıldı
                 
                 // Pozitif değer kaydetme kontrolü
                 const pozitifMesajlar = [];
@@ -1685,8 +1668,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Motor çalışmıyor kaydı:', result);
                 rememberMotorRecord(result.record || sheetsData);
                 
-                // Kayıt tamamlandıktan sonra kullanıcıyı bekletmeden arka planda yenile.
-                setTimeout(() => refreshCache(), 800);
+                // Cache devre dışı - refresh çağrısı kaldırıldı
                 
                 showMessage(`${data.motor} motoru için "ÇALIŞMIYOR" durumu kaydedildi!`, 'warning');
                 

@@ -710,91 +710,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     const sidebarLogout = document.getElementById('sidebarLogout');
     const headerLogout = document.getElementById('headerLogout');
 
-    // ⚡ Cache'i yenile - Optimize edilmiş
+    // ⚡ Cache'i yenile - DEVRE DIŞI
     async function refreshCache() {
-        try {
-            const result = await getLastEnerjiRecords(150);
-            if (result.success) {
-                cachedRecords = result.data;
-                recordMap.clear();
-                
-                result.data.forEach(record => {
-                    const mapKey = `${record.motor}|${record.tarih}|${record.saat}`;
-                    recordMap.set(mapKey, record);
-                });
-                
-                cacheTimestamp = Date.now();
-                console.log('⚡ Kojen Enerji cache yenilendi:', cachedRecords.length, 'kayıt');
-                startBackgroundRefresh();
-            }
-        } catch (error) {
-            console.error('Cache yenileme hatası:', error);
-        }
+        // Cache devre dışı - hiçbir şey yapma
+        return;
     }
     
-    // ⚡ Background cache yenileme
+    // ⚡ Background cache yenileme - DEVRE DIŞI
     function startBackgroundRefresh() {
-        if (cacheRefreshTimer) clearInterval(cacheRefreshTimer);
-        cacheRefreshTimer = setInterval(async () => {
-            try {
-                const result = await getLastEnerjiRecords(150);
-                if (result.success) {
-                    cachedRecords = result.data;
-                    recordMap.clear();
-                    result.data.forEach(record => {
-                        const mapKey = `${record.motor}|${record.tarih}|${record.saat}`;
-                        recordMap.set(mapKey, record);
-                    });
-                    cacheTimestamp = Date.now();
-                }
-            } catch (error) {
-                console.error('Background cache hatası:', error);
-            }
-        }, 240000); // 4 dakika
+        // Cache devre dışı - hiçbir şey yapma
+        return;
     }
     
-    // ⚡ ULTRA HIZLI çift kayıt kontrolü - Map tabanlı
+    // ⚡ ULTRA HIZLI çift kayıt kontrolü - DEVRE DIŞI
     async function checkExistingRecord(motor, tarih, saat) {
-        try {
-            const now = Date.now();
-            if (now - cacheTimestamp < CACHE_DURATION) {
-                const mapKey = `${motor}|${tarih}|${saat}`;
-                const cached = recordMap.get(mapKey);
-                if (cached) {
-                    console.log('⚡ Enerji cache hit!');
-                    return cached;
-                }
-            }
-            
-            const result = await checkExistingEnerjiRecord(motor, tarih, saat);
-            if (result.success && result.exists) {
-                cachedRecords.push(result.record);
-                const mapKey = `${result.record.motor}|${result.record.tarih}|${result.record.saat}`;
-                recordMap.set(mapKey, result.record);
-                return result.record;
-            }
-            return null;
-        } catch (error) {
-            console.error('Kayıt kontrolü hatası:', error);
-            return null;
-        }
+        // Cache devre dışı - her zaman null döndür
+        return null;
     }
     
     // 🔒 BAŞLANGIÇTA TÜM FORM PASİF
     function rememberEnerjiRecord(record) {
-        if (!record || !record.motor || !record.tarih || !record.saat) return;
-        const mapKey = `${record.motor}|${record.tarih}|${record.saat}`;
-        recordMap.set(mapKey, record);
-        cachedRecords = [record].concat(cachedRecords.filter(item =>
-            `${item.motor}|${item.tarih}|${item.saat}` !== mapKey
-        )).slice(0, 150);
-        cacheTimestamp = Date.now();
+        // Cache devre dışı - hiçbir şey yapma
+        return;
     }
 
     disableAllFormElements();
     
-    // ⚡ CACHE BAŞLAT
-    setTimeout(() => refreshCache(), 100);
+    // ⚡ CACHE BAŞLAT - DEVRE DIŞI
+    // setTimeout(() => refreshCache(), 100);
     
     // 🔍 1 SN SONRA KAYIT KONTROLÜ VE AÇ/KİLİTLE
     setTimeout(async () => {
@@ -1182,16 +1125,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             const result = await saveEnerjiToSheets({...data, motor: selectedMotor, tarih: tarihSecimi.value, vardiya: vardiyaSecimi.value, saat, kaydeden: getCurrentUserName(), durum: 'NORMAL'});
             if (result.success) {
-                // Kayıt tamamlandıktan sonra kullanıcıyı bekletmeden arka planda yenile.
-                rememberEnerjiRecord(result.record || {
-                    ...data,
-                    motor: selectedMotor,
-                    tarih: tarihSecimi.value,
-                    vardiya: vardiyaSecimi.value,
-                    saat,
-                    kaydeden: getCurrentUserName(),
-                    durum: 'NORMAL'
-                });
+                // Sadece Google Sheets'ten dönen gerçek kaydı cache'e ekle
+                if (result.record) {
+                    rememberEnerjiRecord(result.record);
+                }
                 /*
                 rememberEnerjiRecord(result.record || {
                     motor: selectedMotor,
