@@ -1335,8 +1335,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 lockForm(false);
                 
                 // 🔥 OTOMATİK ENERJİ VERİ SAYFASINA YÖNLENDİRME
-                setTimeout(() => {
-                    redirectToEnerjiVeri(data.motor);
+                setTimeout(async () => {
+                    await redirectToEnerjiVeri(data.motor);
                 }, 500);
             } else {
                 kaydetTimerStatus = `hata: ${result.error || 'Bilinmeyen hata'}`;
@@ -1567,8 +1567,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 lockForm(false);
                 
                 // 🔥 OTOMATİK ENERJİ VERİ SAYFASINA YÖNLENDİRME
-                setTimeout(() => {
-                    redirectToEnerjiVeri(data.motor);
+                setTimeout(async () => {
+                    await redirectToEnerjiVeri(data.motor);
                 }, 500);
             } else {
                 kaydetTimerStatus = `hata: ${result.error || 'Bilinmeyen hata'}`;
