@@ -493,3 +493,61 @@ window.getAllEnerjiRecords = getAllEnerjiRecords;
 window.addMultipleEnerjiRecords = addMultipleEnerjiRecords;
 window.sendKojenEnerjiEmailAlert = sendKojenEnerjiEmailAlert;
 window.runKojenEnerjiHourlyMissingRecordCheck = runKojenEnerjiHourlyMissingRecordCheck;
+
+/**
+ * Enerji kaydını güncelle
+ * @param {Object} data - Güncellenecek enerji verileri
+ * @returns {Promise<Object>} - Güncelleme sonucu
+ */
+async function updateEnerjiRecord(data) {
+    try {
+        const url = KojenEnerjiSheetsConfig.WEB_APP_URL;
+        
+        // Tarih formatını düzelt (dd.MM.yyyy -> yyyy-MM-dd)
+        let formattedTarih = data.tarih;
+        if (formattedTarih && formattedTarih.includes('.')) {
+            const parts = formattedTarih.split('.');
+            formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        
+        // Parametreleri hazırla
+        const params = new URLSearchParams({
+            action: 'updateRecord',
+            tarih: formattedTarih,
+            saat: data.saat || '',
+            motor: data.motor || '',
+            aydemVoltaji: data.aydemVoltaji || '0',
+            aktifGuc: data.aktifGuc || '0',
+            reaktifGuc: data.reaktifGuc || '0',
+            cosPhi: data.cosPhi || '0',
+            ortAkim: data.ortAkim || '0',
+            ortGerilim: data.ortGerilim || '0',
+            notrAkim: data.notrAkim || '0',
+            tahrikGerilimi: data.tahrikGerilimi || '0',
+            toplamAktifEnerji: data.toplamAktifEnerji || '0',
+            calismaSaati: data.calismaSaati || '0',
+            kalkisSayisi: data.kalkisSayisi || '0',
+            durum: data.durum || 'NORMAL',
+            duzenlemeNotu: data.duzenlemeNotu || '',
+            duzenleyen: data.duzenleyen || 'Admin',
+            duzenlemeTarihi: data.duzenlemeTarihi || new Date().toISOString()
+        });
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: params
+        });
+        
+        const result = await response.json();
+        return result;
+        
+    } catch (error) {
+        console.error('Kayıt güncelleme hatası:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+window.updateEnerjiRecord = updateEnerjiRecord;
