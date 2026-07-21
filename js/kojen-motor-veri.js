@@ -156,26 +156,10 @@ function parseDateTime(tarih, saat) {
     }
 }
 
-<<<<<<< HEAD
 // ⚡ KAYIT KONTROLÜ - GLOBAL - DEVRE DIŞI
 async function checkExistingRecord(motor, tarih, saat) {
     // Cache devre dışı - her zaman null döndür
     return null;
-=======
-// ⚡ KAYIT KONTROLÜ - GLOBAL (Sadece Google Sheets)
-async function checkExistingRecord(motor, tarih, saat) {
-    try {
-        // Sadece Google Sheets'den kontrol et
-        const result = await checkExistingMotorRecord(motor, tarih, saat);
-        if (result.success && result.exists) {
-            return result.record;
-        }
-        return null;
-    } catch (error) {
-        console.error('Kayıt kontrolü hatası:', error);
-        return null;
-    }
->>>>>>> e5ec952 (Güncelleme)
 }
 
 // � GLOBAL loadVardiyaData FONKSİYONU
@@ -207,7 +191,6 @@ function rememberMotorRecord(record) {
     return;
 }
 
-<<<<<<< HEAD
 // 🔥 CACHE YENİLEME FONKSİYONU (GLOBAL) - DEVRE DIŞI
 async function refreshCache() {
     // Cache devre dışı - hiçbir şey yapma
@@ -220,45 +203,6 @@ let cacheRefreshTimer = null;
 function startBackgroundRefresh() {
     // Cache devre dışı - hiçbir şey yapma
     return;
-=======
-// 🔥 CACHE YENİLEME FONKSİYONU (GLOBAL)
-async function refreshCache() {
-    try {
-        const result = await getLastMotorRecords(150);
-        if (result.success) {
-            cachedRecords = result.data || [];
-            recordMap.clear(); // Map'i temizle
-            
-            // 🔥 Map'i hızlıca doldur
-            cachedRecords.forEach(record => {
-                const mapKey = `${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`;
-                recordMap.set(mapKey, record);
-            });
-            
-            cacheTimestamp = Date.now();
-            console.log('⚡ Ultra hızlı cache yenilendi:', cachedRecords.length, 'kayıt, Map size:', recordMap.size);
-            
-            // ⚡ Background timer'ı başlat
-            startBackgroundRefresh();
-        }
-    } catch (error) {
-        console.error('Cache yenileme hatası:', error);
-    }
-}
-
-// 🔥 BACKGROUND CACHE YENİLEME FONKSİYONU (GLOBAL)
-let cacheRefreshTimer = null;
-
-function startBackgroundRefresh() {
-    if (cacheRefreshTimer) {
-        clearTimeout(cacheRefreshTimer);
-    }
-    
-    // Her 5 dakikada bir cache'i sessizce yenile
-    cacheRefreshTimer = setTimeout(() => {
-        refreshCache();
-    }, 5 * 60 * 1000);
->>>>>>> e5ec952 (Güncelleme)
 }
 
 // 🔥 TÜM INPUT DEĞERLERİNİ GETİR FONKSİYONU
@@ -270,26 +214,6 @@ function getAllInputValues() {
         values[input.id] = input.value;
     });
     
-<<<<<<< HEAD
-    // Saat değerini tablodaki aktif satırdan al
-    let saat = '';
-    const activeRow = document.querySelector('tr.active');
-    if (activeRow) {
-        const firstCell = activeRow.querySelector('td:first-child');
-        if (firstCell) {
-            saat = firstCell.textContent.trim();
-        }
-    }
-    
-    // Eğer aktif satırdan alınamazsa, sticky-col'den al
-    if (!saat) {
-        const currentHourElement = document.querySelector('.sticky-col.active') || document.querySelector('.sticky-col');
-        saat = currentHourElement?.textContent?.trim() || '';
-    }
-    
-    return {
-        motor: window.selectedMotor,
-=======
     // Saat değerini doğrudan currentHour elementinden al
     let saat = '';
     const currentHourElement = document.getElementById('currentHour');
@@ -305,7 +229,6 @@ function getAllInputValues() {
     
     return {
         motor: selectedMotor,
->>>>>>> e5ec952 (Güncelleme)
         tarih: document.getElementById('tarihSecimi').value,
         vardiya: document.getElementById('vardiyaSecimi').value,
         saat: saat,
@@ -320,30 +243,6 @@ function openEditModal(record) {
     currentEditRecord = record;
     
     // Modal bilgilerini doldur
-<<<<<<< HEAD
-    document.getElementById('editMotor').textContent = record.motor;
-    document.getElementById('editTarih').textContent = record.tarih;
-    document.getElementById('editVardiya').textContent = record.vardiya;
-    document.getElementById('editSaat').textContent = record.saat;
-    
-    // Inputları mevcut değerlerle doldur
-    const inputMapping = {
-        'editJenYatakSicaklikDE': record.jenYatakSicaklikDE,
-        'editJenYatakSicaklikNDE': record.jenYatakSicaklikNDE,
-        'editSogutmaSuyuSicaklik': record.sogutmaSuyuSicaklik,
-        'editSogutmaSuyuBasinc': record.sogutmaSuyuBasinc,
-        'editYagSicaklik': record.yagSicaklik,
-        'editYagBasinc': record.yagBasinc,
-        'editSarjSicaklik': record.sarjSicaklik,
-        'editSarjBasinc': record.sarjBasinc,
-        'editGazRegulatoru': record.gazRegulatoru,
-        'editMakineDairesiSicaklik': record.makineDairesiSicaklik,
-        'editKarterBasinc': record.karterBasinc,
-        'editOnKamaraFarkBasinc': record.onKamaraFarkBasinc,
-        'editSargiSicaklik1': record.sargiSicaklik1,
-        'editSargiSicaklik2': record.sargiSicaklik2,
-        'editSargiSicaklik3': record.sargiSicaklik3
-=======
     document.getElementById('duzenleMotor').value = record.motor;
     document.getElementById('duzenleTarih').value = record.tarih;
     document.getElementById('duzenleSaat').value = record.saat;
@@ -365,7 +264,6 @@ function openEditModal(record) {
         'duzenleSargiSicaklik1': record.sargiSicaklik1,
         'duzenleSargiSicaklik2': record.sargiSicaklik2,
         'duzenleSargiSicaklik3': record.sargiSicaklik3
->>>>>>> e5ec952 (Güncelleme)
     };
     
     Object.keys(inputMapping).forEach(inputId => {
@@ -379,41 +277,6 @@ function openEditModal(record) {
         }
     });
     
-<<<<<<< HEAD
-    // Modal'ı göster
-    document.getElementById('editModal').style.display = 'block';
-}
-
-function closeEditModal() {
-    document.getElementById('editModal').style.display = 'none';
-    currentEditRecord = null;
-}
-
-async function saveEditModal() {
-    if (!currentEditRecord) return;
-    
-    const newData = {
-        jenYatakSicaklikDE: document.getElementById('editJenYatakSicaklikDE').value,
-        jenYatakSicaklikNDE: document.getElementById('editJenYatakSicaklikNDE').value,
-        sogutmaSuyuSicaklik: document.getElementById('editSogutmaSuyuSicaklik').value,
-        sogutmaSuyuBasinc: document.getElementById('editSogutmaSuyuBasinc').value,
-        yagSicaklik: document.getElementById('editYagSicaklik').value,
-        yagBasinc: document.getElementById('editYagBasinc').value,
-        sarjSicaklik: document.getElementById('editSarjSicaklik').value,
-        sarjBasinc: document.getElementById('editSarjBasinc').value,
-        gazRegulatoru: document.getElementById('editGazRegulatoru').value,
-        makineDairesiSicaklik: document.getElementById('editMakineDairesiSicaklik').value,
-        karterBasinc: document.getElementById('editKarterBasinc').value,
-        onKamaraFarkBasinc: document.getElementById('editOnKamaraFarkBasinc').value,
-        sargiSicaklik1: document.getElementById('editSargiSicaklik1').value,
-        sargiSicaklik2: document.getElementById('editSargiSicaklik2').value,
-        sargiSicaklik3: document.getElementById('editSargiSicaklik3').value
-    };
-    
-    const kaydetBtn = document.getElementById('editModalKaydetBtn');
-    kaydetBtn.disabled = true;
-    kaydetBtn.textContent = 'KAYDEDİLİYOR...';
-=======
     // Durum seçeneğini ayarla
     const durumSelect = document.getElementById('duzenleDurum');
     if (durumSelect) {
@@ -456,7 +319,6 @@ async function handleDuzenleKaydet() {
         kaydetBtn.disabled = true;
         kaydetBtn.textContent = 'KAYDEDİLİYOR...';
     }
->>>>>>> e5ec952 (Güncelleme)
     
     try {
         const updateData = {
@@ -480,11 +342,7 @@ async function handleDuzenleKaydet() {
             await loadVardiyaData();
             
             // Modal'ı kapat
-<<<<<<< HEAD
-            closeEditModal();
-=======
             closeDuzenleModal();
->>>>>>> e5ec952 (Güncelleme)
         } else {
             showMessage('Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
         }
@@ -492,15 +350,10 @@ async function handleDuzenleKaydet() {
         console.error('Güncelleme hatası:', error);
         showMessage('Bağlantı hatası: ' + error.message, 'error');
     } finally {
-<<<<<<< HEAD
-        kaydetBtn.disabled = false;
-        kaydetBtn.textContent = '💾 KAYDET';
-=======
         if (kaydetBtn) {
             kaydetBtn.disabled = false;
             kaydetBtn.textContent = '💾 KAYDET';
         }
->>>>>>> e5ec952 (Güncelleme)
     }
 }
 
@@ -939,7 +792,7 @@ function checkAuth() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Önce kimlik dogrulama kontrolü
     checkAuth();
     
@@ -1532,10 +1385,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let kaydetTimerStatus = 'tamamlandi';
 
         try {
-<<<<<<< HEAD
             // 🔒 ÇİFT KAYIT KONTROLÜ - Cache devre dışı, sadece canlı kontrol
-=======
->>>>>>> e5ec952 (Güncelleme)
             kaydetBtn.disabled = true;
             kaydetBtn.textContent = 'KONTROL EDILIYOR...';
 
@@ -1582,14 +1432,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 kaydetTimerStatus = 'basarili';
                 console.log('Google Sheets kaydı:', result);
-<<<<<<< HEAD
-=======
-                
-                // Sadece Google Sheets'ten dönen gerçek kaydı cache'e ekle
-                if (result.record) {
-                    rememberMotorRecord(result.record);
-                }
->>>>>>> e5ec952 (Güncelleme)
                 
                 // Sadece Google Sheets'ten dönen gerçek kaydı cache'e ekle
                 if (result.record) {
@@ -1803,10 +1645,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let kaydetTimerStatus = 'tamamlandi';
 
         try {
-<<<<<<< HEAD
             // 🔒 ÇİFT KAYIT KONTROLÜ - Cache devre dışı, sadece canlı kontrol
-=======
->>>>>>> e5ec952 (Güncelleme)
             // Butonu devre dışı bırak
             motorCalismiyorKaydetBtn.disabled = true;
             motorCalismiyorKaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
@@ -1876,6 +1715,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Otomatik ayarları yap
     async function otomatikAyarlar() {
+        // Elementleri seç
+        const tarihSecimi = document.getElementById('tarihSecimi');
+        const vardiyaSecimi = document.getElementById('vardiyaSecimi');
+        
+        if (!tarihSecimi || !vardiyaSecimi) {
+            console.error('Elementler bulunamadı');
+            return;
+        }
+        
         // Bugünün tarihini ayarla (TR formatı)
         const today = new Date();
         const year = today.getFullYear();
@@ -2123,7 +1971,7 @@ document.addEventListener('DOMContentLoaded', function() {
     guncelleVardiyaBilgisi();
     
     // Sayfa yüklendiğinde otomatik ayarları yap
-    otomatikAyarlar();
+    await otomatikAyarlar();
     startMissingMotorMailCheck();
 
     // Her 5 saniyede bir saati güncelle (tablet performansı için 1s'den 5s'e çıkarıldı)
