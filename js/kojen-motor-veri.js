@@ -156,10 +156,26 @@ function parseDateTime(tarih, saat) {
     }
 }
 
+<<<<<<< HEAD
 // ⚡ KAYIT KONTROLÜ - GLOBAL - DEVRE DIŞI
 async function checkExistingRecord(motor, tarih, saat) {
     // Cache devre dışı - her zaman null döndür
     return null;
+=======
+// ⚡ KAYIT KONTROLÜ - GLOBAL (Sadece Google Sheets)
+async function checkExistingRecord(motor, tarih, saat) {
+    try {
+        // Sadece Google Sheets'den kontrol et
+        const result = await checkExistingMotorRecord(motor, tarih, saat);
+        if (result.success && result.exists) {
+            return result.record;
+        }
+        return null;
+    } catch (error) {
+        console.error('Kayıt kontrolü hatası:', error);
+        return null;
+    }
+>>>>>>> e5ec952 (Güncelleme)
 }
 
 // � GLOBAL loadVardiyaData FONKSİYONU
@@ -191,6 +207,7 @@ function rememberMotorRecord(record) {
     return;
 }
 
+<<<<<<< HEAD
 // 🔥 CACHE YENİLEME FONKSİYONU (GLOBAL) - DEVRE DIŞI
 async function refreshCache() {
     // Cache devre dışı - hiçbir şey yapma
@@ -203,6 +220,45 @@ let cacheRefreshTimer = null;
 function startBackgroundRefresh() {
     // Cache devre dışı - hiçbir şey yapma
     return;
+=======
+// 🔥 CACHE YENİLEME FONKSİYONU (GLOBAL)
+async function refreshCache() {
+    try {
+        const result = await getLastMotorRecords(150);
+        if (result.success) {
+            cachedRecords = result.data || [];
+            recordMap.clear(); // Map'i temizle
+            
+            // 🔥 Map'i hızlıca doldur
+            cachedRecords.forEach(record => {
+                const mapKey = `${record.motor}|${normalizeMotorDateForCache(record.tarih)}|${normalizeMotorSaatForCache(record.saat)}`;
+                recordMap.set(mapKey, record);
+            });
+            
+            cacheTimestamp = Date.now();
+            console.log('⚡ Ultra hızlı cache yenilendi:', cachedRecords.length, 'kayıt, Map size:', recordMap.size);
+            
+            // ⚡ Background timer'ı başlat
+            startBackgroundRefresh();
+        }
+    } catch (error) {
+        console.error('Cache yenileme hatası:', error);
+    }
+}
+
+// 🔥 BACKGROUND CACHE YENİLEME FONKSİYONU (GLOBAL)
+let cacheRefreshTimer = null;
+
+function startBackgroundRefresh() {
+    if (cacheRefreshTimer) {
+        clearTimeout(cacheRefreshTimer);
+    }
+    
+    // Her 5 dakikada bir cache'i sessizce yenile
+    cacheRefreshTimer = setTimeout(() => {
+        refreshCache();
+    }, 5 * 60 * 1000);
+>>>>>>> e5ec952 (Güncelleme)
 }
 
 // 🔥 TÜM INPUT DEĞERLERİNİ GETİR FONKSİYONU
@@ -214,6 +270,7 @@ function getAllInputValues() {
         values[input.id] = input.value;
     });
     
+<<<<<<< HEAD
     // Saat değerini tablodaki aktif satırdan al
     let saat = '';
     const activeRow = document.querySelector('tr.active');
@@ -232,6 +289,23 @@ function getAllInputValues() {
     
     return {
         motor: window.selectedMotor,
+=======
+    // Saat değerini doğrudan currentHour elementinden al
+    let saat = '';
+    const currentHourElement = document.getElementById('currentHour');
+    if (currentHourElement) {
+        saat = currentHourElement.textContent.trim();
+    }
+    
+    // Eğer currentHour'dan alınamazsa, sticky-col'den al
+    if (!saat) {
+        const stickyColElement = document.querySelector('.sticky-col');
+        saat = stickyColElement?.textContent?.trim() || '';
+    }
+    
+    return {
+        motor: selectedMotor,
+>>>>>>> e5ec952 (Güncelleme)
         tarih: document.getElementById('tarihSecimi').value,
         vardiya: document.getElementById('vardiyaSecimi').value,
         saat: saat,
@@ -246,6 +320,7 @@ function openEditModal(record) {
     currentEditRecord = record;
     
     // Modal bilgilerini doldur
+<<<<<<< HEAD
     document.getElementById('editMotor').textContent = record.motor;
     document.getElementById('editTarih').textContent = record.tarih;
     document.getElementById('editVardiya').textContent = record.vardiya;
@@ -268,6 +343,29 @@ function openEditModal(record) {
         'editSargiSicaklik1': record.sargiSicaklik1,
         'editSargiSicaklik2': record.sargiSicaklik2,
         'editSargiSicaklik3': record.sargiSicaklik3
+=======
+    document.getElementById('duzenleMotor').value = record.motor;
+    document.getElementById('duzenleTarih').value = record.tarih;
+    document.getElementById('duzenleSaat').value = record.saat;
+    
+    // Inputları mevcut değerlerle doldur
+    const inputMapping = {
+        'duzenleJenYatakSicaklikDE': record.jenYatakSicaklikDE,
+        'duzenleJenYatakSicaklikNDE': record.jenYatakSicaklikNDE,
+        'duzenleSogutmaSuyuSicaklik': record.sogutmaSuyuSicaklik,
+        'duzenleSogutmaSuyuBasinc': record.sogutmaSuyuBasinc,
+        'duzenleYagSicaklik': record.yagSicaklik,
+        'duzenleYagBasinc': record.yagBasinc,
+        'duzenleSarjSicaklik': record.sarjSicaklik,
+        'duzenleSarjBasinc': record.sarjBasinc,
+        'duzenleGazRegulatoru': record.gazRegulatoru,
+        'duzenleMakineDairesiSicaklik': record.makineDairesiSicaklik,
+        'duzenleKarterBasinc': record.karterBasinc,
+        'duzenleOnKamaraFarkBasinc': record.onKamaraFarkBasinc,
+        'duzenleSargiSicaklik1': record.sargiSicaklik1,
+        'duzenleSargiSicaklik2': record.sargiSicaklik2,
+        'duzenleSargiSicaklik3': record.sargiSicaklik3
+>>>>>>> e5ec952 (Güncelleme)
     };
     
     Object.keys(inputMapping).forEach(inputId => {
@@ -281,6 +379,7 @@ function openEditModal(record) {
         }
     });
     
+<<<<<<< HEAD
     // Modal'ı göster
     document.getElementById('editModal').style.display = 'block';
 }
@@ -314,6 +413,50 @@ async function saveEditModal() {
     const kaydetBtn = document.getElementById('editModalKaydetBtn');
     kaydetBtn.disabled = true;
     kaydetBtn.textContent = 'KAYDEDİLİYOR...';
+=======
+    // Durum seçeneğini ayarla
+    const durumSelect = document.getElementById('duzenleDurum');
+    if (durumSelect) {
+        durumSelect.value = record.durum || 'NORMAL';
+    }
+    
+    // Modal'ı göster
+    document.getElementById('duzenleModal').style.display = 'block';
+}
+
+function closeDuzenleModal() {
+    document.getElementById('duzenleModal').style.display = 'none';
+    currentEditRecord = null;
+}
+
+async function handleDuzenleKaydet() {
+    if (!currentEditRecord) return;
+    
+    const newData = {
+        jenYatakSicaklikDE: document.getElementById('duzenleJenYatakSicaklikDE').value,
+        jenYatakSicaklikNDE: document.getElementById('duzenleJenYatakSicaklikNDE').value,
+        sogutmaSuyuSicaklik: document.getElementById('duzenleSogutmaSuyuSicaklik').value,
+        sogutmaSuyuBasinc: document.getElementById('duzenleSogutmaSuyuBasinc').value,
+        yagSicaklik: document.getElementById('duzenleYagSicaklik').value,
+        yagBasinc: document.getElementById('duzenleYagBasinc').value,
+        sarjSicaklik: document.getElementById('duzenleSarjSicaklik').value,
+        sarjBasinc: document.getElementById('duzenleSarjBasinc').value,
+        gazRegulatoru: document.getElementById('duzenleGazRegulatoru').value,
+        makineDairesiSicaklik: document.getElementById('duzenleMakineDairesiSicaklik').value,
+        karterBasinc: document.getElementById('duzenleKarterBasinc').value,
+        onKamaraFarkBasinc: document.getElementById('duzenleOnKamaraFarkBasinc').value,
+        sargiSicaklik1: document.getElementById('duzenleSargiSicaklik1').value,
+        sargiSicaklik2: document.getElementById('duzenleSargiSicaklik2').value,
+        sargiSicaklik3: document.getElementById('duzenleSargiSicaklik3').value,
+        durum: document.getElementById('duzenleDurum').value
+    };
+    
+    const kaydetBtn = document.querySelector('#duzenleModal .btn-primary');
+    if (kaydetBtn) {
+        kaydetBtn.disabled = true;
+        kaydetBtn.textContent = 'KAYDEDİLİYOR...';
+    }
+>>>>>>> e5ec952 (Güncelleme)
     
     try {
         const updateData = {
@@ -337,7 +480,11 @@ async function saveEditModal() {
             await loadVardiyaData();
             
             // Modal'ı kapat
+<<<<<<< HEAD
             closeEditModal();
+=======
+            closeDuzenleModal();
+>>>>>>> e5ec952 (Güncelleme)
         } else {
             showMessage('Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
         }
@@ -345,8 +492,15 @@ async function saveEditModal() {
         console.error('Güncelleme hatası:', error);
         showMessage('Bağlantı hatası: ' + error.message, 'error');
     } finally {
+<<<<<<< HEAD
         kaydetBtn.disabled = false;
         kaydetBtn.textContent = '💾 KAYDET';
+=======
+        if (kaydetBtn) {
+            kaydetBtn.disabled = false;
+            kaydetBtn.textContent = '💾 KAYDET';
+        }
+>>>>>>> e5ec952 (Güncelleme)
     }
 }
 
@@ -593,6 +747,18 @@ function getSaatDegeri(saat) {
     if (!saat) return 0;
     const [saatStr] = saat.split(':');
     return parseInt(saatStr) || 0;
+}
+
+function calculateVardiyaFromSaat(saat) {
+    const saatDegeri = getSaatDegeri(saat);
+    
+    if (saatDegeri >= 8 && saatDegeri < 16) {
+        return '08-16';
+    } else if (saatDegeri >= 16 && saatDegeri < 24) {
+        return '16-24';
+    } else {
+        return '24-08';
+    }
 }
 
 // � ARKA PLAN KAYIT SİSTEMİ FONKSİYONLARI
@@ -1319,9 +1485,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const data = getAllInputValues();
         
-        if (!data.motor || !data.tarih || !data.vardiya) {
-            showMessage('Lütfen motor, tarih ve vardiya seçin!', 'error');
+        if (!data.motor || !data.tarih) {
+            showMessage('Lütfen motor ve tarih seçin!', 'error');
             return;
+        }
+        
+        // Vardiya otomatik hesaplanacak
+        if (!data.vardiya) {
+            data.vardiya = calculateVardiyaFromSaat(data.saat);
         }
         
         // Tüm input'ların dolu olup olmadığını kontrol et
@@ -1361,7 +1532,10 @@ document.addEventListener('DOMContentLoaded', function() {
         let kaydetTimerStatus = 'tamamlandi';
 
         try {
+<<<<<<< HEAD
             // 🔒 ÇİFT KAYIT KONTROLÜ - Cache devre dışı, sadece canlı kontrol
+=======
+>>>>>>> e5ec952 (Güncelleme)
             kaydetBtn.disabled = true;
             kaydetBtn.textContent = 'KONTROL EDILIYOR...';
 
@@ -1408,6 +1582,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 kaydetTimerStatus = 'basarili';
                 console.log('Google Sheets kaydı:', result);
+<<<<<<< HEAD
+=======
+                
+                // Sadece Google Sheets'ten dönen gerçek kaydı cache'e ekle
+                if (result.record) {
+                    rememberMotorRecord(result.record);
+                }
+>>>>>>> e5ec952 (Güncelleme)
                 
                 // Sadece Google Sheets'ten dönen gerçek kaydı cache'e ekle
                 if (result.record) {
@@ -1607,16 +1789,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const data = getAllInputValues();
         
-        if (!data.motor || !data.tarih || !data.vardiya) {
-            showMessage('Lütfen motor, tarih ve vardiya seçin!', 'error');
+        if (!data.motor || !data.tarih) {
+            showMessage('Lütfen motor ve tarih seçin!', 'error');
             return;
+        }
+        
+        // Vardiya otomatik hesaplanacak
+        if (!data.vardiya) {
+            data.vardiya = calculateVardiyaFromSaat(data.saat);
         }
         
         let stopKaydetTimer = null;
         let kaydetTimerStatus = 'tamamlandi';
 
         try {
+<<<<<<< HEAD
             // 🔒 ÇİFT KAYIT KONTROLÜ - Cache devre dışı, sadece canlı kontrol
+=======
+>>>>>>> e5ec952 (Güncelleme)
             // Butonu devre dışı bırak
             motorCalismiyorKaydetBtn.disabled = true;
             motorCalismiyorKaydetBtn.textContent = '⚠️ KAYDEDİLİYOR...';
@@ -1775,9 +1965,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Vardiya saat aralıklarını tanımla
     const vardiyaSaatAraliklari = {
-        '08-16': { baslangic: 7, bitis: 15, baslangicSaat: '07:00', bitisSaat: '15:00' },
-        '16-24': { baslangic: 15, bitis: 24, baslangicSaat: '15:00', bitisSaat: '24:00' },
-        '24-08': { baslangic: 23, bitis: 7, baslangicSaat: '23:00', bitisSaat: '07:00' }
+        '08-16': { baslangic: 8, bitis: 16, baslangicSaat: '08:00', bitisSaat: '16:00' },
+        '16-24': { baslangic: 16, bitis: 24, baslangicSaat: '16:00', bitisSaat: '24:00' },
+        '24-08': { baslangic: 0, bitis: 8, baslangicSaat: '00:00', bitisSaat: '08:00' }
     };
     
     // Saat değerini saat kısmına çevir (14:00 -> 14)

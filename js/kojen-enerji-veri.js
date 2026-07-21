@@ -708,9 +708,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Vardiya aralıkları
     const vardiyaSaatAraliklari = {
-        '08-16': { baslangic: 7, bitis: 16, baslangicSaat: '07:00', bitisSaat: '16:00' },
-        '16-24': { baslangic: 15, bitis: 24, baslangicSaat: '15:00', bitisSaat: '24:00' },
-        '24-08': { baslangic: 23, bitis: 7, baslangicSaat: '23:00', bitisSaat: '07:00' }
+        '08-16': { baslangic: 8, bitis: 16, baslangicSaat: '08:00', bitisSaat: '16:00' },
+        '16-24': { baslangic: 16, bitis: 24, baslangicSaat: '16:00', bitisSaat: '24:00' },
+        '24-08': { baslangic: 0, bitis: 8, baslangicSaat: '00:00', bitisSaat: '08:00' }
     };
 
     // Çıkış butonları

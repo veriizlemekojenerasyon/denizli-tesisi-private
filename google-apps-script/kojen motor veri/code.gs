@@ -25,6 +25,7 @@ function doPost(e) {
 var KOJEN_MOTOR_API_VERSION = 'motor-fast-bulk-2026-06-03-v3';
 var KOJEN_MOTOR_WRITE_LOCK_WAIT_MS = 5000;
 var KOJEN_MOTOR_MISSING_CHECK_LOOKBACK_HOURS = 10;
+var KOJEN_MOTOR_SPREADSHEET_ID = '1ncEnE6vG76HIXFzJRRWz2yehiN2oolg4t2pzfbKt2vI'; // Buraya gerçek spreadsheet ID gelecek
 
 function handleRequest(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -99,6 +100,9 @@ function handleRequest(e) {
         break;
       case 'getSystemLogs':
         result = getSystemLogs(parseInt(params.count, 10) || 100);
+        break;
+      case 'updateRecord':
+        result = updateRecord(params);
         break;
       default:
         result = { success: false, error: 'Geçersiz işlem' };
@@ -2192,6 +2196,202 @@ function getDateColor(tarih) {
 // Geriye dönük uyumluluk için bırakıldı
 function getRandomColor() {
   return getDateColor(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy'));
+}
+
+// 🔥 KAYIT GÜNCELLEME FONKSİYONU
+function updateRecord(params) {
+  var startedAt = new Date().getTime();
+  try {
+    var motor = normalizeMotorLabel(params.motor);
+    var tarih = normalizeDateTR(params.tarih);
+    var saat = normalizeMotorSaat(params.saat);
+    
+    // Motor bazlı sayfayı bul
+    var sheet = getMotorSheetIfExists(motor);
+    if (!sheet) {
+      return { success: false, error: motor + ' motoru için motor sayfası bulunamadı.' };
+    }
+    
+    // Kaydı bul
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: false, error: 'Kayıt bulunamadı - sayfa boş' };
+    }
+    
+    var data = sheet.getRange(2, 1, lastRow - 1, 21).getDisplayValues();
+    var foundRow = -1;
+    var oldValues = null;
+    
+    for (var i = 0; i < data.length; i++) {
+      var row = data[i];
+      var rowTarih = normalizeDateTR(row[0] || '');
+      var rowSaat = normalizeMotorSaat(row[2] || '');
+      var rowMotor = normalizeMotorLabel(row[3] || '');
+      
+      if (rowTarih === tarih && rowSaat === saat && rowMotor === motor) {
+        foundRow = i + 2;
+        oldValues = row.slice();
+        break;
+      }
+    }
+    
+    if (foundRow === -1) {
+      return { success: false, error: 'Kayıt bulunamadı' };
+    }
+    
+    // Eski değerleri düzenleme geçmişine kaydet
+    var duzenlemeGecmisSheet = getOrCreateDuzenlemeGecmisSheet();
+    var duzenlemeTarihi = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss');
+    
+    duzenlemeGecmisSheet.appendRow([
+      duzenlemeTarihi,
+      tarih,
+      saat,
+      motor,
+      oldValues[4] || '', // Eski JEN. YATAK SIC. (DE)
+      oldValues[5] || '', // Eski JEN. YATAK SIC. (NDE)
+      oldValues[6] || '', // Eski SOĞUTMA SUYU SIC.
+      oldValues[7] || '', // Eski SOĞUTMA SUYU BAS.
+      oldValues[8] || '', // Eski YAĞ SIC.
+      oldValues[9] || '', // Eski YAĞ BAS.
+      oldValues[10] || '', // Eski ŞARJ SIC.
+      oldValues[11] || '', // Eski ŞARJ BAS.
+      oldValues[12] || '', // Eski GAZ REG. (λ)
+      oldValues[13] || '', // Eski MAKİNE DAİRESİ SIC.
+      oldValues[14] || '', // Eski KARTER BAS.
+      oldValues[15] || '', // Eski ÖN KAMARA FARK BAS.
+      oldValues[16] || '', // Eski SARGI SIC. -1-
+      oldValues[17] || '', // Eski SARGI SIC. -2-
+      oldValues[18] || '', // Eski SARGI SIC. -3-
+      oldValues[19] || '', // Eski Durum
+      params.jenYatakSicaklikDE || '',
+      params.jenYatakSicaklikNDE || '',
+      params.sogutmaSuyuSicaklik || '',
+      params.sogutmaSuyuBasinc || '',
+      params.yagSicaklik || '',
+      params.yagBasinc || '',
+      params.sarjSicaklik || '',
+      params.sarjBasinc || '',
+      params.gazRegulatoru || '',
+      params.makineDairesiSicaklik || '',
+      params.karterBasinc || '',
+      params.onKamaraFarkBasinc || '',
+      params.sargiSicaklik1 || '',
+      params.sargiSicaklik2 || '',
+      params.sargiSicaklik3 || '',
+      params.durum || 'NORMAL',
+      params.duzenlemeNotu || '',
+      params.duzenleyen || 'Admin'
+    ]);
+    
+    // Yeni değerleri güncelle
+    var durum = normalizeDurum(params.durum || 'NORMAL');
+    var newValues = [
+      tarih,
+      params.vardiya || '',
+      saat,
+      motor,
+      parseFloat(params.jenYatakSicaklikDE) || 0,
+      parseFloat(params.jenYatakSicaklikNDE) || 0,
+      parseFloat(params.sogutmaSuyuSicaklik) || 0,
+      parseFloat(params.sogutmaSuyuBasinc) || 0,
+      parseFloat(params.yagSicaklik) || 0,
+      parseFloat(params.yagBasinc) || 0,
+      parseFloat(params.sarjSicaklik) || 0,
+      parseFloat(params.sarjBasinc) || 0,
+      parseFloat(params.gazRegulatoru) || 0,
+      parseFloat(params.makineDairesiSicaklik) || 0,
+      parseFloat(params.karterBasinc) || 0,
+      parseFloat(params.onKamaraFarkBasinc) || 0,
+      parseFloat(params.sargiSicaklik1) || 0,
+      parseFloat(params.sargiSicaklik2) || 0,
+      parseFloat(params.sargiSicaklik3) || 0,
+      durum,
+      oldValues[20] || '', // Kaydeden (değişmez)
+      oldValues[21] || ''  // Kayıt Tarihi (değişmez)
+    ];
+    
+    sheet.getRange(foundRow, 1, 1, 22).setValues([newValues]);
+    
+    // Formatlama
+    var dataRange = sheet.getRange(foundRow, 1, 1, 22);
+    dataRange.setHorizontalAlignment('center');
+    dataRange.setFontSize(10);
+    dataRange.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+    
+    // Sayısal formatlar
+    sheet.getRange(foundRow, 5, 1, 15).setNumberFormat('0.00');
+    
+    // Tarih renklendirme
+    colorizeDates(sheet, [{ tarih: tarih, saat: saat, row: foundRow }]);
+    
+    // Motor çalışmıyor durumunda kırmızı yazı
+    if (durum === 'MOTOR ÇALIŞMIYOR') {
+      dataRange.setFontColor('#c62828');
+    }
+    
+    Logger.log('Kayıt güncellendi: ' + motor + ' ' + tarih + ' ' + saat);
+    
+    return {
+      success: true,
+      message: 'Kayıt başarıyla güncellendi',
+      row: foundRow,
+      durationMs: new Date().getTime() - startedAt
+    };
+    
+  } catch (error) {
+    Logger.log('Kayıt güncelleme hatası: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+// 🔥 DÜZENLEME GEÇMİŞİ SAYFASI OLUŞTURMA
+function getOrCreateDuzenlemeGecmisSheet() {
+  var spreadsheet = SpreadsheetApp.openById(KOJEN_MOTOR_SPREADSHEET_ID);
+  var sheet = spreadsheet.getSheetByName('MotorDuzenlemeGecmisi');
+  var headers = ['Düzenleme Tarihi', 'Tarih', 'Saat', 'Motor', 
+                 'Eski JEN. YATAK SIC. (DE)', 'Eski JEN. YATAK SIC. (NDE)', 'Eski SOĞUTMA SUYU SIC.', 'Eski SOĞUTMA SUYU BAS.', 
+                 'Eski YAĞ SIC.', 'Eski YAĞ BAS.', 'Eski ŞARJ SIC.', 'Eski ŞARJ BAS.', 
+                 'Eski GAZ REG. (λ)', 'Eski MAKİNE DAİRESİ SIC.', 'Eski KARTER BAS.', 'Eski ÖN KAMARA FARK BAS.',
+                 'Eski SARGI SIC. -1-', 'Eski SARGI SIC. -2-', 'Eski SARGI SIC. -3-', 'Eski Durum',
+                 'Yeni JEN. YATAK SIC. (DE)', 'Yeni JEN. YATAK SIC. (NDE)', 'Yeni SOĞUTMA SUYU SIC.', 'Yeni SOĞUTMA SUYU BAS.', 
+                 'Yeni YAĞ SIC.', 'Yeni YAĞ BAS.', 'Yeni ŞARJ SIC.', 'Yeni ŞARJ BAS.', 
+                 'Yeni GAZ REG. (λ)', 'Yeni MAKİNE DAİRESİ SIC.', 'Yeni KARTER BAS.', 'Yeni ÖN KAMARA FARK BAS.',
+                 'Yeni SARGI SIC. -1-', 'Yeni SARGI SIC. -2-', 'Yeni SARGI SIC. -3-', 'Yeni Durum',
+                 'Düzenleme Notu', 'Düzenleyen'];
+  
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('MotorDuzenlemeGecmisi');
+    sheet.appendRow(headers);
+    var headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#0f172a');
+    headerRange.setFontColor('#ffffff');
+    sheet.getRange(2, 1, 1000, headers.length).setNumberFormat('@');
+    
+    // Sütun genişlikleri
+    sheet.setColumnWidth(1, 150); // Düzenleme Tarihi
+    sheet.setColumnWidth(2, 100); // Tarih
+    sheet.setColumnWidth(3, 80);  // Saat
+    sheet.setColumnWidth(4, 80);  // Motor
+    for (var i = 5; i <= 19; i++) {
+      sheet.setColumnWidth(i, 120); // Eski değerler
+    }
+    for (var i = 20; i <= 34; i++) {
+      sheet.setColumnWidth(i, 120); // Yeni değerler
+    }
+    sheet.setColumnWidth(35, 200); // Düzenleme Notu
+    sheet.setColumnWidth(36, 120); // Düzenleyen
+  }
+  
+  return sheet;
+}
+
+function normalizeDurum(durum) {
+  var value = String(durum || 'NORMAL').trim();
+  if (!value) return 'NORMAL';
+  if (value === 'MOTOR ÇALIŞMIYOR' || value === 'ÇALIŞMIYOR') return 'MOTOR ÇALIŞMIYOR';
+  return 'NORMAL';
 }
 
 // Mail gönderme fonksiyonu
