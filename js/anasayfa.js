@@ -95,13 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         refreshMaintenanceTotalInBackground();
         await refreshDashboardMotorCardsInBackground();
-        const dashboardLoaded = await loadDashboardSummary();
-        if (dashboardLoaded) {
-            refreshMaintenanceTotalInBackground();
-            updateMotorData();
-            updateSummaryData();
-        }
-
+        
         const tasks = [
             updateAnnouncementTicker(),
             loadBuharData().then(updateSummaryData),
@@ -115,12 +109,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function refreshDashboardSummaryInBackground() {
         if (dashboardSummaryRefreshPromise) return dashboardSummaryRefreshPromise;
-        dashboardSummaryRefreshPromise = loadDashboardSummary().then(dashboardLoaded => {
-            if (dashboardLoaded) {
-                updateMotorData();
-                updateSummaryData();
-            }
-        }).finally(() => {
+        dashboardSummaryRefreshPromise = (async () => {
+            const tasks = [
+                loadBuharData().then(updateSummaryData),
+                loadLatestEnergyData().then(updateMotorData),
+                loadLatestMotorStatus().then(updateMotorData),
+                loadMaintenanceData().then(updateSummaryData)
+            ];
+            await Promise.allSettled(tasks);
+            updateMotorData();
+            updateSummaryData();
+        })().finally(() => {
             dashboardSummaryRefreshPromise = null;
         });
         return dashboardSummaryRefreshPromise;
