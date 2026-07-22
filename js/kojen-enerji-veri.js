@@ -1441,6 +1441,35 @@ document.addEventListener('DOMContentLoaded', async function() {
     function closeDuzenleModal() {
         document.getElementById('duzenleModal').style.display = 'none';
         currentEditRecord = null;
+
+        // Tüm input'ları temizle
+        const inputIds = [
+            'duzenleAydemVoltaji',
+            'duzenleAktifGuc',
+            'duzenleReaktifGuc',
+            'duzenleCosPhi',
+            'duzenleOrtAkim',
+            'duzenleOrtGerilim',
+            'duzenleNotrAkim',
+            'duzenleTahrikGerilimi',
+            'duzenleToplamAktifEnerji',
+            'duzenleCalismaSaati',
+            'duzenleKalkisSayisi',
+            'duzenleNot'
+        ];
+
+        inputIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = '';
+            }
+        });
+
+        // Durum select'ini varsayılan değere ayarla
+        const durumSelect = document.getElementById('duzenleDurum');
+        if (durumSelect) {
+            durumSelect.value = 'NORMAL';
+        }
     }
 
     async function handleDuzenleKaydet() {

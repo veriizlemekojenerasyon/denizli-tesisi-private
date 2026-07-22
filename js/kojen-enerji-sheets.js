@@ -350,10 +350,10 @@ async function getEnerjiRecordsByMotorAndDate(motor, tarih) {
             formattedTarih = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
         
-        const url = KojenEnerjiSheetsConfig.WEB_APP_URL + 
+        const url = KojenEnerjiSheetsConfig.WEB_APP_URL +
             `?action=getRecordsByMotorAndDate&motor=${encodeURIComponent(motor)}&tarih=${encodeURIComponent(formattedTarih)}`;
-        
-        const response = await fetch(url);
+
+        const response = await fetch(url, { cache: 'no-cache' });
         const result = await response.json();
         return result;
         

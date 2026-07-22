@@ -238,8 +238,8 @@ async function getMotorRecordsByMotorAndDate(motor, tarih, vardiya) {
         }
         
         console.log(`g��� API çağrısı: ${url}`);
-        
-        const response = await fetch(url);
+
+        const response = await fetch(url, { cache: 'no-cache' });
         const result = await response.json();
         console.log(`g��� API yanıt:`, result);
         return result;
