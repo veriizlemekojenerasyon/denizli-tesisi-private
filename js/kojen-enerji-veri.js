@@ -932,14 +932,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         kaydetBtn.disabled = true; kaydetBtn.textContent = '💾 KAYDEDİLİYOR...';
         try {
-            const result = await saveEnerjiToSheets({...data, motor: selectedMotor, tarih: tarihSecimi.value, vardiya: vardiyaSecimi.value, saat, kaydeden: getCurrentUserName(), durum: 'NORMAL'});
+            const result = await saveEnerjiToSheets({...data, motor: selectedMotor, tarih: tarihSecimi.value, vardiya: vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value, saat, kaydeden: getCurrentUserName(), durum: 'NORMAL'});
             if (result.success) {
                 // Kayıt tamamlandıktan sonra kullanıcıyı bekletmeden arka planda yenile.
                 rememberEnerjiRecord(result.record || {
                     ...data,
                     motor: selectedMotor,
                     tarih: tarihSecimi.value,
-                    vardiya: vardiyaSecimi.value,
+                    vardiya: vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value,
                     saat,
                     kaydeden: getCurrentUserName(),
                     durum: 'NORMAL'
@@ -976,7 +976,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const kayitVerisi = {
                     motor: selectedMotor,
                     tarih: tarihSecimi.value,
-                    vardiya: vardiyaSecimi.value,
+                    vardiya: vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value,
                     saat: saat,
                     toplamAktifEnerji: data.toplamAktifEnerji,
                     calismaSaati: data.calismaSaati,
@@ -1059,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const result = await saveEnerjiToSheets({
                 motor: selectedMotor, 
                 tarih: tarihSecimi.value, 
-                vardiya: vardiyaSecimi.value, 
+                vardiya: vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value, 
                 saat, 
                 kaydeden: getCurrentUserName(), 
                 durum: 'MOTOR ÇALIŞMIYOR',
@@ -1133,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const result = await saveEnerjiEndOfDayValues({
                 motor: selectedMotor,
                 tarih: tarih,
-                vardiya: vardiyaSecimi.value || '24-08',
+                vardiya: vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value || '24-08',
                 toplamAktifEnerji: toplamAktifEnerji,
                 calismaSaati: calismaSaati,
                 kalkisSayisi: kalkisSayisi,
@@ -1165,14 +1165,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         return vardiya === '24-08' ? (saat >= 23 || saat < 7) : (saat >= aralik.baslangic && saat <= aralik.bitis);
     }
     function guncelleVardiyaBilgisi() {
-        const vardiya = vardiyaSecimi.value, aralik = vardiyaSaatAraliklari[vardiya];
+        const vardiya = vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value, aralik = vardiyaSaatAraliklari[vardiya];
         const badge = document.getElementById('vardiyaBadge'), saatAraligi = document.getElementById('saatAraligi');
         if (badge && aralik) badge.textContent = vardiya;
         if (saatAraligi && aralik) saatAraligi.textContent = `${aralik.baslangicSaat} - ${aralik.bitisSaat}`;
     }
 
     async function loadVardiyaData() {
-        const vardiya = vardiyaSecimi.value, tarih = tarihSecimi.value, motor = selectedMotor;
+        const vardiya = vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value, tarih = tarihSecimi.value, motor = selectedMotor;
         console.log('DEBUG loadVardiyaData:', vardiya, tarih, motor);
         if (!vardiya || !tarih || !motor) { console.log('DEBUG: Eksik parametre'); return; }
         const tableBody = document.getElementById('vardiyaTableBody'), noDataMessage = document.getElementById('noDataMessage');
@@ -1265,26 +1265,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Düzenleme butonu hücresi
                 const islemTd = document.createElement('td');
                 const editBtn = document.createElement('button');
-                editBtn.className = 'btn-edit';
+                editBtn.className = 'edit-btn';
                 editBtn.textContent = '✏️ Düzenle';
+                editBtn.style.cssText = 'padding: 4px 8px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;';
                 editBtn.onclick = function() {
-                    openDuzenleModal(
-                        record.tarih,
-                        record.saat,
-                        record.motor,
-                        record.aydemVoltaji || '',
-                        record.aktifGuc || '',
-                        record.reaktifGuc || '',
-                        record.cosPhi || '',
-                        record.ortAkim || '',
-                        record.ortGerilim || '',
-                        record.notrAkim || '',
-                        record.tahrikGerilimi || '',
-                        toplamAktifEnerji,
-                        calismaSaati,
-                        kalkisSayisi,
-                        record.durum || 'NORMAL'
-                    );
+                    openEditModal(record);
                 };
                 islemTd.appendChild(editBtn);
                 row.appendChild(islemTd);
@@ -1358,7 +1343,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         const today = new Date();
         tarihSecimi.value = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
         const hour = today.getHours();
-        vardiyaSecimi.value = hour >= 8 && hour < 16 ? '08-16' : hour >= 16 && hour < 24 ? '16-24' : '24-08';
+        const vardiyaValue = hour >= 8 && hour < 16 ? '08-16' : hour >= 16 && hour < 24 ? '16-24' : '24-08';
+        const vardiyaDisplay = hour >= 8 && hour < 16 ? '08:00 - 16:00' : hour >= 16 && hour < 24 ? '16:00 - 24:00' : '24:00 - 08:00';
+        vardiyaSecimi.value = vardiyaDisplay;
+        vardiyaSecimi.dataset.vardiyaValue = vardiyaValue; // Store actual value for saving
         if (currentHourElement) currentHourElement.textContent = `${String(hour).padStart(2,'0')}:00`;
         updateGunSonuEnerjiMeta();
         guncelleVardiyaBilgisi();
@@ -1375,6 +1363,155 @@ document.addEventListener('DOMContentLoaded', async function() {
             await checkAndUpdateFormStatus();
         }
     }, 60000);
+
+    // 🔥 DÜZENLEME MODAL FONKSİYONLARI
+    let currentEditRecord = null;
+
+    async function openEditModal(record) {
+        // Google Sheets'ten fresh data çek
+        try {
+            console.log(`📊 Google Sheets'ten veri çekiliyor: ${record.motor} ${record.tarih} ${record.saat}`);
+            const result = await getEnerjiRecordsByMotorAndDate(record.motor, record.tarih);
+
+            if (result.success && result.data && result.data.length > 0) {
+                // İlgili kaydı bul
+                const freshRecord = result.data.find(r =>
+                    r.saat === record.saat &&
+                    r.motor === record.motor
+                );
+
+                if (freshRecord) {
+                    console.log('✅ Fresh data bulundu:', freshRecord);
+                    // Fresh data ile güncelle
+                    record = freshRecord;
+                }
+            }
+        } catch (error) {
+            console.error('Google Sheets veri çekme hatası:', error);
+        }
+
+        currentEditRecord = record;
+
+        // Modal bilgilerini doldur
+        document.getElementById('duzenleMotor').value = record.motor;
+        document.getElementById('duzenleTarih').value = record.tarih;
+        document.getElementById('duzenleSaat').value = record.saat;
+        document.getElementById('duzenleVardiya').value = record.vardiya || '';
+
+        // Inputları mevcut değerlerle doldur
+        const inputMapping = {
+            'duzenleAydemVoltaji': record.aydemVoltaji,
+            'duzenleAktifGuc': record.aktifGuc,
+            'duzenleReaktifGuc': record.reaktifGuc,
+            'duzenleCosPhi': record.cosPhi,
+            'duzenleOrtAkim': record.ortAkim,
+            'duzenleOrtGerilim': record.ortGerilim,
+            'duzenleNotrAkim': record.notrAkim,
+            'duzenleTahrikGerilimi': record.tahrikGerilimi,
+            'duzenleToplamAktifEnerji': record.toplamAktifEnerji,
+            'duzenleCalismaSaati': record.calismaSaati,
+            'duzenleKalkisSayisi': record.kalkisSayisi
+        };
+
+        Object.keys(inputMapping).forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input && inputMapping[inputId] !== undefined) {
+                let value = inputMapping[inputId];
+                if (typeof value === 'string' && value.includes(',')) {
+                    value = value.replace(',', '.');
+                }
+                // Kalkış sayısı için ondalık kısmı koru
+                if (inputId === 'duzenleKalkisSayisi' && value && !value.includes('.')) {
+                    value = parseFloat(value).toFixed(2);
+                }
+                input.value = value === '-' ? '' : value;
+            }
+        });
+
+        // Durum seçeneğini ayarla
+        const durumSelect = document.getElementById('duzenleDurum');
+        if (durumSelect) {
+            durumSelect.value = record.durum || 'NORMAL';
+        }
+
+        // Modal'ı göster
+        document.getElementById('duzenleModal').style.display = 'block';
+    }
+
+    function closeDuzenleModal() {
+        document.getElementById('duzenleModal').style.display = 'none';
+        currentEditRecord = null;
+    }
+
+    async function handleDuzenleKaydet() {
+        if (!currentEditRecord) return;
+
+        const newData = {
+            aydemVoltaji: document.getElementById('duzenleAydemVoltaji').value,
+            aktifGuc: document.getElementById('duzenleAktifGuc').value,
+            reaktifGuc: document.getElementById('duzenleReaktifGuc').value,
+            cosPhi: document.getElementById('duzenleCosPhi').value,
+            ortAkim: document.getElementById('duzenleOrtAkim').value,
+            ortGerilim: document.getElementById('duzenleOrtGerilim').value,
+            notrAkim: document.getElementById('duzenleNotrAkim').value,
+            tahrikGerilimi: document.getElementById('duzenleTahrikGerilimi').value,
+            toplamAktifEnerji: document.getElementById('duzenleToplamAktifEnerji').value,
+            calismaSaati: document.getElementById('duzenleCalismaSaati').value,
+            kalkisSayisi: document.getElementById('duzenleKalkisSayisi').value,
+            durum: document.getElementById('duzenleDurum').value
+        };
+
+        // Kalkış sayısı için ondalık ekle
+        if (newData.kalkisSayisi && !newData.kalkisSayisi.includes('.')) {
+            newData.kalkisSayisi = parseFloat(newData.kalkisSayisi).toFixed(2);
+        }
+
+        const kaydetBtn = document.querySelector('#duzenleModal .btn-primary');
+        if (kaydetBtn) {
+            kaydetBtn.disabled = true;
+            kaydetBtn.textContent = 'KAYDEDİLİYOR...';
+        }
+
+        try {
+            const updateData = {
+                ...newData,
+                motor: currentEditRecord.motor,
+                tarih: currentEditRecord.tarih,
+                vardiya: currentEditRecord.vardiya,
+                saat: currentEditRecord.saat,
+                duzenlemeNotu: document.getElementById('duzenleNot').value,
+                duzenleyen: getCurrentUserName(),
+                duzenlemeTarihi: new Date().toISOString()
+            };
+
+            const result = await updateEnerjiRecord(updateData);
+
+            if (result.success) {
+                showMessage(`${currentEditRecord.motor} motoru ${currentEditRecord.saat} kaydı başarıyla güncellendi!`, 'success');
+
+                // Vardiya tablosunu yeniden yükle
+                await loadVardiyaData();
+
+                // Modal'ı kapat
+                closeDuzenleModal();
+            } else {
+                showMessage('Güncelleme hatası: ' + (result.error || 'Bilinmeyen hata'), 'error');
+            }
+        } catch (error) {
+            console.error('Güncelleme hatası:', error);
+            showMessage('Bağlantı hatası: ' + error.message, 'error');
+        } finally {
+            if (kaydetBtn) {
+                kaydetBtn.disabled = false;
+                kaydetBtn.textContent = '💾 KAYDET';
+            }
+        }
+    }
+
+    // Window export for edit functions
+    window.openEditModal = openEditModal;
+    window.closeDuzenleModal = closeDuzenleModal;
+    window.handleDuzenleKaydet = handleDuzenleKaydet;
 });
 
 // 🔥 MOTOR ÇALIŞMIYOR MODAL FONKSİYONLARI
@@ -1392,10 +1529,10 @@ function openMotorCalismiyorModal() {
     
     // Modal alanlarını doldur
     modalTarih.value = todayStr; // Otomatik bugünün tarihi
-    modalVardiya.value = vardiyaSecimi.value;
-    
+    modalVardiya.value = vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value;
+
     // Vardiya saatlerini filtrele
-    filterSaatByVardiya(vardiyaSecimi.value);
+    filterSaatByVardiya(vardiyaSecimi.dataset.vardiyaValue || vardiyaSecimi.value);
     
     // Modalı göster
     modal.style.display = 'flex';
@@ -1777,12 +1914,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Düzenleme kaydet butonu
-    const duzenleKaydetBtn = document.getElementById('duzenleKaydetBtn');
-    if (duzenleKaydetBtn) {
-        duzenleKaydetBtn.addEventListener('click', handleDuzenleKaydet);
-    }
-    
     // Vardiya değiştiğinde saatleri filtrele
     document.getElementById('modalVardiya')?.addEventListener('change', function() {
         filterSaatByVardiya(this.value);
@@ -1991,109 +2122,3 @@ async function handleModalKaydet() {
     }
 }
 
-// Window export
-window.handleModalKaydet = handleModalKaydet;
-
-// 🔥 DÜZENLEME MODAL FONKSİYONLARI
-let currentEditRecord = null;
-
-function openDuzenleModal(tarih, saat, motor, aydemVoltaji, aktifGuc, reaktifGuc, cosPhi, ortAkim, ortGerilim, notrAkim, tahrikGerilimi, toplamAktifEnerji, calismaSaati, kalkisSayisi, durum) {
-    currentEditRecord = {
-        tarih,
-        saat,
-        motor,
-        aydemVoltaji,
-        aktifGuc,
-        reaktifGuc,
-        cosPhi,
-        ortAkim,
-        ortGerilim,
-        notrAkim,
-        tahrikGerilimi,
-        toplamAktifEnerji,
-        calismaSaati,
-        kalkisSayisi,
-        durum
-    };
-
-    document.getElementById('duzenleTarih').value = tarih;
-    document.getElementById('duzenleSaat').value = saat;
-    document.getElementById('duzenleMotor').value = motor;
-    document.getElementById('duzenleAydemVoltaji').value = aydemVoltaji === '-' ? '' : aydemVoltaji;
-    document.getElementById('duzenleAktifGuc').value = aktifGuc === '-' ? '' : aktifGuc;
-    document.getElementById('duzenleReaktifGuc').value = reaktifGuc === '-' ? '' : reaktifGuc;
-    document.getElementById('duzenleCosPhi').value = cosPhi === '-' ? '' : cosPhi;
-    document.getElementById('duzenleOrtAkim').value = ortAkim === '-' ? '' : ortAkim;
-    document.getElementById('duzenleOrtGerilim').value = ortGerilim === '-' ? '' : ortGerilim;
-    document.getElementById('duzenleNotrAkim').value = notrAkim === '-' ? '' : notrAkim;
-    document.getElementById('duzenleTahrikGerilimi').value = tahrikGerilimi === '-' ? '' : tahrikGerilimi;
-    document.getElementById('duzenleToplamAktifEnerji').value = toplamAktifEnerji === '-' ? '' : toplamAktifEnerji;
-    document.getElementById('duzenleCalismaSaati').value = calismaSaati === '-' ? '' : calismaSaati;
-    document.getElementById('duzenleKalkisSayisi').value = kalkisSayisi === '-' ? '' : kalkisSayisi;
-    document.getElementById('duzenleDurum').value = durum || 'NORMAL';
-    document.getElementById('duzenleNot').value = '';
-
-    document.getElementById('duzenleModal').style.display = 'flex';
-}
-
-function closeDuzenleModal() {
-    document.getElementById('duzenleModal').style.display = 'none';
-    currentEditRecord = null;
-}
-
-async function handleDuzenleKaydet() {
-    if (!currentEditRecord) {
-        showMessage('Düzenlenecek kayıt bulunamadı', 'error');
-        return;
-    }
-
-    const duzenleBtn = document.getElementById('duzenleKaydetBtn');
-    const originalText = duzenleBtn.textContent;
-    duzenleBtn.disabled = true;
-    duzenleBtn.textContent = 'Kaydediliyor...';
-
-    try {
-        const updatedData = {
-            tarih: currentEditRecord.tarih,
-            saat: currentEditRecord.saat,
-            motor: currentEditRecord.motor,
-            aydemVoltaji: document.getElementById('duzenleAydemVoltaji').value || '0',
-            aktifGuc: document.getElementById('duzenleAktifGuc').value || '0',
-            reaktifGuc: document.getElementById('duzenleReaktifGuc').value || '0',
-            cosPhi: document.getElementById('duzenleCosPhi').value || '0',
-            ortAkim: document.getElementById('duzenleOrtAkim').value || '0',
-            ortGerilim: document.getElementById('duzenleOrtGerilim').value || '0',
-            notrAkim: document.getElementById('duzenleNotrAkim').value || '0',
-            tahrikGerilimi: document.getElementById('duzenleTahrikGerilimi').value || '0',
-            toplamAktifEnerji: document.getElementById('duzenleToplamAktifEnerji').value || '0',
-            calismaSaati: document.getElementById('duzenleCalismaSaati').value || '0',
-            kalkisSayisi: document.getElementById('duzenleKalkisSayisi').value || '0',
-            durum: document.getElementById('duzenleDurum').value,
-            duzenlemeNotu: document.getElementById('duzenleNot').value,
-            duzenleyen: getCurrentUserName(),
-            duzenlemeTarihi: new Date().toISOString()
-        };
-
-        const result = await updateEnerjiRecord(updatedData);
-
-        if (result.success) {
-            showMessage('Kayıt başarıyla güncellendi!', 'success');
-            closeDuzenleModal();
-            // Vardiya verilerini yenile
-            setTimeout(() => loadVardiyaData(), 500);
-        } else {
-            showMessage('Güncelleme hatası: ' + result.error, 'error');
-        }
-    } catch (error) {
-        console.error('Düzenleme hatası:', error);
-        showMessage('Düzenleme hatası: ' + error.message, 'error');
-    } finally {
-        duzenleBtn.disabled = false;
-        duzenleBtn.textContent = originalText;
-    }
-}
-
-// Window export
-window.openDuzenleModal = openDuzenleModal;
-window.closeDuzenleModal = closeDuzenleModal;
-window.handleDuzenleKaydet = handleDuzenleKaydet;

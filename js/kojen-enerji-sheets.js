@@ -516,6 +516,7 @@ async function updateEnerjiRecord(data) {
             tarih: formattedTarih,
             saat: data.saat || '',
             motor: data.motor || '',
+            vardiya: data.vardiya || '',
             aydemVoltaji: data.aydemVoltaji || '0',
             aktifGuc: data.aktifGuc || '0',
             reaktifGuc: data.reaktifGuc || '0',
