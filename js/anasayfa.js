@@ -2181,4 +2181,142 @@ function checkAuth() {
     }
 }
 
-// ... (geri kalan kod)
+// Buhar verisi kontrol sistemi
+const STEAM_CHECK_STORAGE_KEY = 'steamCheckLastRun';
+const STEAM_ANNOUNCEMENT_PREFIX = 'BUHAR_VERISI_EKSIK:';
+
+// Basit tarih formatlama fonksiyonu
+function formatSteamDate(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}.${month}.${date.getFullYear()}`;
+}
+
+// Basit tarih normalizasyon fonksiyonu
+function normalizeSteamDate(dateStr) {
+    if (!dateStr) return '';
+    const str = String(dateStr).trim();
+    // GG.AA.YYYY formatını kontrol et
+    if (str.includes('.')) {
+        return str;
+    }
+    // Diğer formatları dönüştürme gerekebilir
+    return str;
+}
+
+async function checkPreviousDaySteamData() {
+    try {
+        const now = new Date();
+        const hour = now.getHours();
+        
+        // Sadece 00:30'dan sonra çalıştır
+        if (hour < 0 || (hour === 0 && now.getMinutes() < 30)) {
+            return;
+        }
+
+        // Bugün zaten kontrol edildiyse atla
+        const lastRun = localStorage.getItem(STEAM_CHECK_STORAGE_KEY);
+        const today = formatSteamDate(now);
+        if (lastRun === today) {
+            return;
+        }
+
+        console.log('Buhar verisi kontrolü başlatılıyor...');
+        
+        // Bir önceki günün tarihini hesapla
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayDate = formatSteamDate(yesterday);
+        
+        console.log('Kontrol edilecek tarih:', yesterdayDate);
+
+        // Buhar verilerini çek
+        const buharUrl = window.AppConfig.getScriptUrl('buhar');
+        const url = new URL(buharUrl);
+        url.searchParams.append('action', 'getLastRecords');
+        url.searchParams.append('count', '50');
+        
+        const response = await fetch(url, { method: 'GET', mode: 'cors' });
+        const result = await response.json();
+        
+        if (!result.success || !Array.isArray(result.data)) {
+            console.error('Buhar verileri alınamadı:', result.error);
+            return;
+        }
+
+        // Bir önceki günün buhar verisini ara
+        const yesterdayRecord = result.data.find(record => 
+            normalizeSteamDate(record.tarih) === yesterdayDate
+        );
+
+        if (yesterdayRecord) {
+            console.log('Buhar verisi bulundu:', yesterdayRecord);
+            // Bildiriyi sil
+            await deleteSteamMissingAnnouncement(yesterdayDate);
+        } else {
+            console.log('Buhar verisi bulunamadı, bildirim gönderiliyor...');
+            // Bildirim gönder
+            await createSteamMissingAnnouncement(yesterdayDate);
+        }
+
+        // Kontrol edildiğini kaydet
+        localStorage.setItem(STEAM_CHECK_STORAGE_KEY, today);
+        
+    } catch (error) {
+        console.error('Buhar verisi kontrol hatası:', error);
+    }
+}
+
+async function createSteamMissingAnnouncement(date) {
+    try {
+        const announcementData = {
+            title: `Buhar Verisi Eksik - ${date}`,
+            message: `${date} tarihli buhar verisi girilmemiş. Lütfen veri girişi yapınız.`,
+            priority: 'high',
+            category: 'veri-eksik',
+            active: true,
+            createdBy: 'Sistem'
+        };
+
+        const result = await saveAnnouncementToSheets(announcementData);
+        if (result.success) {
+            console.log('Buhar eksik bildirimi gönderildi:', date);
+        } else {
+            console.error('Buhar eksik bildirimi gönderilemedi:', result.error);
+        }
+    } catch (error) {
+        console.error('Buhar eksik bildirimi oluşturma hatası:', error);
+    }
+}
+
+async function deleteSteamMissingAnnouncement(date) {
+    try {
+        // Mevcut duyuruları çek
+        const result = await fetchAnnouncementsFromSheets({ active: 'true' });
+        
+        if (!result.success || !Array.isArray(result.data)) {
+            console.error('Duyurular alınamadı');
+            return;
+        }
+
+        // Buhar eksik bildirimini ara
+        const announcementId = result.data.find(item => 
+            item.title && item.title.includes(`Buhar Verisi Eksik - ${date}`)
+        );
+
+        if (announcementId && announcementId.id) {
+            const deleteResult = await deleteAnnouncementFromSheets(announcementId.id);
+            if (deleteResult.success) {
+                console.log('Buhar eksik bildirimi silindi:', date);
+            } else {
+                console.error('Buhar eksik bildirimi silinemedi:', deleteResult.error);
+            }
+        }
+    } catch (error) {
+        console.error('Buhar eksik bildirimi silme hatası:', error);
+    }
+}
+
+// Buhar kontrolünü başlat
+setTimeout(checkPreviousDaySteamData, 60000); // Sayfa yüklendikten 1 dakika sonra
+setInterval(checkPreviousDaySteamData, 30 * 60 * 1000); // Her 30 dakikada bir kontrol
