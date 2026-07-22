@@ -357,31 +357,11 @@ async function handleDuzenleKaydet() {
     }
 }
 
-// 🔥 GÜNCELLEME LOG FONKSİYONU
+// 🔥 GÜNCELLEME LOG FONKSİYONU - DEVRE DIŞI
 async function logUpdate(oldRecord, newRecord) {
-    try {
-        const logData = {
-            motor: oldRecord.motor,
-            tarih: oldRecord.tarih,
-            vardiya: oldRecord.vardiya,
-            saat: oldRecord.saat,
-            eskiKayit: oldRecord,
-            yeniKayit: newRecord,
-            guncelleyen: getCurrentUserName(),
-            guncellemeZamani: new Date().toISOString()
-        };
-        
-        // Google Sheets'e log kaydı gönder
-        await fetch('https://script.google.com/macros/s/AKfycbz-Ipx_lGRL4_OE7Z-phV6JkXzyykIokf9ifNltl14ERl2NzyKFfIYXcWmklFnJemCm/exec', {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'logUpdate',
-                data: logData
-            })
-        });
-    } catch (error) {
-        console.error('Log kaydı hatası:', error);
-    }
+    // Log fonksiyonu devre dışı - URL 404 veriyor
+    console.log('Log kaydı (devre dışı):', oldRecord.motor, oldRecord.tarih, oldRecord.saat);
+    return;
 }
 
 

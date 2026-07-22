@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const DAILY_PRODUCTION_CACHE_KEY = 'dashboardDailyProduction';
     const DAILY_STEAM_CACHE_KEY = 'dashboardDailySteam';
     const SUMMARY_CACHE_DATE_KEY = 'dashboardSummaryCacheDate';
+    const ANNOUNCEMENT_COUNT_CACHE_KEY = 'dashboardAnnouncementCount';
     const ANNOUNCEMENT_MODAL_PENDING_KEY = 'showHomeAnnouncementModal';
     const ANNOUNCEMENT_MODAL_SHOWN_KEY = 'homeAnnouncementModalShown';
     const defaultAnnouncements = [];
@@ -99,7 +100,6 @@ document.addEventListener('DOMContentLoaded', function() {
             refreshMaintenanceTotalInBackground();
             updateMotorData();
             updateSummaryData();
-            return;
         }
 
         const tasks = [
@@ -358,8 +358,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function loadCachedAnnouncementCount() {
+        const cachedCount = localStorage.getItem(ANNOUNCEMENT_COUNT_CACHE_KEY);
+        if (cachedCount !== null) {
+            const value = parseDashboardNumber(cachedCount);
+            if (Number.isFinite(value)) {
+                summaryData.activeFaults = value;
+            }
+        }
+    }
+
     function updateAnnouncementCount(announcements) {
         summaryData.activeFaults = announcements.length;
+        localStorage.setItem(ANNOUNCEMENT_COUNT_CACHE_KEY, String(summaryData.activeFaults));
         updateSummaryData();
     }
 
@@ -635,19 +646,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Buhar verisini çek (son kayıt)
     async function loadBuharData() {
         try {
+            console.log('Buhar verisi yükleniyor...');
             const url = new URL(BUHAR_APPS_SCRIPT_URL);
             url.searchParams.append('action', 'getLastRecords');
             url.searchParams.append('count', '1');
             
+            console.log('Buhar API URL:', url.toString());
             const response = await fetch(url, { method: 'GET', mode: 'cors' });
             const result = await response.json();
             
+            console.log('Buhar API yanıtı:', result);
+            
             if (result.success && result.data && result.data.length > 0) {
                 const lastRecord = result.data[0];
+                console.log('Son buhar kaydı:', lastRecord);
                 summaryData.dailySteam = parseFloat(lastRecord.buharMiktari) || 0;
                 localStorage.setItem(DAILY_STEAM_CACHE_KEY, String(summaryData.dailySteam));
                 localStorage.setItem(SUMMARY_CACHE_DATE_KEY, formatDashboardDateTR(new Date()));
+                console.log('Buhar verisi kaydedildi:', summaryData.dailySteam);
             } else {
+                console.log('Buhar verisi bulunamadı veya başarısız:', result);
                 summaryData.dailySteam = null;
             }
         } catch (error) {
