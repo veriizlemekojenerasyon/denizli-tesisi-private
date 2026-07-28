@@ -7,6 +7,11 @@
     let html5QrCode = null;
     let isScanning = false;
     let onSuccessCallback = null;
+    let notificationFormat = 'title-first';
+
+    function setNotificationFormat(format) {
+        notificationFormat = format === 'type-first' ? 'type-first' : 'title-first';
+    }
 
     function getSupportedFormats() {
         const F = global.Html5QrcodeSupportedFormats;
@@ -29,7 +34,11 @@
 
     function notify(title, message, type) {
         if (typeof showNotification === 'function') {
-            showNotification(title, message, type);
+            if (notificationFormat === 'type-first') {
+                showNotification(type, title, message);
+            } else {
+                showNotification(title, message, type);
+            }
         } else {
             alert(message);
         }
@@ -176,7 +185,7 @@
         throw lastError || new Error('Kamera açılamadı.');
     }
 
-    async function open(targetInputId) {
+    async function open(targetInputId, customCallback) {
         if (isScanning) return;
 
         if (!global.Html5Qrcode) {
@@ -193,14 +202,18 @@
             return;
         }
 
-        const input = document.getElementById(targetInputId);
-        if (!input) return;
+        const input = targetInputId ? document.getElementById(targetInputId) : null;
+        if (targetInputId && !input && typeof customCallback !== 'function') return;
 
         onSuccessCallback = function (text) {
             const barcodeValue = extractBarcodeCode(text);
-            input.value = barcodeValue;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
+            if (typeof customCallback === 'function') {
+                customCallback(barcodeValue, text);
+            } else if (input) {
+                input.value = barcodeValue;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
             notify('Başarılı', 'Barkod okundu: ' + barcodeValue, 'success');
         };
 
@@ -255,11 +268,11 @@
         if (modal) modal.remove();
     }
 
-    function initButton(buttonId, targetInputId) {
+    function initButton(buttonId, targetInputId, customCallback) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
         btn.addEventListener('click', function () {
-            open(targetInputId);
+            open(targetInputId, customCallback);
         });
     }
 
@@ -267,6 +280,7 @@
         open: open,
         close: close,
         initButton: initButton,
-        extractBarcodeCode: extractBarcodeCode
+        extractBarcodeCode: extractBarcodeCode,
+        setNotificationFormat: setNotificationFormat
     };
 })(window);

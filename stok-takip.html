@@ -98,8 +98,13 @@
                     <form id="stock-form">
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="material-code">Malzeme Kodu</label>
-                                <input type="text" id="material-code" name="material-code" placeholder="Örn: MLZ-001" required>
+                                <label for="material-code">Barkod / Malzeme Kodu</label>
+                                <div class="barcode-input-group">
+                                    <input type="text" id="material-code" name="material-code" placeholder="Barkod okutun veya kod girin" required>
+                                    <button type="button" id="material-code-scan-btn" class="barcode-scan-btn" title="Kamera ile barkod oku">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="material-name">Malzeme Adı</label>
@@ -160,6 +165,23 @@
                 <!-- Stok Giriş/Çıkış İşlemleri -->
                 <div class="stock-transaction-container">
                     <h3><i class="fas fa-exchange-alt"></i> Stok Giriş/Çıkış</h3>
+                    <div class="barcode-quick-panel">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="transaction-barcode">Barkod ile Malzeme Bul</label>
+                                <div class="barcode-input-group">
+                                    <input type="text" id="transaction-barcode" name="transaction-barcode" placeholder="Barkod okutun veya kod yazın">
+                                    <button type="button" id="transaction-barcode-scan-btn" class="barcode-scan-btn" title="Kamera ile barkod oku">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group barcode-match-info" id="barcode-match-info" style="display: none;">
+                                <label>Seçilen Malzeme</label>
+                                <div class="barcode-match-text" id="barcode-match-text"></div>
+                            </div>
+                        </div>
+                    </div>
                     <form id="transaction-form">
                         <div class="form-row">
                             <div class="form-group">
@@ -196,7 +218,7 @@
                                 <label for="transaction-reason">İşlem Nedeni</label>
                                 <select id="transaction-reason" name="transaction-reason" required>
                                     <option value="">Neden seçin</option>
-                                    <option value=" satin-alma">Satın Alma</option>
+                                    <option value="satin-alma">Satın Alma</option>
                                     <option value="kullanim">Kullanım</option>
                                     <option value="bakim">Bakım</option>
                                     <option value="degisim">Değişim</option>
@@ -237,7 +259,7 @@
                         <table class="stock-table" id="stock-table">
                             <thead>
                                 <tr>
-                                    <th>Kod</th>
+                                    <th>Barkod / Kod</th>
                                     <th>Malzeme Adı</th>
                                     <th>Kategori</th>
                                     <th>Miktar</th>
@@ -316,6 +338,8 @@
         })();
     </script>
 
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="js/barcode-scanner.js"></script>
 <script src="js/stok-takip.js"></script>
 
 <script src="js/global-duyurular.js"></script>
