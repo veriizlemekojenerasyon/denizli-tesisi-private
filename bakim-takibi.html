@@ -337,7 +337,12 @@
                                         </div>
                                         <div class="oil-sample-item">
                                             <label for="barcode-number">Barkod Numarası</label>
-                                            <input type="text" id="barcode-number" name="barcode-number" placeholder="Barkod numarasını girin">
+                                            <div class="barcode-input-group">
+                                                <input type="text" id="barcode-number" name="barcode-number" placeholder="Barkod numarasını girin">
+                                                <button type="button" id="barcode-scan-btn" class="barcode-scan-btn" title="Kamera ile barkod oku">
+                                                    <i class="fas fa-camera"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -697,6 +702,8 @@
         })();
     </script>
 
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="js/barcode-scanner.js"></script>
 <script src="js/bakim-takibi-redesign.js"></script>
 
 <script src="js/bakim-takibi.js"></script>

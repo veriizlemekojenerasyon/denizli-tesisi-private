@@ -971,3 +971,124 @@ body.operator-history-view .report-table-container {
 body.operator-history-view .report-table-container {
   margin-top: 0;
 }
+
+.barcode-input-group {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.barcode-input-group input {
+  flex: 1;
+  min-width: 0;
+}
+
+.barcode-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+  border: 1px solid var(--maint-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--maint-primary);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.barcode-scan-btn:hover {
+  background: #eff6ff;
+  border-color: var(--maint-primary);
+}
+
+.barcode-scan-btn:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.18);
+}
+
+.barcode-scanner-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.82);
+}
+
+.barcode-scanner-modal-content {
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.barcode-scanner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--maint-border);
+}
+
+.barcode-scanner-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--maint-text);
+}
+
+.barcode-scanner-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.barcode-scanner-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.barcode-scanner-body {
+  padding: 16px;
+}
+
+.barcode-scanner-hint {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.barcode-scanner-reader {
+  width: 100%;
+  min-height: 280px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.barcode-scanner-reader video {
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+  .barcode-scanner-modal-content {
+    width: 100%;
+  }
+
+  .barcode-scanner-reader {
+    min-height: 240px;
+  }
+}

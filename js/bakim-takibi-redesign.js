@@ -225,7 +225,12 @@ function renderModernMaintenanceForms() {
                   </div>
                   <div class="oil-sample-item">
                     <label for="barcode-number">Barkod numarasi</label>
-                    <input type="text" id="barcode-number" name="barcode-number" placeholder="Barkod numarasi">
+                    <div class="barcode-input-group">
+                      <input type="text" id="barcode-number" name="barcode-number" placeholder="Barkod numarasi">
+                      <button type="button" id="barcode-scan-btn" class="barcode-scan-btn" title="Kamera ile barkod oku">
+                        <i class="fas fa-camera"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -365,4 +370,8 @@ function renderModernMaintenanceForms() {
       </form>
     </div>
   `;
+
+  if (typeof BarcodeScanner !== 'undefined') {
+    BarcodeScanner.initButton('barcode-scan-btn', 'barcode-number');
+  }
 }
