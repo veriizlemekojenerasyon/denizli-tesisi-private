@@ -157,44 +157,45 @@ main {
 }
 
 @media (max-width: 768px) {
-    .dashboard-container {
+    /* sidebar-mobile-compact modu aktif değilken yatay bar moduna geç */
+    body:not(.sidebar-mobile-compact) .dashboard-container {
         flex-direction: column;
     }
 
-    .sidebar {
+    body:not(.sidebar-mobile-compact) .sidebar {
         width: 100% !important;
         max-height: none;
         position: relative;
     }
 
-    .sidebar-header {
+    body:not(.sidebar-mobile-compact) .sidebar-header {
         padding: 16px;
     }
 
-    .sidebar .logo,
-    .logo {
+    body:not(.sidebar-mobile-compact) .sidebar .logo,
+    body:not(.sidebar-mobile-compact) .logo {
         width: 72px;
         height: 72px;
     }
 
-    .company-name {
+    body:not(.sidebar-mobile-compact) .company-name {
         font-size: 13px;
     }
 
-    .sidebar-menu {
+    body:not(.sidebar-mobile-compact) .sidebar-menu {
         display: flex;
         flex-direction: row;
         overflow-x: auto;
         padding: 10px;
     }
 
-    .menu-item {
+    body:not(.sidebar-mobile-compact) .menu-item {
         flex: 0 0 auto;
         margin: 0 8px 0 0;
         padding: 0;
     }
 
-    .menu-link {
+    body:not(.sidebar-mobile-compact) .menu-link {
         min-width: 92px;
         min-height: 64px;
         justify-content: center;
@@ -202,18 +203,18 @@ main {
         text-align: center;
     }
 
-    .menu-icon {
+    body:not(.sidebar-mobile-compact) .menu-icon {
         margin-right: 0 !important;
         margin-bottom: 4px;
     }
 
-    .menu-text {
+    body:not(.sidebar-mobile-compact) .menu-text {
         font-size: 12px;
         line-height: 1.2;
         white-space: normal;
     }
 
-    .sidebar-footer {
+    body:not(.sidebar-mobile-compact) .sidebar-footer {
         display: none !important;
     }
 

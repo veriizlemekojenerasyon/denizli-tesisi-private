@@ -107,6 +107,23 @@ function setupEventListeners() {
     if (exportBtn) {
         exportBtn.addEventListener('click', exportToExcel);
     }
+
+    setupBarcodeScanners();
+
+    const transactionBarcodeInput = document.getElementById('transaction-barcode');
+    if (transactionBarcodeInput) {
+        transactionBarcodeInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyBarcodeToTransaction(transactionBarcodeInput.value);
+            }
+        });
+        transactionBarcodeInput.addEventListener('change', function () {
+            if (transactionBarcodeInput.value.trim()) {
+                applyBarcodeToTransaction(transactionBarcodeInput.value);
+            }
+        });
+    }
     
     // Çıkış butonları
     const sidebarLogout = document.getElementById('sidebarLogout');
@@ -182,6 +199,9 @@ async function handleTransactionSubmit(e) {
     
     try {
         // Backend'e işlem ekle
+        const selectedMaterialId = formData.get('transaction-material');
+        const selectedMaterial = getMaterials().find(m => String(m.id) === String(selectedMaterialId));
+
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: {
@@ -189,11 +209,11 @@ async function handleTransactionSubmit(e) {
             },
             body: new URLSearchParams({
                 action: 'addTransaction',
-                materialId: formData.get('transaction-material'),
-                materialName: document.querySelector('#transaction-material option:checked')?.text.split(' - ')[1] || '',
+                materialId: selectedMaterialId,
+                materialName: selectedMaterial?.name || document.querySelector('#transaction-material option:checked')?.text.split(' - ')[1] || '',
                 transactionType: formData.get('transaction-type'),
                 transactionQuantity: formData.get('transaction-quantity'),
-                materialUnit: 'adet', // Bu dinamik olabilir
+                materialUnit: selectedMaterial?.unit || 'adet',
                 transactionDate: formData.get('transaction-date'),
                 transactionPerson: formData.get('transaction-person'),
                 transactionReason: formData.get('transaction-reason')
@@ -216,6 +236,7 @@ async function handleTransactionSubmit(e) {
             // Formu temizle ve listeleri güncelle
             e.target.reset();
             document.getElementById('transaction-date').value = new Date().toISOString().split('T')[0];
+            clearBarcodeMatchInfo();
             await loadStockList(true);
             populateMaterialSelect(stockMaterialsCache);
             await loadRecentTransactions();
@@ -425,10 +446,11 @@ async function loadRecentTransactions() {
 // İşlem satırı oluştur
 function createTransactionRow(transaction) {
     const row = document.createElement('tr');
-    
-    const typeClass = transaction.type === 'in' ? 'text-success' : 'text-danger';
-    const typeText = transaction.type === 'in' ? 'Giriş' : 'Çıkış';
-    const typeIcon = transaction.type === 'in' ? '↓' : '↑';
+
+    const isIn = transaction.type === 'in' || transaction.type === 'GİRİŞ' || transaction.type === 'GIRIS';
+    const typeClass = isIn ? 'text-success' : 'text-danger';
+    const typeText = isIn ? 'Giriş' : 'Çıkış';
+    const typeIcon = isIn ? '↓' : '↑';
     
     row.innerHTML = `
         <td>${formatDate(transaction.date)}</td>
@@ -444,6 +466,7 @@ function createTransactionRow(transaction) {
 
 // İşlem nedenini getir
 function getReasonName(reason) {
+    const normalizedReason = String(reason || '').trim();
     const reasons = {
         'satin-alma': 'Satın Alma',
         'kullanim': 'Kullanım',
@@ -451,7 +474,97 @@ function getReasonName(reason) {
         'degisim': 'Değişim',
         'diger': 'Diğer'
     };
-    return reasons[reason] || reason;
+    return reasons[normalizedReason] || reason;
+}
+
+function normalizeBarcodeValue(value) {
+    if (typeof BarcodeScanner !== 'undefined' && BarcodeScanner.extractBarcodeCode) {
+        return BarcodeScanner.extractBarcodeCode(value);
+    }
+    return (value || '').trim();
+}
+
+function findMaterialByBarcode(code) {
+    const normalizedCode = normalizeBarcodeValue(code);
+    if (!normalizedCode) return null;
+
+    const materials = getMaterials();
+    return materials.find(function (material) {
+        return String(material.code || '').trim().toLowerCase() === normalizedCode.toLowerCase();
+    }) || null;
+}
+
+function showBarcodeMatchInfo(material) {
+    const infoBox = document.getElementById('barcode-match-info');
+    const infoText = document.getElementById('barcode-match-text');
+    if (!infoBox || !infoText || !material) return;
+
+    infoText.textContent = `${material.code} - ${material.name} (${material.quantity.toFixed(2)} ${material.unit})`;
+    infoBox.style.display = 'block';
+}
+
+function clearBarcodeMatchInfo() {
+    const infoBox = document.getElementById('barcode-match-info');
+    const infoText = document.getElementById('barcode-match-text');
+    const barcodeInput = document.getElementById('transaction-barcode');
+
+    if (infoBox) infoBox.style.display = 'none';
+    if (infoText) infoText.textContent = '';
+    if (barcodeInput) barcodeInput.value = '';
+}
+
+function applyBarcodeToTransaction(code) {
+    const normalizedCode = normalizeBarcodeValue(code);
+    const barcodeInput = document.getElementById('transaction-barcode');
+    const materialSelect = document.getElementById('transaction-material');
+
+    if (!normalizedCode) {
+        clearBarcodeMatchInfo();
+        return null;
+    }
+
+    if (barcodeInput) {
+        barcodeInput.value = normalizedCode;
+    }
+
+    const material = findMaterialByBarcode(normalizedCode);
+    if (!material) {
+        clearBarcodeMatchInfo();
+        if (barcodeInput) barcodeInput.value = normalizedCode;
+        showNotification('warning', 'Bulunamadı', `"${normalizedCode}" barkodlu malzeme kayıtlı değil. Yeni malzeme ekleyebilirsiniz.`);
+
+        const materialCodeInput = document.getElementById('material-code');
+        if (materialCodeInput) {
+            materialCodeInput.value = normalizedCode;
+            materialCodeInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return null;
+    }
+
+    if (materialSelect) {
+        materialSelect.value = material.id;
+        materialSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    showBarcodeMatchInfo(material);
+    showNotification('success', 'Malzeme Bulundu', `${material.name} seçildi.`);
+
+    const quantityInput = document.getElementById('transaction-quantity');
+    if (quantityInput) {
+        quantityInput.focus();
+    }
+
+    return material;
+}
+
+function setupBarcodeScanners() {
+    if (typeof BarcodeScanner === 'undefined') return;
+
+    BarcodeScanner.setNotificationFormat('type-first');
+    BarcodeScanner.initButton('material-code-scan-btn', 'material-code');
+    BarcodeScanner.initButton('transaction-barcode-scan-btn', 'transaction-barcode', function (code) {
+        applyBarcodeToTransaction(code);
+    });
 }
 
 // Malzeme düzenle

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kojen Maliyet Raporu | Kojenerasyon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/enerji-rapor.css">
+    <link rel="stylesheet" href="css/kojen-maliyet-rapor.css">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body data-active-page="kojen-maliyet-rapor">
+
+    <!-- appShell: admin girişinden sonra gösterilir -->
+    <div id="appShell" class="dashboard-container" hidden>
+
+        <!-- Sidebar -->
+        <nav class="sidebar" aria-label="Ana menü">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Koruma logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu"></ul>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <span id="sidebarUserNameDisplay">Yükleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout" type="button">Çıkış Yap</button>
+            </div>
+        </nav>
+
+        <!-- Ana İçerik -->
+        <div class="main-content">
+
+            <!-- Sayfa Başlığı -->
+            <header class="page-header">
+                <div class="header-left">
+                    <p class="eyebrow">Admin · Kojen Analitik</p>
+                    <h1>Maliyet Raporu</h1>
+                    <p class="header-subtitle">
+                        Bakım, arıza, doğalgaz, bağlantı noktası ve fatura verilerini birleştiren kapsamlı maliyet analizi.
+                    </p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn ghost" type="button" id="exportCsvBtn">
+                        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                        CSV
+                    </button>
+                    <button class="btn ghost" type="button" id="exportPdfBtn">
+                        <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+                        PDF
+                    </button>
+                    <button class="btn primary" type="button" id="generateReportBtn">
+                        <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        Rapor Üret
+                    </button>
+                    <button class="btn accent" type="button" id="maliyetGirisBtn">
+                        <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                        Maliyet Giriş
+                    </button>
+                    <span class="current-user" id="userNameDisplay">Admin</span>
+                </div>
+            </header>
+
+            <main class="report-content">
+
+                <!-- Filtre Paneli -->
+                <section class="filter-panel" aria-label="Rapor filtreleri">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="reportMonth">Ay</label>
+                            <select id="reportMonth">
+                                <option value="1">Ocak</option>
+                                <option value="2">Şubat</option>
+                                <option value="3">Mart</option>
+                                <option value="4">Nisan</option>
+                                <option value="5">Mayıs</option>
+                                <option value="6">Haziran</option>
+                                <option value="7" selected>Temmuz</option>
+                                <option value="8">Ağustos</option>
+                                <option value="9">Eylül</option>
+                                <option value="10">Ekim</option>
+                                <option value="11">Kasım</option>
+                                <option value="12">Aralık</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="reportYear">Yıl</label>
+                            <input type="number" id="reportYear" value="2026" min="2020" max="2100" step="1">
+                        </div>
+                        <div class="filter-group">
+                            <label for="reportType">Rapor Türü</label>
+                            <select id="reportType">
+                                <option value="all">Tüm Veriler</option>
+                                <option value="maliyet">Maliyet Analizi</option>
+                                <option value="avantaj">Kojen Avantajı</option>
+                                <option value="dengesizlik">Dengesizlik</option>
+                                <option value="fatura">Faturalaşma</option>
+                                <option value="baglanti">Bağlantı Noktaları</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="reportStartDate">Başlangıç</label>
+                            <input type="date" id="reportStartDate">
+                        </div>
+                        <div class="filter-group">
+                            <label for="reportEndDate">Bitiş</label>
+                            <input type="date" id="reportEndDate">
+                        </div>
+                        <button class="btn primary filter-btn" type="button" id="applyFilterBtn">
+                            Filtrele
+                        </button>
+                    </div>
+                    <div class="filter-row chips-row">
+                        <button class="chip active" data-quick="thisMonth">Bu Ay</button>
+                        <button class="chip" data-quick="lastMonth">Geçen Ay</button>
+                        <button class="chip" data-quick="last7">Son 7 Gün</button>
+                        <button class="chip" data-quick="last30">Son 30 Gün</button>
+                        <button class="chip" data-quick="ytd">Yılbaşından Bugüne</button>
+                    </div>
+                </section>
+
+                <!-- Bildirim Alanı -->
+                <div class="notice-bar" id="noticeBar" hidden></div>
+
+                <!-- KPI Kartları -->
+                <section class="kpi-grid" aria-label="Özet göstergeler">
+                    <article class="kpi-card accent-blue">
+                        <span class="kpi-label">Kojen Birim Maliyeti</span>
+                        <strong id="kpiBirimMaliyet">--</strong>
+                        <span class="kpi-note">TL / kWh</span>
+                        <div class="kpi-sub" id="kpiBirimMaliyetSub"></div>
+                    </article>
+                    <article class="kpi-card accent-green">
+                        <span class="kpi-label">Toplam Kojen Avantajı</span>
+                        <strong id="kpiKojenAvantaj">--</strong>
+                        <span class="kpi-note">₺</span>
+                        <div class="kpi-sub" id="kpiKojenAvantajSub"></div>
+                    </article>
+                    <article class="kpi-card accent-orange">
+                        <span class="kpi-label">Toplam Dengesizlik</span>
+                        <strong id="kpiDengesizlik">--</strong>
+                        <span class="kpi-note">₺</span>
+                        <div class="kpi-sub" id="kpiDengesizlikSub"></div>
+                    </article>
+                    <article class="kpi-card accent-purple">
+                        <span class="kpi-label">Toplam Şebeke Faturası</span>
+                        <strong id="kpiFatura">--</strong>
+                        <span class="kpi-note">₺</span>
+                        <div class="kpi-sub" id="kpiFaturaSub"></div>
+                    </article>
+                    <article class="kpi-card accent-teal">
+                        <span class="kpi-label">Toplam Kojen Üretim</span>
+                        <strong id="kpiKojenUretim">--</strong>
+                        <span class="kpi-note">kWh</span>
+                        <div class="kpi-sub" id="kpiKojenUretimSub"></div>
+                    </article>
+                    <article class="kpi-card accent-red">
+                        <span class="kpi-label">Net Şebeke Tüketimi</span>
+                        <strong id="kpiSebeke">--</strong>
+                        <span class="kpi-note">MWh</span>
+                        <div class="kpi-sub" id="kpiSebekeSub"></div>
+                    </article>
+                </section>
+
+                <!-- Maliyet Detay + Avantaj Grafik -->
+                <section class="panel-grid two-col">
+
+                    <!-- Maliyet Bileşenleri -->
+                    <article class="panel" id="maliyetPanel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Maliyet Bileşenleri</h2>
+                                <p>kWh başına maliyet dağılımı</p>
+                            </div>
+                            <span class="panel-badge" id="maliyetBadge">--</span>
+                        </div>
+                        <div class="cost-breakdown" id="costBreakdown">
+                            <div class="loading-state">
+                                <div class="spinner"></div>
+                                <p>Rapor üretmek için "Rapor Üret" butonuna basın.</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Günlük Avantaj Tablosu -->
+                    <article class="panel" id="avantajPanel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Günlük Kojen Avantajı</h2>
+                                <p>Şebeke yerine kojen kullanımının getirdiği tasarruf</p>
+                            </div>
+                            <span class="panel-badge green" id="avantajToplamBadge">--</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Avantaj (₺)</th>
+                                        <th>Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="avantajTableBody">
+                                    <tr><td colspan="3" class="empty-row">Veri yok</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                </section>
+
+                <!-- Saatlik Bağlantı Noktaları + Dengesizlik -->
+                <section class="panel-grid two-col">
+
+                    <!-- Saatlik Üretim Planı -->
+                    <article class="panel" id="baglantiPanel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Saatlik Üretim Planı</h2>
+                                <p id="baglantiTarihLabel">Bağlantı noktası verileri</p>
+                            </div>
+                            <div class="panel-header-actions">
+                                <input type="date" id="baglantiTarihInput" class="date-inline">
+                                <button class="btn ghost sm" type="button" id="baglantiCekBtn">Çek</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table saatlik-table">
+                                <thead>
+                                    <tr>
+                                        <th>Saat</th>
+                                        <th>Tüketim (MWh)</th>
+                                        <th>GM1</th>
+                                        <th>GM2</th>
+                                        <th>GM3</th>
+                                        <th>Kojen Top.</th>
+                                        <th>Şebeke</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="baglantiTableBody">
+                                    <tr><td colspan="7" class="empty-row">Veri yok</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <!-- Aylık Dengesizlik -->
+                    <article class="panel" id="dengesizlikPanel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Aylık Dengesizlik Detayı</h2>
+                                <p>EPİAŞ ve TEİAŞ dengesizlik maliyetleri</p>
+                            </div>
+                            <span class="panel-badge red" id="dengesizlikToplamBadge">--</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>EPİAŞ (₺)</th>
+                                        <th>TEİAŞ (₺)</th>
+                                        <th>Toplam (₺)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dengesizlikTableBody">
+                                    <tr><td colspan="4" class="empty-row">Veri yok</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                </section>
+
+                <!-- Faturalaşma Detayı -->
+                <section class="panel full-width" id="faturaPanel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Faturalaşma Detayı</h2>
+                            <p>Saatlik EPİAŞ, dağıtım+YEKDEM ve dengesizlik kalemleri</p>
+                        </div>
+                        <div class="panel-header-actions">
+                            <span class="panel-badge" id="faturaToplamBadge">--</span>
+                            <button class="btn ghost sm" type="button" id="faturaExportBtn">
+                                <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                                CSV
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table fatura-table">
+                            <thead>
+                                <tr>
+                                    <th>Saat</th>
+                                    <th>Den. Alış/Satış (₺)</th>
+                                    <th>EPİAŞ (₺)</th>
+                                    <th>Dağıtım+YEKDEM (₺)</th>
+                                    <th>Koruma Fatura (₺)</th>
+                                    <th>VTC Fatura (₺)</th>
+                                    <th>Tahmin (MWh)</th>
+                                    <th>Gerçek (MWh)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="faturaTableBody">
+                                <tr><td colspan="8" class="empty-row">Veri yok</td></tr>
+                            </tbody>
+                            <tfoot id="faturaTableFoot"></tfoot>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Motor Bazlı Çalışma Özeti -->
+                <section class="panel-grid three-col">
+                    <article class="panel motor-card" id="motorGm1Card">
+                        <div class="motor-badge">GM1</div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Çalışma Saati</span>
+                            <strong id="gm1Hours">--</strong>
+                        </div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Plan Üretimi</span>
+                            <strong id="gm1Plan">--</strong>
+                        </div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Bakım Maliyeti</span>
+                            <strong id="gm1Bakim">--</strong>
+                        </div>
+                    </article>
+                    <article class="panel motor-card" id="motorGm2Card">
+                        <div class="motor-badge">GM2</div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Çalışma Saati</span>
+                            <strong id="gm2Hours">--</strong>
+                        </div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Plan Üretimi</span>
+                            <strong id="gm2Plan">--</strong>
+                        </div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Bakım Maliyeti</span>
+                            <strong id="gm2Bakim">--</strong>
+                        </div>
+                    </article>
+                    <article class="panel motor-card" id="motorGm3Card">
+                        <div class="motor-badge">GM3</div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Çalışma Saati</span>
+                            <strong id="gm3Hours">--</strong>
+                        </div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Plan Üretimi</span>
+                            <strong id="gm3Plan">--</strong>
+                        </div>
+                        <div class="motor-stat">
+                            <span class="motor-label">Bakım Maliyeti</span>
+                            <strong id="gm3Bakim">--</strong>
+                        </div>
+                    </article>
+                </section>
+
+                <!-- Aylık Özet Tablosu -->
+                <section class="panel full-width" id="aylikOzetPanel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Aylık Özet</h2>
+                            <p>Günlük şebeke maliyeti, kojen üretimi ve birim maliyet karşılaştırması</p>
+                        </div>
+                        <button class="btn ghost sm" type="button" id="aylikExportBtn">
+                            <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                            CSV
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table aylik-table">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Kojen Avantaj (₺)</th>
+                                    <th>Şebeke Mal. (₺)</th>
+                                    <th>Birim Mal. (₺/kWh)</th>
+                                    <th>Kojen Üretim (kWh)</th>
+                                    <th>Kojen Mal. (₺)</th>
+                                    <th>Dengesizlik (₺)</th>
+                                    <th>Durum</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aylikTableBody">
+                                <tr><td colspan="8" class="empty-row">Veri yok</td></tr>
+                            </tbody>
+                            <tfoot id="aylikTableFoot"></tfoot>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Rapor Geçmişi -->
+                <section class="panel full-width" id="raporGecmisiPanel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Rapor Geçmişi</h2>
+                            <p>Bu oturumda üretilen raporlar</p>
+                        </div>
+                        <button class="btn ghost sm" type="button" id="clearHistoryBtn">Geçmişi Temizle</button>
+                    </div>
+                    <div class="history-list" id="historyList">
+                        <p class="empty-row">Henüz rapor üretilmedi.</p>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ── MALİYET GİRİŞ MODALI ─────────────────────────────────────────── -->
+    <div id="maliyetGirisModal" class="km-modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="kmModalTitle">
+        <div class="km-modal">
+            <div class="km-modal-header">
+                <div>
+                    <h2 id="kmModalTitle">Kojen Maliyet Bedeli Girişi</h2>
+                    <p>Seçilen döneme ait maliyet bileşenlerini girin.</p>
+                </div>
+                <button class="km-modal-close" id="maliyetModalKapat" type="button" aria-label="Kapat">
+                    <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="km-modal-body">
+
+                <!-- Dönem -->
+                <div class="km-field-row">
+                    <div class="km-field">
+                        <label for="kmAy">Ay</label>
+                        <select id="kmAy">
+                            <option value="1">Ocak</option><option value="2">Şubat</option>
+                            <option value="3">Mart</option><option value="4">Nisan</option>
+                            <option value="5">Mayıs</option><option value="6">Haziran</option>
+                            <option value="7">Temmuz</option><option value="8">Ağustos</option>
+                            <option value="9">Eylül</option><option value="10">Ekim</option>
+                            <option value="11">Kasım</option><option value="12">Aralık</option>
+                        </select>
+                    </div>
+                    <div class="km-field">
+                        <label for="kmYil">Yıl</label>
+                        <input type="number" id="kmYil" min="2020" max="2100" step="1">
+                    </div>
+                </div>
+
+                <div class="km-divider"></div>
+
+                <!-- Fatura Kalemleri -->
+                <p class="km-section-label">Fatura Kalemleri (TL/MWh)</p>
+
+                <div class="km-field-row">
+                    <div class="km-field">
+                        <label for="kmKojenMaliyet">
+                            Kojen Maliyet
+                            <span class="km-hint">TL/MWh</span>
+                        </label>
+                        <input type="number" id="kmKojenMaliyet" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                    <div class="km-field">
+                        <label for="kmYekdem">
+                            YEKDEM
+                            <span class="km-hint">TL/MWh</span>
+                        </label>
+                        <input type="number" id="kmYekdem" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <div class="km-field-row">
+                    <div class="km-field">
+                        <label for="kmDagitim">
+                            Dağıtım
+                            <span class="km-hint">TL/MWh</span>
+                        </label>
+                        <input type="number" id="kmDagitim" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                    <div class="km-field">
+                        <label for="kmVtcGider">
+                            VTC Gider
+                            <span class="km-hint">TL/MWh</span>
+                        </label>
+                        <input type="number" id="kmVtcGider" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <div class="km-field-row">
+                    <div class="km-field">
+                        <label for="kmGucBedeli">
+                            Güç Bedeli
+                            <span class="km-hint">TL/MWh</span>
+                        </label>
+                        <input type="number" id="kmGucBedeli" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                    <div class="km-field"><!-- dolgu --></div>
+                </div>
+
+                <div class="km-divider"></div>
+
+                <!-- Kojen Maliyet Bedeli — ana input -->
+
+
+                <div class="km-field">
+                    <label for="kmNot">Açıklama / Not <span class="km-hint">opsiyonel</span></label>
+                    <textarea id="kmNot" rows="2" placeholder="Örn: Temmuz 2026 revize değeri..."></textarea>
+                </div>
+
+            </div>
+
+            <div class="km-modal-footer">
+                <div id="kmModalNotice" class="km-notice" hidden></div>
+                <div class="km-footer-actions">
+                    <button class="btn ghost" type="button" id="kmIptalBtn">İptal</button>
+                    <button class="btn primary" type="button" id="kmKaydetBtn">
+                        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+                        Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ── MODAL SONU ─────────────────────────────────────────────────────── -->
+
+    <script src="js/app-config.js"></script>
+    <script src="js/sidebar-menu.js"></script>
+    <script src="js/logout-system.js"></script>
+    <script src="js/kojen-maliyet-rapor.js"></script>
+</body>
+</html>
