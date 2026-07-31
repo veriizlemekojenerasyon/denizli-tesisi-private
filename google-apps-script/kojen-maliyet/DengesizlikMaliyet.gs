@@ -5,7 +5,7 @@
  *
  * Sol tablo (A–L) — Saatlik:
  *   A: SAAT
- *   B: ŞEBEKE TAHMİN (MWh)   ← BaglantiNoktalari G sütunu (Şebeke Hattı Tüketimi)
+ *   B: ŞEBEKE TAHMİN (MWh)   ← BaglantiNoktalari G sütunu (Şebeke Hattı Tüketimi MWh)
  *   C: GERÇEK (MWh)           ← AMR saatlik sayfası B sütunu
  *   D: FARK (MWh)             = C - B
  *   E: PTF (TL/MWh)           ← PiyasaFiyatlari C sütunu
@@ -46,12 +46,19 @@ var DM_SAATLER = [
  * DengesizlikMaliyet sayfasını oluşturur.
  * @param {number} ay   1-12 (opsiyonel)
  * @param {number} yil  Örn: 2026 (opsiyonel)
+ * @param {number} gun  1-31 (opsiyonel, PTF filtresi için; yoksa BaglantiNoktalari'nden okunur)
  */
-function dengesizlikMaliyetSayfasiOlustur(ay, yil) {
+function dengesizlikMaliyetSayfasiOlustur(ay, yil, gun) {
   try {
     var bugun = new Date();
     ay  = ay  || (bugun.getMonth() + 1);
     yil = yil || bugun.getFullYear();
+    // gun belirtilmemişse BaglantiNoktalari'nden veya dünden al
+    if (!gun) {
+      var ss0 = SpreadsheetApp.openById(DM_SPREADSHEET_ID);
+      var bgTarih = dmBaglantiTarihiOku(ss0);
+      gun = bgTarih ? bgTarih.getDate() : (bugun.getDate() - 1 || 1);
+    }
 
     var ss       = SpreadsheetApp.openById(DM_SPREADSHEET_ID);
     var sayfaAdi = DM_SHEET_PREFIX + yil + '_' + dmPad2(ay);
@@ -63,9 +70,9 @@ function dengesizlikMaliyetSayfasiOlustur(ay, yil) {
     // ── Başlıkları yaz ────────────────────────────────────────────────────────
     dmBasliklariYaz(sheet);
     // ── Veri kaynaklarını oku ─────────────────────────────────────────────────
-    var baglantiVerisi  = dmBaglantiNoktasiOku(ss);        // B sütunu (Şebeke Tahmini)
+    var baglantiVerisi  = dmBaglantiNoktasiOku(ss);        // G sütunu (Şebeke Hattı Tüketimi MWh)
     var amrSayfaAdi     = dmAmrSayfaAdiBul(ss, ay, yil);   // AMR_YYYYMMDD sayfa adı
-    var piyasaVerisi    = dmPiyasaVerisiOku(ss, ay, yil);  // PTF, SMF, PozDen, NegDen
+    var piyasaVerisi    = dmPiyasaVerisiOku(ss, ay, yil, gun);  // PTF, SMF, PozDen, NegDen
 
     // ── Saatlik veriler ───────────────────────────────────────────────────────
     var hesaplananGun = dmBaglantiTarihiOku(ss);
@@ -86,19 +93,19 @@ function dengesizlikMaliyetSayfasiOlustur(ay, yil) {
         .setBackground('#1C2B3A').setFontColor('#FFFFFF')
         .setFontWeight('bold').setHorizontalAlignment('center');
 
-      // B: Şebeke Tahmini — BaglantiNoktalari B sütundan sabit değer
+      // B: Şebeke Tahmini — BaglantiNoktalari G sütunu (Şebeke Hattı Tüketimi MWh)
       var tahmin = baglantiVerisi[i] || 0;
       sheet.getRange(satirNo, 2)
         .setValue(tahmin)
         .setNumberFormat('0.000')
-        .setNote('Kaynak: BaglantiNoktalari!B' + bagRow);
+        .setNote('Kaynak: BaglantiNoktalari!G' + bagRow + ' (Sebeke Hatti Tuketimi MWh)');
 
-      // C: Gerçek — AMR_YYYYMMDD B sütunu sabit değer
+      // C: Gerçek — AMR_Saatlik B sütunu (MWh olarak gelir — dönüşüm gerekmez)
       var amrDeger = 0;
       if (amrSayfaAdi) {
         var amrSheet = ss.getSheetByName(amrSayfaAdi);
         if (amrSheet && amrSheet.getLastRow() >= amrRow) {
-          amrDeger = parseFloat(amrSheet.getRange(amrRow, 2).getValue()) || 0;
+          amrDeger = parseFloat(amrSheet.getRange(amrRow, 2).getValue()) || 0; // MWh
         }
       }
       sheet.getRange(satirNo, 3)
@@ -349,53 +356,37 @@ function dmAylikDengesizlikTablosu(sheet, ss, ay, yil, hesaplananGun) {
 // ─── VERİ OKUMA ───────────────────────────────────────────────────────────────
 
 /**
- * BaglantiNoktalari B2:B25 → Tüketim / Şebeke Tahmini (MWh)
- * (Formül referansı için sayfa adı kontrolü yeterli)
+ * BaglantiNoktalari G2:G25 → Şebeke Hattı Tüketimi (MWh)
+ * Sütun yapısı: A=SAAT | B=Tüketim Noktası | C=GM1 | D=GM2 | E=GM3 | F=Toplam Kojen | G=Şebeke Hattı
  */
 function dmBaglantiNoktasiOku(ss) {
   var sheet = ss.getSheetByName('BaglantiNoktalari');
   if (!sheet || sheet.getLastRow() < 25) return dmBosArray(24);
-  return sheet.getRange(2, 2, 24, 1).getValues().map(function(r) {
+  return sheet.getRange(2, 7, 24, 1).getValues().map(function(r) {  // G sütunu = sütun 7
     return parseFloat(r[0]) || 0;
   });
 }
 
 /**
- * O ay/yıl için en son AMR_YYYYMMDD sayfa adını bulur.
- * @returns {string|null} Sayfa adı veya null
+ * AMR sayfası artık tek — AMR_Saatlik
+ * @returns {string} 'AMR_Saatlik'
  */
 function dmAmrSayfaAdiBul(ss, ay, yil) {
-  var sheets = ss.getSheets();
-  var enSonTarih = 0;
-  var bulunanAd  = null;
-
-  sheets.forEach(function(s) {
-    var ad = s.getName();
-    // AMR_YYYYMMDD formatı: AMR_ + 8 rakam = 12 karakter
-    if (ad.length !== 12 || ad.indexOf('AMR_') !== 0) return;
-    var tarihKisim = ad.substring(4); // YYYYMMDD
-    var sYil = parseInt(tarihKisim.substring(0, 4));
-    var sAy  = parseInt(tarihKisim.substring(4, 6));
-    var tarihNum = parseInt(tarihKisim);
-    if (sYil === yil && sAy === ay && tarihNum > enSonTarih) {
-      enSonTarih = tarihNum;
-      bulunanAd  = ad;
-    }
-  });
-
-  if (bulunanAd) {
-    Logger.log('AMR sayfası bulundu: ' + bulunanAd);
-  } else {
-    Logger.log('⚠️ ' + yil + '/' + dmPad2(ay) + ' için AMR sayfası bulunamadı.');
+  var sheet = ss.getSheetByName('AMR_Saatlik');
+  if (sheet) {
+    Logger.log('AMR sayfası bulundu: AMR_Saatlik');
+    return 'AMR_Saatlik';
   }
-  return bulunanAd;
+  Logger.log('⚠️ AMR_Saatlik sayfası bulunamadı.');
+  return null;
 }
 
 /**
- * PiyasaFiyatlari sayfasından ay/yıl için PTF, SMF, PozDen, NegDen okur.
+ * PiyasaFiyatlari sayfasından ay/yıl ve gün için PTF, SMF, PozDen, NegDen okur.
  * A=TARİH (Date), B=SAAT (Date), C=PTF, D=SMF, E=PozDen, F=NegDen
+ * @param {number} gun - Filtrelenecek gün (1-31); 0 veya undefined ise gün filtresi uygulanmaz
  */
-function dmPiyasaVerisiOku(ss, ay, yil) {
+function dmPiyasaVerisiOku(ss, ay, yil, gun) {
   var sonuc = { ptf: [], smf: [], pozDen: [], negDen: [] };
   for (var i = 0; i < 24; i++) {
     sonuc.ptf.push(0); sonuc.smf.push(0);
@@ -412,17 +403,21 @@ function dmPiyasaVerisiOku(ss, ay, yil) {
     var saatObj  = r[1];
 
     // Tarih kontrolü
-    var rAy, rYil;
+    var rAy, rYil, rGun;
     if (tarihObj instanceof Date) {
       rAy  = tarihObj.getMonth() + 1;
       rYil = tarihObj.getFullYear();
+      rGun = tarihObj.getDate();
     } else {
       var p = String(tarihObj).split('.');
       if (p.length < 3) return;
+      rGun = parseInt(p[0]);
       rAy  = parseInt(p[1]);
       rYil = parseInt(p[2]);
     }
     if (rAy !== ay || rYil !== yil) return;
+    // Gün filtresi — belirtilmişse kontrol et
+    if (gun && rGun !== gun) return;
 
     // Saat indeksi
     var sHour;
@@ -492,7 +487,7 @@ function dmPad2(n) { return n < 10 ? '0' + n : String(n); }
 // ─── TEST ─────────────────────────────────────────────────────────────────────
 
 function dengesizlikMaliyetTest() {
-  var r = dengesizlikMaliyetSayfasiOlustur(7, 2026);
+  var r = dengesizlikMaliyetSayfasiOlustur(7, 2026, 30); // ← gün de belirtin
   Logger.log(JSON.stringify(r, null, 2));
   return r;
 }

@@ -4,8 +4,11 @@
 
 // ─── KONFİGÜRASYON ───────────────────────────────────────────────────────────
 
-// Maliyet kayıt GAS Web App URL — deploy sonrası buraya yapıştırın
-var KMR_URL = 'https://script.google.com/macros/s/AKfycbwizn4pYfxP0hjyvn_C8ak2sCTZbvJe8v7-xjCrHbFQ5cweFJUhdLGM7OHlya2qAozS1g/exec';
+// Maliyet kayıt + Rapor verisi + Excel indirme GAS Web App URL
+var KMR_URL = 'https://script.google.com/macros/s/AKfycbx_4MlDgSlc11PhaEqHFHfwEJU5oD17d-NcaLyHcENdjEoXDqD4BvyjfIdBBCSb9Z0x/exec';
+
+// Excel dışa aktarım — aynı proje, aynı URL
+var EXCEL_URL = 'https://script.google.com/macros/s/AKfycbxHQy5uQtkxR1_a-PpX3Iu4HEz8Lg4yp3L0SbKaAZw73gvtlOTdwhFdCyVRla_SJxQm/exec';
 
 var State = {
   user         : null,
@@ -136,26 +139,35 @@ async function handleGenerateReport() {
 }
 
 async function fetchReportData(filter) {
-  if (!KMR_URL) return buildDemoData(filter);
-  var params = new URLSearchParams({ action: 'getRaporData', startDate: filter.startDate,
-    endDate: filter.endDate, month: filter.month, year: filter.year, type: filter.type });
-  var res  = await fetch(KMR_URL + '?' + params.toString());
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  var json = await res.json();
-  if (!json.success) throw new Error(json.error || 'Sunucu hatası');
-  return json.data;
+  // file:// protokolünde fetch çalışmaz — demo moda düş
+  if (!KMR_URL || window.location.protocol === 'file:') return buildDemoData(filter);
+  try {
+    var params = new URLSearchParams({ action: 'getRaporData', startDate: filter.startDate,
+      endDate: filter.endDate, month: filter.month, year: filter.year, type: filter.type });
+    var res  = await fetch(KMR_URL + '?' + params.toString());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Sunucu hatası');
+    return json.data;
+  } catch(err) {
+    console.warn('GAS fetch başarısız, demo mod:', err.message);
+    return buildDemoData(filter);
+  }
 }
 
 // ─── KPI ──────────────────────────────────────────────────────────────────────
 
 function renderKpis(data) {
   var m = data.maliyet||{}, a = data.avantaj||{}, d = data.dengesizlik||{}, f = data.fatura||{}, b = data.baglanti||{};
-  setEl('kpiBirimMaliyet',    fmt5(m.birimMaliyet || 0));
-  setEl('kpiBirimMaliyetSub', 'Bakım+Arıza+Doğalgaz');
+  var kojenMaliyet = num(m.kojenMaliyet || m.net || 0);
+  var toplamMaliyet = num(m.kojenMaliyet||0) + num(m.yekdem||0) + num(m.dagitim||0) + num(m.vtcGider||0) + num(m.gucBedeli||0);
+
+  setEl('kpiBirimMaliyet',    kojenMaliyet.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}));
+  setEl('kpiBirimMaliyetSub', 'YEKDEM+Dağıtım+VTC: ' + (toplamMaliyet - kojenMaliyet).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' TL/MWh');
   setEl('kpiKojenAvantaj',    fmtTL(a.toplam || 0));
   setEl('kpiKojenAvantajSub', 'Günlük ort: ' + fmtTL((a.toplam||0) / Math.max(a.gunSayisi||1,1)));
   setEl('kpiDengesizlik',    fmtTL((d.epiasToplam||0)+(d.teiasToplam||0)));
-  setEl('kpiDengesizlikSub', 'EPİAŞ: ' + fmtTL(d.epiasToplam||0));
+  setEl('kpiDengesizlikSub', 'EPİAŞ: ' + fmtTL(d.epiasToplam||0) + ' · TEİAŞ: ' + fmtTL(d.teiasToplam||0));
   setEl('kpiFatura',    fmtTL(f.toplam||0));
   setEl('kpiFaturaSub', 'Şebeke: ' + fmtMwh(f.sebekeMwh||0));
   setEl('kpiKojenUretim',    fmtKwh(b.toplamUretim||0));
@@ -168,25 +180,38 @@ function renderKpis(data) {
 
 function renderCostBreakdown(m) {
   m = m || {};
+  var kojenMaliyet = num(m.kojenMaliyet || m.net || 0);
+  var yekdem       = num(m.yekdem   || 0);
+  var dagitim      = num(m.dagitim  || 0);
+  var vtcGider     = num(m.vtcGider || 0);
+  var gucBedeli    = num(m.gucBedeli|| 0);
+  var toplam       = kojenMaliyet + yekdem + dagitim + vtcGider + gucBedeli;
+
   var items = [
-    { label: 'Bakım',       value: m.bakim    || 0.1798, cls: 'bakim' },
-    { label: 'Arıza',       value: m.ariza    || 0.1046, cls: 'ariza' },
-    { label: 'Doğalgaz',    value: m.dogalgaz || 4.5420, cls: 'dogalgaz' },
-    { label: 'Buhar (−)',   value: m.buhar    || 0.5636, cls: 'buhar', neg: true },
-    { label: 'Net Maliyet', value: m.net      || 4.2628, cls: 'net' }
+    { label: 'Kojen Maliyet', value: kojenMaliyet, cls: 'dogalgaz' },
+    { label: 'YEKDEM',        value: yekdem,        cls: 'bakim'    },
+    { label: 'Dağıtım',       value: dagitim,       cls: 'ariza'    },
+    { label: 'VTC Gider',     value: vtcGider,      cls: 'buhar'    },
+    { label: 'Güç Bedeli',    value: gucBedeli,     cls: 'net'      }
   ];
-  var maxV = Math.max.apply(null, items.map(function (i) { return Math.abs(i.value); }));
+  var maxV = Math.max.apply(null, items.map(function(i) { return Math.abs(i.value); }));
   var el = document.getElementById('costBreakdown');
-  el.innerHTML = items.map(function (item, idx) {
-    var pct = maxV > 0 ? (Math.abs(item.value)/maxV*100).toFixed(1) : 0;
-    return (idx===3?'<hr class="cost-divider">':'') +
-      '<div class="cost-item">' +
+  if (!el) return;
+  el.innerHTML = items.map(function(item) {
+    var pct = maxV > 0 ? (Math.abs(item.value) / maxV * 100).toFixed(1) : 0;
+    return '<div class="cost-item">' +
       '<span class="cost-item-label">' + item.label + '</span>' +
       '<div class="cost-bar-wrap"><div class="cost-bar ' + item.cls + '" style="width:' + pct + '%"></div></div>' +
-      '<span class="cost-item-value">' + (item.neg?'− ':'') + fmt5(Math.abs(item.value)) + ' TL/kWh</span>' +
+      '<span class="cost-item-value">' + item.value.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' TL/MWh</span>' +
       '</div>';
-  }).join('');
-  setEl('maliyetBadge', fmt5(m.net||4.2628) + ' TL/kWh');
+  }).join('') +
+    '<hr class="cost-divider">' +
+    '<div class="cost-item">' +
+      '<span class="cost-item-label" style="font-weight:700">Toplam</span>' +
+      '<div class="cost-bar-wrap"><div class="cost-bar net" style="width:100%"></div></div>' +
+      '<span class="cost-item-value" style="font-weight:700">' + toplam.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' TL/MWh</span>' +
+    '</div>';
+  setEl('maliyetBadge', kojenMaliyet.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' TL/MWh');
 }
 
 // ─── TABLO RENDER FONKSİYONLARI ──────────────────────────────────────────────
@@ -277,7 +302,7 @@ async function handleBaglantiCek() {
   document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row">Yükleniyor...</td></tr>';
   try {
     var rows=[];
-    if (KMR_URL) {
+    if (KMR_URL && window.location.protocol !== 'file:') {
       var res=await fetch(KMR_URL+'?'+new URLSearchParams({action:'getBaglantiNoktalari',date:tarih}).toString());
       var json=await res.json(); if(!json.success) throw new Error(json.error||'Hata');
       rows=json.data||[];
@@ -372,7 +397,70 @@ function exportTable(tbodyId, filename) {
   showToast('CSV indirildi','success');
 }
 
-// ─── DEMO VERİ ────────────────────────────────────────────────────────────────
+// ─── EXCEL DIŞA AKTARIM ──────────────────────────────────────────────────────
+
+async function excelIndir(tip) {
+  var ay  = getVal('excelAy')  || (new Date().getMonth() + 1);
+  var yil = getVal('excelYil') || new Date().getFullYear();
+
+  var durumEl  = document.getElementById('excelDurum');
+  var hepsiBtn = document.getElementById('excelHepsiBtn');
+  var tipLabel = {
+    hepsi: 'Tüm Sayfalar', kojen: 'Kojen Çalışma',
+    dengesizlik: 'Dengesizlik Maliyet', fatura: 'Faturalaşma', maliyet: 'Maliyet'
+  };
+
+  if (durumEl) {
+    durumEl.style.display = 'block';
+    durumEl.style.color   = 'var(--text-muted)';
+    durumEl.textContent   = '⏳ ' + (tipLabel[tip] || tip) + ' Excel hazırlanıyor...';
+  }
+  if (hepsiBtn) hepsiBtn.disabled = true;
+
+  try {
+    var url = (EXCEL_URL || KMR_URL);
+    if (!url) throw new Error('Excel URL tanımlı değil.');
+
+    var params = new URLSearchParams({ action: 'excelIndir', ay: ay, yil: yil, tip: tip });
+    var res    = await fetch(url + '?' + params.toString());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Sunucu hatası');
+
+    // Base64 → Blob → İndir
+    var byteChars = atob(json.base64);
+    var byteArr   = new Uint8Array(byteChars.length);
+    for (var i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+    var blob = new Blob([byteArr], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    var blobUrl = URL.createObjectURL(blob);
+    var a       = document.createElement('a');
+    a.href     = blobUrl;
+    a.download = json.dosyaAdi;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+
+    if (durumEl) {
+      durumEl.style.color = '#276749';
+      durumEl.textContent = '✅ ' + json.dosyaAdi + ' indirildi'
+        + (json.sayfalar && json.sayfalar.length ? ' (' + json.sayfalar.join(', ') + ')' : '');
+      setTimeout(function() { if (durumEl) durumEl.style.display = 'none'; }, 6000);
+    }
+    showToast(json.dosyaAdi + ' indirildi', 'success');
+
+  } catch(err) {
+    if (durumEl) {
+      durumEl.style.color = '#c53030';
+      durumEl.textContent = '❌ Hata: ' + err.message;
+    }
+    showToast('Excel indirme hatası: ' + err.message, 'error');
+  } finally {
+    if (hepsiBtn) hepsiBtn.disabled = false;
+  }
+}
 
 function buildDemoData(filter) {
   var avList=[111283,60689,50486,34117,2960,21601,38484,39818,68388,59592,42336,49016,47935,56313,31747,83361,72728,74956,69662,94512,98596,120347,94826,108412,25129,69665];
@@ -386,7 +474,15 @@ function buildDemoData(filter) {
   var tAv=gunler.reduce(function(s,g){return s+g.avantaj;},0);
   var tDen=gunler.reduce(function(s,g){return s+g.dengesizlik;},0);
   return {
-    maliyet:{bakim:0.1798,ariza:0.1046,dogalgaz:4.5419,buhar:0.5636,net:4.2628,birimMaliyet:4.403},
+    maliyet:{
+      kojenMaliyet : 4250,
+      yekdem       : 320.50,
+      dagitim      : 185.75,
+      vtcGider     : 95.00,
+      gucBedeli    : 210.00,
+      net          : 4250,
+      birimMaliyet : 4250
+    },
     avantaj:{toplam:tAv,gunSayisi:gunler.length,gunluk:gunler.map(function(g){return{tarih:g.tarih,avantaj:g.avantaj};})},
     dengesizlik:{epiasToplam:Math.round(tDen*.93),teiasToplam:Math.round(tDen*.07),
       aylik:gunler.map(function(g){return{tarih:g.tarih,epias:Math.round(g.dengesizlik*.93),teias:Math.round(g.dengesizlik*.07)};})},
@@ -493,8 +589,7 @@ var KM_MODAL = {
     ['kmKojenMaliyet','kmYekdem','kmDagitim','kmVtcGider','kmGucBedeli'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener('input', function () { KM_MODAL.autoHesapla(); });
-    });
-  },
+    });  },
 
   /** Modalı açar ve dönem değerlerini rapor filtresinden doldurur */
   ac: function () {
@@ -522,7 +617,7 @@ var KM_MODAL = {
     this.noticeGizle();
     this.overlay.hidden = false;
     // İlk input'a odaklan
-    var ilk = document.getElementById('kmBirimMaliyet');
+    var ilk = document.getElementById('kmKojenMaliyet');
     if (ilk) setTimeout(function () { ilk.focus(); ilk.select(); }, 80);
   },
 
@@ -532,20 +627,19 @@ var KM_MODAL = {
     this.noticeGizle();
   },
 
-  /** Bakım + Arıza + Doğalgaz − Buhar → birim maliyet otomatik ipucu */
+  /** Maliyet toplamını hesaplayıp gösterir */
   autoHesapla: function () {
-    var b  = parseFloat(getVal('kmBakim'))    || 0;
-    var a  = parseFloat(getVal('kmAriza'))    || 0;
-    var d  = parseFloat(getVal('kmDogalgaz')) || 0;
-    var bh = parseFloat(getVal('kmBuhar'))    || 0;
-    var net = b + a + d - bh;
+    var k  = parseFloat(getVal('kmKojenMaliyet')) || 0;
+    var y  = parseFloat(getVal('kmYekdem'))       || 0;
+    var d  = parseFloat(getVal('kmDagitim'))      || 0;
+    var v  = parseFloat(getVal('kmVtcGider'))     || 0;
+    var g  = parseFloat(getVal('kmGucBedeli'))    || 0;
+    var toplam = k + y + d + v + g;
 
-    var hintEl = document.getElementById('kmAutoHint');
-    var valEl  = document.getElementById('kmAutoVal');
-    if (!hintEl || !valEl) return;
-
-    if (b || a || d || bh) {
-      valEl.textContent = net.toFixed(5) + ' TL/kWh';
+    var hintEl = document.getElementById('kmToplamHint');
+    if (!hintEl) return;
+    if (k || y || d || v || g) {
+      hintEl.textContent = 'Toplam: ' + toplam.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' TL/MWh';
       hintEl.hidden = false;
     } else {
       hintEl.hidden = true;
@@ -604,8 +698,8 @@ var KM_MODAL = {
     this.setSaving(true);
 
     try {
-      if (!KMR_URL) {
-        // Demo mod — URL yoksa simüle et
+      if (!KMR_URL || window.location.protocol === 'file:') {
+        // Demo mod — file:// protokolünde veya URL yoksa simüle et
         await new Promise(function (r) { setTimeout(r, 800); });
         KM_MODAL._kaydetBasarili(payload);
         return;

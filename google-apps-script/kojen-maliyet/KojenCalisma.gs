@@ -40,12 +40,19 @@ var KC_SAATLER = [
  * Güncel ay veya belirtilen ay/yıl için KojenCalisma sayfasını oluşturur.
  * @param {number} ay  - 1-12 (opsiyonel, yoksa güncel ay)
  * @param {number} yil - Örn: 2026 (opsiyonel, yoksa güncel yıl)
+ * @param {number} gun - 1-31 (opsiyonel, PTF filtresi için; yoksa BaglantiNoktalari'nden okunur)
  */
-function kojenCalismaSayfasiOlustur(ay, yil) {
+function kojenCalismaSayfasiOlustur(ay, yil, gun) {
   try {
     var bugun = new Date();
     ay  = ay  || (bugun.getMonth() + 1);
     yil = yil || bugun.getFullYear();
+    // gun belirtilmemişse BaglantiNoktalari'nden veya dünden al
+    if (!gun) {
+      var ss0 = SpreadsheetApp.openById(KC_SPREADSHEET_ID);
+      var bgTarih = kcBaglantiTarihiOku(ss0);
+      gun = bgTarih ? bgTarih.getDate() : (bugun.getDate() - 1 || 1);
+    }
 
     var ss         = SpreadsheetApp.openById(KC_SPREADSHEET_ID);
     var sayfaAdi   = KC_SHEET_PREFIX + yil + '_' + kcPad2(ay);
@@ -85,7 +92,7 @@ function kojenCalismaSayfasiOlustur(ay, yil) {
         .setNote('Hesaplama: Kojen Üretim × Kojen Maliyet\n= B' + satirNo + ' × C' + satirNo);
 
       // E: Şebeke+Dağıtım+YEKDEM — PTF sabit değer + Maliyet F/G/H sabitleri
-      var ptfDegeri = kcPtfDegeriniAl(ss, saat, ay, yil);
+      var ptfDegeri = kcPtfDegeriniAl(ss, saat, ay, yil, gun);
       var ptfSayi = isNaN(parseFloat(ptfDegeri)) ? 0 : parseFloat(ptfDegeri);
       // Ondalık locale sorununu önlemek için PTF'yi tam sayıya yuvarlayarak formüle yaz
       var ptfTamsayi = Math.round(ptfSayi * 100) / 100;
@@ -325,11 +332,12 @@ function kcDunTarihi() {
 }
 
 /**
- * PiyasaFiyatlari sayfasından belirtilen ay/yıl ve saate ait PTF değerini okur.
+ * PiyasaFiyatlari sayfasından belirtilen ay/yıl, gün ve saate ait PTF değerini okur.
  * A=TARİH (Date objesi), B=SAAT (Date objesi), C=PTF
  * B sütunu Date objesi olduğu için saat bilgisi karşılaştırılır.
+ * @param {number} gun - Filtrelenecek gün (1-31); 0 veya undefined ise gün filtresi uygulanmaz
  */
-function kcPtfDegeriniAl(ss, saat, ay, yil) {
+function kcPtfDegeriniAl(ss, saat, ay, yil, gun) {
   var sheet = ss.getSheetByName('PiyasaFiyatlari');
   if (!sheet || sheet.getLastRow() < 2) return 0;
 
@@ -342,17 +350,21 @@ function kcPtfDegeriniAl(ss, saat, ay, yil) {
     var ptf      = veriler[i][2];
 
     // Tarih: Date objesi veya string olabilir
-    var satirAy, satirYil;
+    var satirAy, satirYil, satirGun;
     if (tarihObj instanceof Date) {
       satirAy  = tarihObj.getMonth() + 1;
       satirYil = tarihObj.getFullYear();
+      satirGun = tarihObj.getDate();
     } else {
       var parcalar = String(tarihObj).split('.');
       if (parcalar.length < 3) continue;
+      satirGun = parseInt(parcalar[0], 10);
       satirAy  = parseInt(parcalar[1], 10);
       satirYil = parseInt(parcalar[2], 10);
     }
     if (satirAy !== ay || satirYil !== yil) continue;
+    // Gün filtresi — belirtilmişse kontrol et
+    if (gun && satirGun !== gun) continue;
 
     // Saat: Date objesi veya string olabilir
     var satirSaat;
@@ -399,7 +411,7 @@ function kcPad2(n) {
 // ─── TEST ─────────────────────────────────────────────────────────────────────
 
 function kojenCalismaTest() {
-  var result = kojenCalismaSayfasiOlustur(7, 2026);
+  var result = kojenCalismaSayfasiOlustur(7, 2026, 30); // ← gün de belirtin
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }

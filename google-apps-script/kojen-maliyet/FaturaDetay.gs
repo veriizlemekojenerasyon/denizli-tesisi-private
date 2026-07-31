@@ -45,11 +45,23 @@ var FD_AYLAR = ['','Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki'
 
 // ─── ANA FONKSİYON ────────────────────────────────────────────────────────────
 
-function faturaDetaySayfasiOlustur(ay, yil) {
+/**
+ * FaturaDetay sayfasını oluşturur.
+ * @param {number} ay   1-12 (opsiyonel)
+ * @param {number} yil  Örn: 2026 (opsiyonel)
+ * @param {number} gun  1-31 (opsiyonel, PTF filtresi için; yoksa BaglantiNoktalari'nden okunur)
+ */
+function faturaDetaySayfasiOlustur(ay, yil, gun) {
   try {
     var bugun = new Date();
     ay  = ay  || (bugun.getMonth() + 1);
     yil = yil || bugun.getFullYear();
+    // gun belirtilmemişse BaglantiNoktalari'nden veya dünden al
+    if (!gun) {
+      var ss0 = SpreadsheetApp.openById(FD_SPREADSHEET_ID);
+      var bgTarih = fdHesaplananGunuBul(ss0, ay, yil);
+      gun = bgTarih ? bgTarih.getDate() : (bugun.getDate() - 1 || 1);
+    }
 
     var ss       = SpreadsheetApp.openById(FD_SPREADSHEET_ID);
     var sayfaAdi = FD_SHEET_PREFIX + yil + '_' + fdPad2(ay);
@@ -63,7 +75,7 @@ function faturaDetaySayfasiOlustur(ay, yil) {
     fdBasliklariYaz(sheet, ay, yil);
 
     // ── Saatlik satırları yaz ─────────────────────────────────────────────────
-    fdSaatlikSatirlariYaz(sheet, ay, yil);
+    fdSaatlikSatirlariYaz(sheet, ay, yil, gun);
 
     // ── Toplam satırı ─────────────────────────────────────────────────────────
     fdToplamSatirYaz(sheet);
@@ -145,19 +157,23 @@ function fdBasliklariYaz(sheet, ay, yil) {
 
 // ─── SAATLİK SATIRLAR ─────────────────────────────────────────────────────────
 
-function fdSaatlikSatirlariYaz(sheet, ay, yil) {
+function fdSaatlikSatirlariYaz(sheet, ay, yil, gun) {
   var dmSayfaAdi = 'DengesizlikMaliyet_' + yil + '_' + fdPad2(ay);
-  var ss = SpreadsheetApp.openById(FD_SPREADSHEET_ID);
-  var dmSheet = ss.getSheetByName(dmSayfaAdi);
+  var ss         = SpreadsheetApp.openById(FD_SPREADSHEET_ID);
+  var dmSheet    = ss.getSheetByName(dmSayfaAdi);
+  // AMR_Saatlik doğrudan gerçek tüketim için kullanılır
+  var amrSheet   = ss.getSheetByName('AMR_Saatlik');
+  // BaglantiNoktalari tahmin (şebeke tahmini) için
+  var bagSheet   = ss.getSheetByName('BaglantiNoktalari');
 
-  // DengesizlikMaliyet'ten D, G, H sütunlarını oku (satır 3-26)
+  // DengesizlikMaliyet'ten D, G, H sütunlarını oku (satır 3-26) — dengesizlik hesabı için
   var dmVeriler = null;
   if (dmSheet && dmSheet.getLastRow() >= 26) {
     dmVeriler = dmSheet.getRange(3, 4, 24, 5).getValues(); // D,E,F,G,H sütunları
   }
 
-  // PiyasaFiyatlari'nden PTF değerlerini oku (ay/yıl filtreli)
-  var ptfMap = fdPtfVerisiniOku(ss, ay, yil);
+  // PiyasaFiyatlari'nden PTF değerlerini oku (ay/yıl/gün filtreli)
+  var ptfMap = fdPtfVerisiniOku(ss, ay, yil, gun);
 
   // Maliyet sayfasından YEKDEM(F), Dağıtım(G), VTC(H) sabit değerlerini oku
   var yekdem = 0, dagitim = 0, vtc = 0;
@@ -166,18 +182,26 @@ function fdSaatlikSatirlariYaz(sheet, ay, yil) {
     var malVeriler = maliyetSheet.getRange(2, 2, maliyetSheet.getLastRow() - 1, 7).getValues();
     for (var m = 0; m < malVeriler.length; m++) {
       if (parseInt(malVeriler[m][0]) === ay && parseInt(malVeriler[m][1]) === yil) {
-        yekdem  = parseFloat(malVeriler[m][4]) || 0; // F sütunu
+        yekdem  = parseFloat(malVeriler[m][4]) || 0; // F sütunu (index 4 = B'den 5. sütun)
         dagitim = parseFloat(malVeriler[m][5]) || 0; // G sütunu
         vtc     = parseFloat(malVeriler[m][6]) || 0; // H sütunu
         break;
       }
     }
   }
-  Logger.log('Maliyet: YEKDEM=' + yekdem + ' Dağıtım=' + dagitim + ' VTC=' + vtc);
+  Logger.log('Maliyet: YEKDEM=' + yekdem + ' Dagitim=' + dagitim + ' VTC=' + vtc + ' | ay=' + ay + ' yil=' + yil);
+
+  // Maliyet bulunamadıysa uyarı log'la — 0 ile devam eder
+  if (yekdem === 0 && dagitim === 0 && vtc === 0) {
+    Logger.log('UYARI: Maliyet sayfasinda ' + ay + '/' + yil + ' donemi bulunamadi! Dagitim+YEKDEM 0 yazilacak.');
+  }
 
   for (var i = 0; i < 24; i++) {
     var satirNo = i + 2;
     var bg      = i % 2 === 0 ? '#F7F9FC' : '#FFFFFF';
+    var amrRow  = i + 2; // AMR_Saatlik 2. satırdan başlar
+    var bagRow  = i + 2; // BaglantiNoktalari 2. satırdan başlar
+    var dmSatir = i + 3; // DengesizlikMaliyet 3. satırdan başlar
 
     // A: SAAT
     sheet.getRange(satirNo, 1)
@@ -185,20 +209,33 @@ function fdSaatlikSatirlariYaz(sheet, ay, yil) {
       .setBackground('#1C2B3A').setFontColor('#FFFFFF')
       .setFontWeight('bold').setHorizontalAlignment('center');
 
-    // B: DENGESİZLİK ALIŞ SATIŞ = D>0 ? D*G : D*H
-    // G ve H değerlerini önce oku (C sütunu da kullanacak)
-    var dmSatir = i + 3;
-    var tahminVal = 0, gercekVal = 0;
-    if (dmSheet && dmSheet.getLastRow() >= dmSatir) {
-      tahminVal = parseFloat(dmSheet.getRange(dmSatir, 2).getValue()) || 0;
+    // Tahmin: BaglantiNoktalari G sütunu = Şebeke Hattı Tüketimi (MWh)
+    // Sütun yapısı: A=SAAT|B=Tüketim Noktası|C=GM1|D=GM2|E=GM3|F=Toplam Kojen|G=Şebeke Hattı
+    var tahminVal = 0;
+    if (bagSheet && bagSheet.getLastRow() >= bagRow) {
+      tahminVal = parseFloat(bagSheet.getRange(bagRow, 7).getValue()) || 0; // G sütunu
+    }
+    if (tahminVal === 0 && dmSheet && dmSheet.getLastRow() >= dmSatir) {
+      tahminVal = parseFloat(dmSheet.getRange(dmSatir, 2).getValue()) || 0; // DM B sütunu fallback
+    }
+
+    // Gerçek tüketim: AMR_Saatlik B sütunu MWh olarak gelir — dönüşüm gerekmez
+    var gercekVal = 0;
+    if (amrSheet && amrSheet.getLastRow() >= amrRow) {
+      gercekVal = parseFloat(amrSheet.getRange(amrRow, 2).getValue()) || 0; // MWh
+    }
+    // AMR yoksa DM'den oku (geriye dönük uyumluluk)
+    if (gercekVal === 0 && dmSheet && dmSheet.getLastRow() >= dmSatir) {
       gercekVal = parseFloat(dmSheet.getRange(dmSatir, 3).getValue()) || 0;
     }
 
+    // B: DENGESİZLİK ALIŞ SATIŞ
+    var bVal = 0;
     if (dmVeriler) {
       var d = parseFloat(dmVeriler[i][0]) || 0; // D sütunu (Fark)
       var g = parseFloat(dmVeriler[i][3]) || 0; // G sütunu (PozFark)
       var h = parseFloat(dmVeriler[i][4]) || 0; // H sütunu (NegFark)
-      var bVal = d > 0 ? d * g : d * h;
+      bVal = d > 0 ? d * g : d * h;
       sheet.getRange(satirNo, 2)
         .setValue(bVal)
         .setBackground(bg).setNumberFormat('#,##0.00')
@@ -212,47 +249,42 @@ function fdSaatlikSatirlariYaz(sheet, ay, yil) {
     sheet.getRange(satirNo, 3)
       .setValue(tahminVal * ptf)
       .setBackground(bg).setNumberFormat('#,##0.00')
-      .setNote('EPİAŞ = TAHMİN × PTF\nTAHMİN(G)=' + tahminVal.toFixed(3) + ' MWh\nPTF=' + ptf.toFixed(2) + ' TL/MWh\nKaynak: PiyasaFiyatlari C sütunu, saat: ' + FD_SAATLER[i]);
-
-    // D–F: Boş (formüller sonradan girilecek)
-    sheet.getRange(satirNo, 4, 1, 3).setBackground(bg).setNumberFormat('#,##0.00');
+      .setNote('EPIAS = TAHMIN x PTF\nTAHMIN=' + tahminVal.toFixed(3) + ' MWh\nPTF=' + ptf.toFixed(2) + ' TL/MWh\nSaat: ' + FD_SAATLER[i]);
 
     // D: DAĞITIM+YEKDEM (TL) = GERÇEK × (YEKDEM + DAĞITIM + VTC)
     var dagYekVal = gercekVal * (yekdem + dagitim + vtc);
     sheet.getRange(satirNo, 4)
       .setValue(dagYekVal)
       .setBackground(bg).setNumberFormat('#,##0.00')
-      .setNote('DAĞITIM+YEKDEM = GERÇEK × (YEKDEM+DAĞITIM+VTC)\nGERÇEK(H)=' + gercekVal.toFixed(3) +
-               ' MWh\nYEKDEM=' + yekdem + ' | Dağıtım=' + dagitim + ' | VTC=' + vtc +
-               '\nToplam=' + (yekdem+dagitim+vtc).toFixed(2) + ' TL/MWh\nKaynak: Maliyet sayfası F,G,H');
-
-    // E–F: Boş (formüller sonradan girilecek)
-    sheet.getRange(satirNo, 5, 1, 2).setBackground(bg).setNumberFormat('#,##0.00');
+      .setNote('DAGITIM+YEKDEM = GERCEK x (YEKDEM+DAGITIM+VTC)\nGERCEK=' + gercekVal.toFixed(3) +
+               ' MWh\nYEKDEM=' + yekdem + ' | Dagitim=' + dagitim + ' | VTC=' + vtc +
+               '\nToplam katsayi=' + (yekdem+dagitim+vtc).toFixed(2) + ' TL/MWh\nKaynak: Maliyet sayfasi F,G,H');
 
     // E: KORUMA FATURA (TL) = B>0 ? B : 0
     var korumaVal = bVal > 0 ? bVal : 0;
     sheet.getRange(satirNo, 5)
       .setValue(korumaVal)
       .setBackground(bg).setNumberFormat('#,##0.00')
-      .setNote('KORUMA FATURA = EĞER(B' + satirNo + '>0; B; 0)\nB(DengesizlikAlışSatış)=' + bVal.toFixed(2));
+      .setNote('KORUMA FATURA = EGER(B>0; B; 0)\nB=' + bVal.toFixed(2));
 
     // F: VTC FATURA (TL) = B<0 ? B : 0
     var vtcFaturaVal = bVal < 0 ? bVal : 0;
     sheet.getRange(satirNo, 6)
       .setValue(vtcFaturaVal)
       .setBackground(bg).setNumberFormat('#,##0.00')
-      .setNote('VTC FATURA = EĞER(B' + satirNo + '<0; B; 0)\nB(DengesizlikAlışSatış)=' + bVal.toFixed(2));
+      .setNote('VTC FATURA = EGER(B<0; B; 0)\nB=' + bVal.toFixed(2));
 
-    // G: TAHMİN — DengesizlikMaliyet B sütunu
-    // H: GERÇEK  — DengesizlikMaliyet C sütunu
+    // G: TAHMİN (MWh) — BaglantiNoktalari G sütunu (Şebeke Hattı Tüketimi)
     sheet.getRange(satirNo, 7)
       .setValue(tahminVal)
       .setBackground(bg).setNumberFormat('0.000')
-      .setNote('Kaynak: ' + dmSayfaAdi + ' B' + dmSatir + ' (Şebeke Tahmini MWh)');
+      .setNote('Kaynak: BaglantiNoktalari!G' + bagRow + ' (Sebeke Hatti Tuketimi MWh)');
+
+    // H: GERÇEK (MWh) — AMR_Saatlik B sütunundan doğrudan (MWh)
     sheet.getRange(satirNo, 8)
       .setValue(gercekVal)
       .setBackground(bg).setNumberFormat('0.000')
-      .setNote('Kaynak: ' + dmSayfaAdi + ' C' + dmSatir + ' (Gerçek Tüketim MWh)');
+      .setNote('Kaynak: AMR_Saatlik B' + amrRow + ' (MWh - VTC API doğrudan MWh yazar)');
 
     // I: Boş ayraç
     sheet.getRange(satirNo, 9).setBackground('#E2E8F0');
@@ -457,10 +489,11 @@ function fdAylikTablolariYaz(sheet, ay, yil, hesaplananGun) {
 // ─── YARDIMCILAR ──────────────────────────────────────────────────────────────
 
 /**
- * PiyasaFiyatlari sayfasından ay/yıl için 24 saatlik PTF dizisi döner.
+ * PiyasaFiyatlari sayfasından ay/yıl ve gün için 24 saatlik PTF dizisi döner.
+ * @param {number} gun - Filtrelenecek gün (1-31); 0 veya undefined ise gün filtresi uygulanmaz
  * @returns {Array} 24 elemanlı PTF dizisi (index=saat)
  */
-function fdPtfVerisiniOku(ss, ay, yil) {
+function fdPtfVerisiniOku(ss, ay, yil, gun) {
   var ptfDizi = [];
   for (var i = 0; i < 24; i++) ptfDizi.push(0);
 
@@ -473,17 +506,21 @@ function fdPtfVerisiniOku(ss, ay, yil) {
     var saatObj  = r[1];
     var ptf      = parseFloat(r[2]) || 0;
 
-    var rAy, rYil;
+    var rAy, rYil, rGun;
     if (tarihObj instanceof Date) {
       rAy  = tarihObj.getMonth() + 1;
       rYil = tarihObj.getFullYear();
+      rGun = tarihObj.getDate();
     } else {
       var p = String(tarihObj).split('.');
       if (p.length < 3) return;
+      rGun = parseInt(p[0]);
       rAy  = parseInt(p[1]);
       rYil = parseInt(p[2]);
     }
     if (rAy !== ay || rYil !== yil) return;
+    // Gün filtresi — belirtilmişse kontrol et
+    if (gun && rGun !== gun) return;
 
     var sHour;
     if (saatObj instanceof Date) {
@@ -542,7 +579,7 @@ function fdDunTarihi() {
 // ─── TEST ─────────────────────────────────────────────────────────────────────
 
 function faturaDetayTest() {
-  var r = faturaDetaySayfasiOlustur(7, 2026);
+  var r = faturaDetaySayfasiOlustur(7, 2026, 30); // ← gün de belirtin
   Logger.log(JSON.stringify(r, null, 2));
   return r;
 }

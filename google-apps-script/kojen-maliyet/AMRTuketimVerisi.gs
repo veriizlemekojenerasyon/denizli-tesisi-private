@@ -2,12 +2,12 @@
  * AMR TÜKETİM VERİSİ — Google Apps Script
  *
  * API: GET /vsensor/electricity/readings/reports/assetamrconsumptiongenerations
- *   consumption → Tüketim (Wh → kWh'ye çevrilir)
- *   generation  → Üretim  (Wh → kWh'ye çevrilir)
+ *   consumption → Tüketim (VTC API doğrudan MWh döner)
+ *   generation  → Üretim  (VTC API doğrudan MWh döner)
  *
  * Hedef sayfalar:
- *   Saatlik : "AMR_YYYYAAGG"   → TARİH | SAAT | TÜKETİM (kWh) | ÜRETİM (kWh) | NET (kWh)
- *   Günlük  : "AMR_YYYY_AA"    → TARİH | TÜKETİM (kWh) | ÜRETİM (kWh) | NET (kWh)
+ *   Saatlik : "AMR_Saatlik"  → SAAT | TÜKETİM (MWh) | ÜRETİM (MWh) | NET (MWh)
+ *   Günlük  : "AMR_YYYY_AA"  → TARİH | TÜKETİM (MWh) | ÜRETİM (MWh) | NET (MWh)
  *
  * Spreadsheet ID: 1lZ7HtzEdvRCk94JAMP63XAtI78AT_GABM2dsPkkEsdY
  *
@@ -224,8 +224,9 @@ function amrApiFetch(assetId, tenantId, token, fromDate, toDate, frequency) {
 // ─── SAYFA YAZMA — SAATLİK ───────────────────────────────────────────────────
 
 /**
- * Saatlik veriyi "AMR_YYYYAAGG" sayfasına yazar.
- * Sütunlar: SAAT | TÜKETİM (kWh) | ÜRETİM (kWh) | NET (kWh)
+ * Saatlik veriyi "AMR_Saatlik" sayfasına yazar.
+ * Sütunlar: SAAT | TÜKETİM (MWh) | ÜRETİM (MWh) | NET (MWh)
+ * Not: VTC API consumption/generation değerlerini doğrudan MWh olarak döner.
  */
 function amrSaatlikSayfasiYaz(ss, items, isoTarih) {
   var trTarih  = isoTarih.split('-').reverse().join('.');
@@ -238,7 +239,7 @@ function amrSaatlikSayfasiYaz(ss, items, isoTarih) {
   sheet.setFrozenColumns(1);
 
   // Başlık
-  var basliklar = ['SAAT', 'TÜKETİM (kWh)', 'ÜRETİM (kWh)', 'NET (kWh)', 'TAHMİNİ?'];
+  var basliklar = ['SAAT', 'TÜKETİM (MWh)', 'ÜRETİM (MWh)', 'NET (MWh)', 'TAHMİNİ?'];
   amrYazBaslik(sheet, basliklar);
   sheet.setColumnWidth(1, 80);
   sheet.setColumnWidth(2, 130);
@@ -260,8 +261,9 @@ function amrSaatlikSayfasiYaz(ss, items, isoTarih) {
     var item  = map[saat] || null;
     var wh    = item ? parseFloat(item.consumption) || 0 : 0;
     var uwh   = item ? parseFloat(item.generation)  || 0 : 0;
-    var kwh   = amrRound(wh  / 1000);
-    var ukwh  = amrRound(uwh / 1000);
+    // VTC API doğrudan MWh döner — dönüşüm gerekmez
+    var kwh   = amrRound(wh);   // MWh
+    var ukwh  = amrRound(uwh);  // MWh
     var net   = amrRound(kwh - ukwh);
     var auto  = (item && item.consumptionAutoFilled) ? 'EVET' : '';
     var row   = h + 2;
@@ -295,10 +297,10 @@ function amrSaatlikSayfasiYaz(ss, items, isoTarih) {
 
   var ozetler = [
     ['Tarih',              trTarih,                  ''],
-    ['Toplam Tüketim',     amrRound(topK),            'kWh'],
-    ['Toplam Üretim',      amrRound(topU),            'kWh'],
-    ['Net Tüketim',        amrRound(topK - topU),     'kWh'],
-    ['Ortalama / Saat',    amrRound(topK / 24),       'kWh'],
+    ['Toplam Tüketim',     amrRound(topK),            'MWh'],
+    ['Toplam Üretim',      amrRound(topU),            'MWh'],
+    ['Net Tüketim',        amrRound(topK - topU),     'MWh'],
+    ['Ortalama / Saat',    amrRound(topK / 24),       'MWh'],
     ['Son Güncelleme',     Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm'), '']
   ];
 
@@ -344,8 +346,9 @@ function amrAylikSayfasiYaz(ss, items, ay, yil) {
   var topK = 0, topU = 0;
   items.forEach(function(item, i) {
     var trTarih = amrUtcToTr(item.readAt).substring(0, 10).split('-').reverse().join('.');
-    var kwh     = amrRound(parseFloat(item.consumption) / 1000);
-    var ukwh    = amrRound(parseFloat(item.generation)  / 1000);
+    // VTC API doğrudan MWh döner — dönüşüm gerekmez
+    var kwh     = amrRound(parseFloat(item.consumption) || 0);  // MWh
+    var ukwh    = amrRound(parseFloat(item.generation)  || 0);  // MWh
     var net     = amrRound(kwh - ukwh);
     var durum   = item.consumptionAutoFilled ? '⚠ Tahmini' : '✓';
     var row     = i + 2;

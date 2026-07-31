@@ -55,6 +55,15 @@ function doGet(e) {
   if (action === 'maliyetBedeliListesi') {
     return jsonResponse(maliyetBedeliListesi());
   }
+  if (action === 'getRaporData') {
+    return jsonResponse(getRaporData(params));
+  }
+  if (action === 'getBaglantiNoktalari') {
+    return jsonResponse(getBaglantiNoktalari(params));
+  }
+  if (action === 'excelIndir') {
+    return jsonResponse(excelIndir(params));
+  }
 
   return jsonResponse({ success: false, error: 'Bilinmeyen action: ' + action });
 }
@@ -212,6 +221,7 @@ function maliyetBedeliListesi() {
 // ─── SAYFA KURULUMU ──────────────────────────────────────────────────────────
 
 function mbGetOrCreateMaliyetSheet(ss) {
+  if (!ss) throw new Error('mbGetOrCreateMaliyetSheet: SpreadsheetApp nesnesi undefined. MALIYET_SS_ID kontrol edin.');
   var sheet = ss.getSheetByName(MALIYET_SHEET);
   if (sheet) {
     // Eski sayfa: K sütunu başlığı yoksa ekle
@@ -246,6 +256,7 @@ function mbGetOrCreateMaliyetSheet(ss) {
 }
 
 function mbGetOrCreateLogSheet(ss) {
+  if (!ss) throw new Error('mbGetOrCreateLogSheet: SpreadsheetApp nesnesi undefined.');
   var sheet = ss.getSheetByName(MALIYET_LOG_SHEET);
   if (sheet) {
     // Eski log sayfası: L ve M başlıkları yoksa ekle
@@ -369,4 +380,168 @@ function maliyetBedeliListesiTest() {
   var liste = maliyetBedeliListesi();
   Logger.log('Toplam kayıt: ' + liste.length);
   return liste;
+}
+
+// ─── RAPOR VERİSİ — WEB SAYFASI İÇİN ────────────────────────────────────────
+
+/**
+ * Kojen maliyet rapor sayfası için tüm veriyi toplar.
+ * Faturalasma_, DengesizlikMaliyet_, KojenCalisma_ sayfalarından okur.
+ */
+function getRaporData(params) {
+  try {
+    var ay  = parseInt(params.month || params.ay  || new Date().getMonth() + 1, 10);
+    var yil = parseInt(params.year  || params.yil || new Date().getFullYear(),  10);
+    var pad = function(n) { return n < 10 ? '0' + n : String(n); };
+    var ss  = SpreadsheetApp.openById(MALIYET_SS_ID);
+
+    // Maliyet sayfasından birim maliyet oku
+    var maliyet = maliyetBedeliOku(ay, yil) || {};
+
+    // Sayfa referansları
+    var fdSheet = ss.getSheetByName('Faturalasma_' + yil + '_' + pad(ay));
+    var dmSheet = ss.getSheetByName('DengesizlikMaliyet_' + yil + '_' + pad(ay));
+    var kcSheet = ss.getSheetByName('KojenCalisma_' + yil + '_' + pad(ay));
+
+    var gunSayisi = new Date(yil, ay, 0).getDate();
+    var aylikGunler = [];
+    var topAvantaj = 0, topSebekeMal = 0, topKojenUretim = 0, topKojenMal = 0;
+    var topEpias = 0, topTeias = 0;
+    var dengesizlikAylik = [];
+
+    for (var g = 1; g <= gunSayisi; g++) {
+      var tarih   = pad(g) + '.' + pad(ay) + '.' + yil;
+      var fdSatir = g + 1;
+      var dmSatir = g + 2;
+      var kcSatir = g + 2;
+
+      var toplamMal = 0, sebeke = 0, birimMal = 0;
+      var kojenUretim = 0, kojenMal = 0;
+      var epias = 0, teias = 0, avantaj = 0;
+
+      if (fdSheet && fdSheet.getLastRow() >= fdSatir) {
+        var fdRow = fdSheet.getRange(fdSatir, 11, 1, 7).getValues()[0];
+        toplamMal   = parseFloat(fdRow[0]) || 0;
+        sebeke      = parseFloat(fdRow[1]) || 0;
+        birimMal    = parseFloat(fdRow[2]) || 0;
+        kojenUretim = parseFloat(fdRow[5]) || 0;
+        kojenMal    = parseFloat(fdRow[6]) || 0;
+      }
+
+      if (dmSheet && dmSheet.getLastRow() >= dmSatir) {
+        var dmRow = dmSheet.getRange(dmSatir, 16, 1, 3).getValues()[0];
+        epias = parseFloat(dmRow[0]) || 0;
+        teias = parseFloat(dmRow[1]) || 0;
+      }
+
+      if (kcSheet && kcSheet.getLastRow() >= kcSatir) {
+        avantaj = parseFloat(kcSheet.getRange(kcSatir, 9).getValue()) || 0;
+      }
+
+      if (toplamMal || kojenUretim || epias || avantaj) {
+        aylikGunler.push({
+          tarih: tarih, avantaj: avantaj,
+          sebekeMal: toplamMal, birimMal: birimMal,
+          kojenUretim: kojenUretim,   // MWh — dönüşüm gerekmez
+          kojenMal: kojenMal, dengesizlik: epias + teias
+        });
+        topAvantaj     += avantaj;
+        topSebekeMal   += toplamMal;
+        topKojenUretim += kojenUretim;   // MWh
+        topKojenMal    += kojenMal;
+      }
+
+      if (epias || teias) {
+        dengesizlikAylik.push({ tarih: tarih, epias: epias, teias: teias });
+        topEpias += epias; topTeias += teias;
+      }
+    }
+
+    // Faturalaşma saatlik (sol tablo)
+    var faturasSaatlik = [], faturasToplam = 0, faturasSebeke = 0;
+    if (fdSheet && fdSheet.getLastRow() >= 26) {
+      for (var h = 0; h < 24; h++) {
+        var fRow = fdSheet.getRange(h + 2, 1, 1, 8).getValues()[0];
+        faturasSaatlik.push({
+          saat: String(fRow[0]).trim() || pad(h) + ':00:00',
+          dengesizlik: parseFloat(fRow[1]) || 0,
+          epias      : parseFloat(fRow[2]) || 0,
+          dagitim    : parseFloat(fRow[3]) || 0,
+          koruma     : parseFloat(fRow[4]) || 0,
+          vtc        : parseFloat(fRow[5]) || 0,
+          tahmin     : parseFloat(fRow[6]) || 0,
+          gercek     : parseFloat(fRow[7]) || 0
+        });
+        faturasToplam += (parseFloat(fRow[2])||0) + (parseFloat(fRow[3])||0) + Math.max(0, parseFloat(fRow[4])||0);
+        faturasSebeke += parseFloat(fRow[7]) || 0;
+      }
+    }
+
+    // BaglantiNoktalari özet
+    var bagSheet = ss.getSheetByName('BaglantiNoktalari');
+    var toplamUretim = 0, toplamSebeke = 0;
+    if (bagSheet && bagSheet.getLastRow() >= 26) {
+      var bagToplam = bagSheet.getRange(26, 1, 1, 7).getValues()[0];
+      toplamSebeke = parseFloat(bagToplam[1]) || 0;
+      // BaglantiNoktalari toplam satırı: C=GM1, D=GM2, E=GM3 — hepsi MWh
+      toplamUretim = ((parseFloat(bagToplam[2])||0) + (parseFloat(bagToplam[3])||0) + (parseFloat(bagToplam[4])||0));
+    }
+    // karsilama: her iki taraf MWh — doğrudan böl
+    var karsilama = toplamSebeke > 0 ? toplamUretim / toplamSebeke * 100 : 0;
+
+    return {
+      success: true,
+      data: {
+        maliyet: {
+          kojenMaliyet : maliyet.kojenMaliyet || 0,
+          yekdem       : maliyet.yekdem       || 0,
+          dagitim      : maliyet.dagitim      || 0,
+          vtcGider     : maliyet.vtcGider     || 0,
+          birimMaliyet : maliyet.kojenMaliyet || 0,
+          net          : maliyet.kojenMaliyet || 0
+        },
+        avantaj: {
+          toplam: topAvantaj, gunSayisi: aylikGunler.length,
+          gunluk: aylikGunler.map(function(g) { return { tarih: g.tarih, avantaj: g.avantaj }; })
+        },
+        dengesizlik: { epiasToplam: topEpias, teiasToplam: topTeias, aylik: dengesizlikAylik },
+        fatura: { toplam: faturasToplam, sebekeMwh: faturasSebeke, saatlik: faturasSaatlik },
+        baglanti: { toplamUretim: toplamUretim, toplamSebeke: toplamSebeke, karsilama: karsilama },
+        motorlar: { gm1: {}, gm2: {}, gm3: {} },
+        aylikOzet: { gunluk: aylikGunler }
+      }
+    };
+
+  } catch(err) {
+    Logger.log('❌ getRaporData hata: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
+/**
+ * Bağlantı noktaları saatlik verisini döner.
+ */
+function getBaglantiNoktalari(params) {
+  try {
+    var ss    = SpreadsheetApp.openById(MALIYET_SS_ID);
+    var sheet = ss.getSheetByName('BaglantiNoktalari');
+    if (!sheet || sheet.getLastRow() < 25) return { success: true, data: [] };
+
+    var rows = [];
+    for (var i = 0; i < 24; i++) {
+      var r = sheet.getRange(i + 2, 1, 1, 7).getValues()[0];
+      rows.push({
+        saat    : String(r[0]).trim(),
+        tuketim : parseFloat(r[1]) || 0,
+        gm1     : parseFloat(r[2]) || 0,
+        gm2     : parseFloat(r[3]) || 0,
+        gm3     : parseFloat(r[4]) || 0,
+        kojenTop: parseFloat(r[5]) || 0,
+        sebeke  : parseFloat(r[6]) || 0
+      });
+    }
+    return { success: true, data: rows };
+  } catch(err) {
+    return { success: false, error: err.toString() };
+  }
 }
