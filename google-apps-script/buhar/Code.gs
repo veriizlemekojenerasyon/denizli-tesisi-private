@@ -150,12 +150,19 @@ function addRecord(data) {
       return { success: false, error: 'Tarih zorunludur' };
     }
 
+    // Buhar miktarı kontrolü — boş veya NaN gelirse reddet
+    var buharMiktari = parseFloat(String(data.buharMiktari || '').replace(',', '.'));
+    if (isNaN(buharMiktari) || String(data.buharMiktari || '').trim() === '') {
+      return { success: false, error: 'Buhar miktari gecersiz veya bos.' };
+    }
+
+    // Mükerrer kayıt kontrolü
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       var dates = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
       for (var i = 0; i < dates.length; i++) {
         if (String(dates[i][0] || '').trim() === inputTarih) {
-          return { success: false, error: 'Bu tarih icin kayit zaten var!' };
+          return { success: false, error: 'Bu tarih icin kayit zaten var: ' + inputTarih };
         }
       }
     }
@@ -163,7 +170,7 @@ function addRecord(data) {
     var kayitTarihi = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss');
     sheet.appendRow([
       inputTarih,
-      parseFloat(data.buharMiktari) || 0,
+      buharMiktari,
       data.kaydeden || 'Admin',
       kayitTarihi
     ]);
@@ -176,7 +183,7 @@ function addRecord(data) {
     sheet.getRange(newRow, 2).setNumberFormat('0.00');
     sheet.getRange(newRow, 3, 1, 2).setNumberFormat('@');
 
-    return { success: true, message: 'Kayit basariyla eklendi!' };
+    return { success: true, message: inputTarih + ' tarihi icin ' + buharMiktari.toFixed(2) + ' ton kayit edildi.' };
   } catch (error) {
     return { success: false, error: error.toString() };
   }
@@ -188,14 +195,34 @@ function getRecords() {
     if (!sheet) return { success: true, data: [], message: 'Sayfa henuz olusturulmamis.' };
     if (sheet.getLastRow() < 2) return { success: true, data: [] };
 
-    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getDisplayValues();
+    // getValues() kullan — getDisplayValues() Türkçe locale'de sayıları
+    // "1.234,56" formatında döndürür, JS parseFloat bunu NaN yapar
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
     var records = [];
     for (var i = rows.length - 1; i >= 0; i--) {
+      var tarih    = rows[i][0];
+      var miktar   = rows[i][1];
+      var kaydeden = rows[i][2];
+      var kayitZam = rows[i][3];
+
+      // Tarih: Date objesi olabilir, string'e çevir
+      if (tarih instanceof Date) {
+        tarih = Utilities.formatDate(tarih, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+      } else {
+        tarih = String(tarih || '').trim();
+      }
+
+      // Miktar: sayısal değeri direkt al, string ise parse et
+      var miktarNum = (typeof miktar === 'number') ? miktar : parseFloat(String(miktar || '0').replace(',', '.'));
+      if (isNaN(miktarNum)) miktarNum = 0;
+
       records.push({
-        tarih: rows[i][0],
-        buharMiktari: rows[i][1],
-        kaydeden: rows[i][2],
-        kayitTarihi: rows[i][3]
+        tarih       : tarih,
+        buharMiktari: miktarNum,
+        kaydeden    : String(kaydeden || '').trim(),
+        kayitTarihi : (kayitZam instanceof Date)
+                        ? Utilities.formatDate(kayitZam, Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss')
+                        : String(kayitZam || '').trim()
       });
     }
 
@@ -238,16 +265,18 @@ function findRecordByDate(tarih) {
 
 function getPreviousDayTarget(date) {
   var now = new Date(date);
-  if (now.getHours() < 23 || (now.getHours() === 23 && now.getMinutes() < 55)) {
-    now.setDate(now.getDate() - 1);
-  }
+  var tz  = Session.getScriptTimeZone();
 
-  var target = new Date(now);
-  target.setDate(target.getDate() - 1);
+  // Bugünün tarihi (timezone farkına göre)
+  var todayStr = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
+  var today    = new Date(todayStr + 'T00:00:00');
+
+  // Hedef: her zaman bugünden bir önceki gün
+  var target = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
 
   return {
-    tarih: Utilities.formatDate(target, Session.getScriptTimeZone(), 'dd.MM.yyyy'),
-    isoTarih: Utilities.formatDate(target, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+    tarih   : Utilities.formatDate(target, tz, 'dd.MM.yyyy'),
+    isoTarih: Utilities.formatDate(target, tz, 'yyyy-MM-dd')
   };
 }
 
@@ -566,6 +595,7 @@ function getSystemLogs(count) {
 }
 
 function installHourlyMissingRecordTrigger() {
+  // Mevcut trigger varsa sil
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
     if (triggers[i].getHandlerFunction() === 'checkHourlyMissingRecords') {
@@ -573,12 +603,17 @@ function installHourlyMissingRecordTrigger() {
     }
   }
 
+  // Her gün 01:00'de çalıştır — gece yarısını geçtikten sonra dünün kaydını kontrol eder
+  // everyMinutes yerine günlük sabit saat: gecikme ve tarih kayması sorunu ortadan kalkar
   ScriptApp.newTrigger('checkHourlyMissingRecords')
     .timeBased()
-    .everyMinutes(5)
+    .everyDays(1)
+    .atHour(1)          // 01:00 — gece yarısından 1 saat sonra, tarih kesinleşmiş olur
+    .nearMinute(0)
+    .inTimezone(Session.getScriptTimeZone())
     .create();
 
-  return { success: true, message: 'Buhar gunluk eksik kayit tetikleyicisi kuruldu' };
+  return { success: true, message: 'Buhar günlük eksik kayit tetikleyicisi kuruldu (her gün 01:00)' };
 }
 
 function getTriggerHealth() {
@@ -630,4 +665,99 @@ function sendEmailAlert(data) {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+// ─── TEMİZLİK FONKSİYONU — bir kez çalıştırın, sonra silebilirsiniz ───────────
+
+/**
+ * BuharVerileri sayfasındaki bozuk kayıtları temizler:
+ *   - Buhar miktarı boş, NaN veya negatif olan satırlar silinir
+ *   - Aynı tarihe ait mükerrer satırlardan sadece EN YÜKSEK değerli olan kalır
+ *     (hepsi 0/NaN ise sadece biri kalır)
+ *   - Sonunda kayıtlar tarihe göre sıralanır
+ *
+ * Çalıştırmadan önce: Sheets'te BuharVerileri sayfasının yedeğini alın.
+ */
+function buharVerileriniTemizle() {
+  var sheet = getBuharSheet(false);
+  if (!sheet || sheet.getLastRow() < 2) {
+    Logger.log('Temizlenecek kayıt yok.');
+    return { success: true, message: 'Kayıt yok.' };
+  }
+
+  var lastRow = sheet.getLastRow();
+  var data    = sheet.getRange(2, 1, lastRow - 1, 4).getDisplayValues();
+
+  // Tarih → satır bilgileri haritası
+  var tarihMap = {}; // { 'dd.MM.yyyy': [ {miktar, kaydeden, kayitTarihi, rowIndex}, ... ] }
+
+  for (var i = 0; i < data.length; i++) {
+    var tarihHam  = String(data[i][0] || '').trim();
+    var miktarHam = String(data[i][1] || '').trim();
+    var kaydeden  = String(data[i][2] || '').trim();
+    var kayitZam  = String(data[i][3] || '').trim();
+
+    if (!tarihHam) continue; // tarihi olmayan satırı atla
+
+    var tarih   = normalizeDateTR(tarihHam);
+    var miktar  = parseFloat(miktarHam.replace(',', '.'));
+    var gecerli = !isNaN(miktar) && miktar >= 0;
+
+    if (!tarihMap[tarih]) tarihMap[tarih] = [];
+    tarihMap[tarih].push({
+      miktar    : gecerli ? miktar : -1,
+      kaydeden  : kaydeden,
+      kayitZaman: kayitZam,
+      gecerli   : gecerli
+    });
+  }
+
+  // Her tarih için en iyi kaydı seç
+  var temizKayitlar = [];
+  var tarihler = Object.keys(tarihMap).sort(function(a, b) {
+    var da = parseDateTR(a), db = parseDateTR(b);
+    if (!da || !db) return 0;
+    return da.getTime() - db.getTime();
+  });
+
+  var silinenSatir = 0, kalinanSatir = 0;
+
+  tarihler.forEach(function(tarih) {
+    var satirlar = tarihMap[tarih];
+    silinenSatir += satirlar.length - 1; // en iyi hariç hepsi silinir
+
+    // Önce geçerli (NaN olmayan) olanı bul, yoksa ilkini al
+    var enIyi = null;
+    satirlar.forEach(function(s) {
+      if (!enIyi) { enIyi = s; return; }
+      if (s.gecerli && !enIyi.gecerli) { enIyi = s; return; }
+      if (s.gecerli && enIyi.gecerli && s.miktar > enIyi.miktar) { enIyi = s; }
+    });
+
+    temizKayitlar.push([
+      tarih,
+      enIyi.gecerli ? enIyi.miktar : 0,
+      enIyi.kaydeden,
+      enIyi.kayitZaman || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss')
+    ]);
+    kalinanSatir++;
+  });
+
+  // Sayfayı temizleyip yeniden yaz
+  var eski = sheet.getLastRow() - 1;
+  if (eski > 0) sheet.getRange(2, 1, eski, 4).clearContent();
+
+  if (temizKayitlar.length > 0) {
+    sheet.getRange(2, 1, temizKayitlar.length, 4).setValues(temizKayitlar);
+    var range = sheet.getRange(2, 1, temizKayitlar.length, 4);
+    range.setHorizontalAlignment('center');
+    range.setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
+    sheet.getRange(2, 1, temizKayitlar.length, 1).setNumberFormat('@');
+    sheet.getRange(2, 2, temizKayitlar.length, 1).setNumberFormat('0.00');
+    sheet.getRange(2, 3, temizKayitlar.length, 2).setNumberFormat('@');
+  }
+
+  var mesaj = 'Temizlendi: ' + eski + ' satır vardı → ' + kalinanSatir + ' kaldı, ' + silinenSatir + ' mükerrer/bozuk silindi.';
+  Logger.log('✅ ' + mesaj);
+  return { success: true, message: mesaj, onceki: eski, sonraki: kalinanSatir, silinen: silinenSatir };
 }
