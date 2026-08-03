@@ -1,4 +1,4 @@
-﻿// kojen-maliyet-rapor.js
+// kojen-maliyet-rapor.js
 
 'use strict';
 
@@ -130,7 +130,9 @@ async function handleGenerateReport() {
     renderMotorKartlari(data.motorlar);
     renderAylikOzetTable(data.aylikOzet);
     addToHistory(filter, data);
-    showNotice('Rapor oluşturuldu. (' + formatDate(new Date()) + ')', 'success');
+    var mesaj = 'Rapor oluşturuldu. (' + formatDate(new Date()) + ')';
+    if (data.uyari) mesaj += ' ⚠️ ' + data.uyari;
+    showNotice(mesaj, data.uyari ? 'warn' : 'success');
   } catch (err) {
     showNotice('Hata: ' + err.message, 'error');
   } finally {
@@ -139,20 +141,25 @@ async function handleGenerateReport() {
 }
 
 async function fetchReportData(filter) {
-  // file:// protokolünde fetch çalışmaz — demo moda düş
-  if (!KMR_URL || window.location.protocol === 'file:') return buildDemoData(filter);
+  if (!KMR_URL) throw new Error('GAS URL tanımlı değil.');
+  if (window.location.protocol === 'file:') throw new Error('Sayfa doğrudan dosyadan açılıyor (file://). Lütfen bir web sunucusu veya GitHub Pages üzerinden erişin.');
+  var params = new URLSearchParams({ action: 'getRaporData', startDate: filter.startDate,
+    endDate: filter.endDate, month: filter.month, year: filter.year, type: filter.type });
+  var res;
   try {
-    var params = new URLSearchParams({ action: 'getRaporData', startDate: filter.startDate,
-      endDate: filter.endDate, month: filter.month, year: filter.year, type: filter.type });
-    var res  = await fetch(KMR_URL + '?' + params.toString());
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Sunucu hatası');
-    return json.data;
+    res = await fetch(KMR_URL + '?' + params.toString());
   } catch(err) {
-    console.warn('GAS fetch başarısız, demo mod:', err.message);
-    return buildDemoData(filter);
+    throw new Error('Sunucuya ulaşılamadı. İnternet bağlantısını kontrol edin. (' + err.message + ')');
   }
+  if (!res.ok) throw new Error('Sunucu hatası: HTTP ' + res.status);
+  var json;
+  try {
+    json = await res.json();
+  } catch(err) {
+    throw new Error('Sunucudan geçersiz yanıt alındı.');
+  }
+  if (!json.success) throw new Error(json.error || 'Sunucu hatası');
+  return json.data;
 }
 
 // ─── KPI ──────────────────────────────────────────────────────────────────────
@@ -298,15 +305,20 @@ function renderAylikOzetTable(aylikOzet) {
 async function handleBaglantiCek() {
   var tarih = getVal('baglantiTarihInput');
   if (!tarih) { showToast('Tarih seçin','error'); return; }
+  if (!KMR_URL) { showToast('GAS URL tanımlı değil','error'); return; }
   setEl('baglantiTarihLabel','Yükleniyor...');
   document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row">Yükleniyor...</td></tr>';
   try {
-    var rows=[];
-    if (KMR_URL && window.location.protocol !== 'file:') {
-      var res=await fetch(KMR_URL+'?'+new URLSearchParams({action:'getBaglantiNoktalari',date:tarih}).toString());
-      var json=await res.json(); if(!json.success) throw new Error(json.error||'Hata');
-      rows=json.data||[];
-    } else { rows=buildDemoBaglantiRows(); }
+    var res = await fetch(KMR_URL+'?'+new URLSearchParams({action:'getBaglantiNoktalari',date:tarih}).toString());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var json = await res.json();
+    if (!json.success) throw new Error(json.error||'Sunucu hatası');
+    var rows = json.data || [];
+    if (!rows.length) {
+      document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row">Bu tarih için veri bulunamadı.</td></tr>';
+      setEl('baglantiTarihLabel','Tarih: '+formatDateTR(tarih));
+      return;
+    }
     renderBaglantiTable(rows);
     setEl('baglantiTarihLabel','Tarih: '+formatDateTR(tarih));
   } catch(err) {
@@ -462,51 +474,8 @@ async function excelIndir(tip) {
   }
 }
 
-function buildDemoData(filter) {
-  var avList=[111283,60689,50486,34117,2960,21601,38484,39818,68388,59592,42336,49016,47935,56313,31747,83361,72728,74956,69662,94512,98596,120347,94826,108412,25129,69665];
-  var gunler=[], start=new Date(filter.startDate||'2026-07-01'), end=new Date(filter.endDate||'2026-07-26'), i=0;
-  for(var d=new Date(start);d<=end&&i<avList.length;d.setDate(d.getDate()+1),i++){
-    gunler.push({ tarih:pad2(d.getDate())+'.'+pad2(d.getMonth()+1)+'.'+d.getFullYear(),
-      avantaj:avList[i], sebekeMal:800000+Math.round(Math.random()*200000),
-      birimMal:3.5+Math.random()*2, kojenUretim:Math.round(avList[i]/1.3),
-      kojenMal:Math.round(avList[i]*1.3), dengesizlik:Math.round(Math.random()*15000+2000) });
-  }
-  var tAv=gunler.reduce(function(s,g){return s+g.avantaj;},0);
-  var tDen=gunler.reduce(function(s,g){return s+g.dengesizlik;},0);
-  return {
-    maliyet:{
-      kojenMaliyet : 4250,
-      yekdem       : 320.50,
-      dagitim      : 185.75,
-      vtcGider     : 95.00,
-      gucBedeli    : 210.00,
-      net          : 4250,
-      birimMaliyet : 4250
-    },
-    avantaj:{toplam:tAv,gunSayisi:gunler.length,gunluk:gunler.map(function(g){return{tarih:g.tarih,avantaj:g.avantaj};})},
-    dengesizlik:{epiasToplam:Math.round(tDen*.93),teiasToplam:Math.round(tDen*.07),
-      aylik:gunler.map(function(g){return{tarih:g.tarih,epias:Math.round(g.dengesizlik*.93),teias:Math.round(g.dengesizlik*.07)};})},
-    fatura:{toplam:762458,sebekeMwh:213.636,saatlik:buildDemoFaturaRows()},
-    baglanti:{toplamUretim:2188700,toplamSebeke:4093831,karsilama:34.8},
-    motorlar:{gm1:{calismaSaati:42634,planUretim:29,bakimMaliyet:234090},gm2:{calismaSaati:48549,planUretim:29,bakimMaliyet:196931},gm3:{calismaSaati:32845,planUretim:29.88,bakimMaliyet:99678}},
-    aylikOzet:{gunluk:gunler}
-  };
-}
-
-function buildDemoFaturaRows() {
-  var d=[[253.8,33767,19005,253.8,0,13,12.70],[-969.6,13508,6179,0,-969.6,3.86,4.13],[447.1,14190,6062,447.1,0,4.30,4.05],[8.70,4386,38158,5040,43852,4.60,5.30],[8.70,4386,38158,5796,50429,4.60,4.40],[8.70,4386,38158,5540,48202,4.50,4.18]];
-  var rows=[];
-  for(var i=0;i<24;i++){
-    var v=d[i%d.length]||[0,3000,18000,0,0,13,12.5];
-    rows.push({saat:pad2(i)+':00:00',dengesizlik:v[0],epias:v[1],dagitim:v[2],koruma:v[3],vtc:v[4],tahmin:v[5],gercek:v[6]});
-  }
-  return rows;
-}
-
-function buildDemoBaglantiRows() {
-  var plan=[[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,2.9,2.9,3.34],[13,2.9,2.9,3.34],[13,2.9,2.9,2.9],[13,2.9,2.9,2.9],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13,0,0,0],[13.3,2.9,2.9,2.9],[13.3,2.9,2.9,2.9],[13.2,2.9,2.9,2.9],[13.1,2.9,2.9,2.9],[13,2.9,2.9,2.9],[13,2.9,2.9,2.9]];
-  return plan.map(function(p,i){return{saat:pad2(i)+':00:00',tuketim:p[0],gm1:p[1],gm2:p[2],gm3:p[3]};});
-}
+// buildDemoData, buildDemoFaturaRows, buildDemoBaglantiRows kaldırıldı.
+// Sayfa artık yalnızca Google Sheets'ten gelen gerçek verileri gösterir.
 
 // ─── BAŞLANGIÇ — tek DOMContentLoaded ────────────────────────────────────────
 
