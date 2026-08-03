@@ -4,11 +4,11 @@
 
 // ─── KONFİGÜRASYON ───────────────────────────────────────────────────────────
 
-// Maliyet kayıt + Rapor verisi + Excel indirme GAS Web App URL
-var KMR_URL = 'https://script.google.com/macros/s/AKfycbx_4MlDgSlc11PhaEqHFHfwEJU5oD17d-NcaLyHcENdjEoXDqD4BvyjfIdBBCSb9Z0x/exec';
+// Maliyet kayıt + Rapor verisi GAS Web App URL
+var KMR_URL = 'https://script.google.com/macros/s/AKfycbzugxfwsSlh6f4zJ4tsM6VHY1240ksO0D64EMMqK8GAYthYYttDUP6suolNdL8MMIyJ/exec';
 
-// Excel dışa aktarım — aynı proje, aynı URL
-var EXCEL_URL = 'https://script.google.com/macros/s/AKfycbxHQy5uQtkxR1_a-PpX3Iu4HEz8Lg4yp3L0SbKaAZw73gvtlOTdwhFdCyVRla_SJxQm/exec';
+// Excel dışa aktarım — ayrı GAS projesi
+var EXCEL_URL = 'https://script.google.com/macros/s/AKfycbxFBU3VMIQ_mf7FWnMERiW7huCEw-tToRcVAx9QH0o_3ximbwBw5z_5ZdVBWAlbC9ir/exec';
 
 var State = {
   user         : null,
@@ -669,7 +669,7 @@ var KM_MODAL = {
   },
 
   /** Formu doğrular, GAS'a gönderir */
-  kaydet: async function () {
+  kaydet: function () {
     if (this.saving) return;
     this.noticeGizle();
 
@@ -682,42 +682,67 @@ var KM_MODAL = {
       return;
     }
 
+    if (!KMR_URL) {
+      this.noticeCal('GAS URL tanımlı değil.', 'error');
+      return;
+    }
+
     var payload = {
-      action      : 'maliyetBedeliKaydet',
-      ay          : ay,
-      yil         : yil,
-      kojenMaliyet: getVal('kmKojenMaliyet').trim() || '0',
-      yekdem      : getVal('kmYekdem').trim()       || '0',
-      dagitim     : getVal('kmDagitim').trim()      || '0',
-      vtcGider    : getVal('kmVtcGider').trim()     || '0',
-      gucBedeli   : getVal('kmGucBedeli').trim()    || '0',
-      not         : getVal('kmNot').trim(),
-      kaydedenKullanici: (State.user && (State.user.email || State.user.firstName)) || 'admin'
+      action            : 'maliyetBedeliKaydet',
+      ay                : ay,
+      yil               : yil,
+      kojenMaliyet      : getVal('kmKojenMaliyet').trim() || '0',
+      yekdem            : getVal('kmYekdem').trim()       || '0',
+      dagitim           : getVal('kmDagitim').trim()      || '0',
+      vtcGider          : getVal('kmVtcGider').trim()     || '0',
+      gucBedeli         : getVal('kmGucBedeli').trim()    || '0',
+      not               : getVal('kmNot').trim(),
+      kaydedenKullanici : (State.user && (State.user.email || State.user.firstName)) || 'admin',
+      callback          : 'KM_MODAL._jsonpCevap'
     };
 
     this.setSaving(true);
 
-    try {
-      if (!KMR_URL || window.location.protocol === 'file:') {
-        // Demo mod — file:// protokolünde veya URL yoksa simüle et
-        await new Promise(function (r) { setTimeout(r, 800); });
-        KM_MODAL._kaydetBasarili(payload);
-        return;
-      }
+    // JSONP ile gönder — file:// protokolünde de CORS sorunu olmadan çalışır
+    var params = Object.keys(payload).map(function(k) {
+      return encodeURIComponent(k) + '=' + encodeURIComponent(payload[k]);
+    }).join('&');
 
-      var params = new URLSearchParams(payload);
-      var res    = await fetch(KMR_URL + '?' + params.toString());
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Sunucu hatası');
+    var script = document.createElement('script');
+    script.src = KMR_URL + '?' + params;
+    script.onerror = function () {
+      KM_MODAL.noticeCal('Bağlantı hatası: GAS\'a ulaşılamadı.', 'error');
+      KM_MODAL.setSaving(false);
+      document.body.removeChild(script);
+    };
+    document.body.appendChild(script);
 
-      KM_MODAL._kaydetBasarili(payload);
+    // 15 saniye timeout
+    this._jsonpTimeout = setTimeout(function () {
+      KM_MODAL.noticeCal('Zaman aşımı: Sunucu yanıt vermedi.', 'error');
+      KM_MODAL.setSaving(false);
+      try { document.body.removeChild(script); } catch(e) {}
+    }, 15000);
 
-    } catch (err) {
-      this.noticeCal('Kayıt hatası: ' + err.message, 'error');
-    } finally {
-      this.setSaving(false);
+    // payload'u sonraki adımda kullanmak için sakla
+    this._pendingPayload = payload;
+  },
+
+  /** JSONP callback — GAS'tan gelen yanıt buraya düşer */
+  _jsonpCevap: function (json) {
+    clearTimeout(KM_MODAL._jsonpTimeout);
+    KM_MODAL.setSaving(false);
+
+    // script tag'i temizle
+    var scripts = document.querySelectorAll('script[src*="maliyetBedeliKaydet"]');
+    scripts.forEach(function(s) { try { document.body.removeChild(s); } catch(e) {} });
+
+    if (!json || !json.success) {
+      KM_MODAL.noticeCal('Kayıt hatası: ' + (json && json.error ? json.error : 'Bilinmeyen hata'), 'error');
+      return;
     }
+
+    KM_MODAL._kaydetBasarili(KM_MODAL._pendingPayload);
   },
 
   _kaydetBasarili: function (payload) {
