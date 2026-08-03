@@ -7,7 +7,7 @@
         enerji: 'https://script.google.com/macros/s/AKfycbz1UCYZDqq5QsMZyIKXdLux_snA3NFusReBhYxjAhBNPMAmxH6Rw2o4ZZ09yT4WRmIb/exec',
         enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbwSno62Ijw1RgvUdZTOCoBXV9NY3H-5bg1Po4WRG-sSuWM_nyZzP307scsyRvwZT1Ux/exec',
         yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxY0_SxJyIWp0TaDABKdhnPFmHmw7pRMUp33AQ7AujZN26mESmpTNr4Bqu81SY5u0F_/exec',
-        buhar: 'https://script.google.com/macros/s/AKfycbwKIqhZDvxJDWmFPf0CupJEke2eey9RkTl-WJ-Z8a9zTrdi9L8geBX9C-KCUHnc3s68/exec',
+        buhar: 'https://script.google.com/macros/s/AKfycbymvcpSQuKs7XZ4mGQlWZR1cluRLWjKs5HNRW6PMeUjQz4KTTzrRw7pSe7y1eEh_Lh_/exec',
         gunluk: 'https://script.google.com/macros/s/AKfycbyrRVJCrgQ1N_-C-kqBW-OA6FIhwshUOgDGGs-YPyliz0CI7JXcakYnk-tEj0pwZMYT/exec',
         bakim: 'https://script.google.com/macros/s/AKfycbyPVtza6spDtgNUkDlPMvX-wlDTAw_1qDu0Ms78wUfeb2WC3zjqgzDoxe3hDYfKjxes/exec',
         vardiya: 'https://script.google.com/macros/s/AKfycbzfcNufcJ8GB16pRxjOyLzGhMl_O2JLXasb8ONoTAjORjA_yvi3lDEfNwKiu8IP8iOt/exec',
