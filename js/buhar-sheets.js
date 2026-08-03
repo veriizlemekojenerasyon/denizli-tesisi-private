@@ -203,24 +203,31 @@ const BuharApp = {
     renderTable: function(records) {
         const tableBody = document.getElementById('recordsTableBody');
         if (!tableBody) return;
-        
+
         if (!records || records.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Henüz kayit bulunmuyor.</td></tr>';
             return;
         }
-        
+
         let html = '';
         records.forEach((record, index) => {
+            // buharMiktari: GAS artık number döndürüyor ama eski kayıtlar string gelebilir
+            const miktarRaw = record.buharMiktari;
+            const miktar = (typeof miktarRaw === 'number')
+                ? miktarRaw
+                : parseFloat(String(miktarRaw || '0').replace(',', '.'));
+            const miktarStr = isNaN(miktar) ? '0.00' : miktar.toFixed(2);
+
             html += `
                 <tr>
                     <td>${index + 1}</td>
                     <td>${this.formatDate(record.tarih)}</td>
-                    <td>${parseFloat(record.buharMiktari).toFixed(2)}</td>
+                    <td>${miktarStr}</td>
                     <td>${record.kaydeden || '-'}</td>
                 </tr>
             `;
         });
-        
+
         tableBody.innerHTML = html;
     },
     
