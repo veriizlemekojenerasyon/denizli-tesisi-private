@@ -1,0 +1,102 @@
+[1mdiff --cc google-apps-script/kojen-maliyet/00_VGenAuth.gs[m
+[1mindex 7bba6a4,a33d295..0000000[m
+[1m--- a/google-apps-script/kojen-maliyet/00_VGenAuth.gs[m
+[1m+++ b/google-apps-script/kojen-maliyet/00_VGenAuth.gs[m
+[36m@@@ -58,8 -58,8 +58,13 @@@[m [mfunction vgenKurulumYap(kullanici, sifr[m
+   * Kullanım: aşağıdaki satırları doldurup bu fonksiyonu çalıştırın.[m
+   */[m
+  function vgenKurulum() {[m
+[32m++<<<<<<< HEAD[m
+[32m +  var KULLANICI_ADI = 'BURAYA_EMAIL_YAZ';  // ← değiştirin[m
+[32m +  var SIFRE         = 'BURAYA_SIFRE_YAZ';  // ← değiştirin[m
+[32m++=======[m
+[32m+   var KULLANICI_ADI = 'murat.coskun@koruma.com.tr';  // ← değiştirin[m
+[32m+   var SIFRE         = 'Mrt145300..';  // ← değiştirin[m
+[32m++>>>>>>> 1aa3d90 (Güncelleme)[m
+    return vgenKurulumYap(KULLANICI_ADI, SIFRE);[m
+  }[m
+  [m
+[1mdiff --cc google-apps-script/kojen-maliyet/06_KojenMaliyetBedeli.gs[m
+[1mindex 6ed2077,3424215..0000000[m
+[1m--- a/google-apps-script/kojen-maliyet/06_KojenMaliyetBedeli.gs[m
+[1m+++ b/google-apps-script/kojen-maliyet/06_KojenMaliyetBedeli.gs[m
+[36m@@@ -146,12 -146,29 +146,38 @@@[m [mfunction getRaporData(params) [m
+    try {[m
+      var ay  = parseInt(params.month || params.ay  || new Date().getMonth() + 1, 10);[m
+      var yil = parseInt(params.year  || params.yil || new Date().getFullYear(),  10);[m
+[32m++<<<<<<< HEAD[m
+[32m +    var ss  = cfgSsAc();[m
+[32m +    var maliyet = maliyetBedeliOku(ay, yil) || {};[m
+[32m +[m
+[32m +    var fdSheet = ss.getSheetByName(CFG_PREF_FATURA    + yil + '_' + cfgPad2(ay));[m
+[32m +    var dmSheet = ss.getSheetByName(CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay));[m
+[32m +    var kcSheet = ss.getSheetByName(CFG_PREF_KOJEN_CALISMA + yil + '_' + cfgPad2(ay));[m
+[32m++=======[m
+[32m+ [m
+[32m+     if (!ay || ay < 1 || ay > 12)        return { success: false, error: 'Geçersiz ay: ' + ay };[m
+[32m+     if (!yil || yil < 2020 || yil > 2100) return { success: false, error: 'Geçersiz yıl: ' + yil };[m
+[32m+ [m
+[32m+     var ss  = cfgSsAc();[m
+[32m+     var maliyet = maliyetBedeliOku(ay, yil);[m
+[32m+ [m
+[32m+     var fdSheetAdi = CFG_PREF_FATURA      + yil + '_' + cfgPad2(ay);[m
+[32m+     var dmSheetAdi = CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay);[m
+[32m+     var kcSheetAdi = CFG_PREF_KOJEN_CALISMA + yil + '_' + cfgPad2(ay);[m
+[32m+ [m
+[32m+     var fdSheet = ss.getSheetByName(fdSheetAdi);[m
+[32m+     var dmSheet = ss.getSheetByName(dmSheetAdi);[m
+[32m+     var kcSheet = ss.getSheetByName(kcSheetAdi);[m
+[32m+ [m
+[32m+     // Hangi sayfaların eksik olduğunu logla[m
+[32m+     var eksikSayfalar = [];[m
+[32m+     if (!fdSheet) eksikSayfalar.push(fdSheetAdi);[m
+[32m+     if (!dmSheet) eksikSayfalar.push(dmSheetAdi);[m
+[32m+     if (!kcSheet) eksikSayfalar.push(kcSheetAdi);[m
+[32m+     if (eksikSayfalar.length > 0) {[m
+[32m+       Logger.log('⚠️ getRaporData: Eksik sayfalar → ' + eksikSayfalar.join(', '));[m
+[32m+     }[m
+[32m++>>>>>>> 1aa3d90 (Güncelleme)[m
+  [m
+      var gunSayisi = new Date(yil, ay, 0).getDate();[m
+      var aylikGunler = [], topAvantaj = 0, topSebekeMal = 0, topKojenUretim = 0, topKojenMal = 0;[m
+[36m@@@ -220,16 -237,27 +246,40 @@@[m
+      }[m
+      var karsilama = toplamSebeke > 0 ? toplamUretim / toplamSebeke * 100 : 0;[m
+  [m
+[32m++<<<<<<< HEAD[m
+[32m +    return {[m
+[32m +      success: true,[m
+[32m +      data: {[m
+[32m +        maliyet: { kojenMaliyet: maliyet.kojenMaliyet||0, yekdem: maliyet.yekdem||0, dagitim: maliyet.dagitim||0, vtcGider: maliyet.vtcGider||0, birimMaliyet: maliyet.kojenMaliyet||0, net: maliyet.kojenMaliyet||0 },[m
+[32m +        avantaj: { toplam: topAvantaj, gunSayisi: aylikGunler.length, gunluk: aylikGunler.map(function(g) { return { tarih: g.tarih, avantaj: g.avantaj }; }) },[m
+[32m +        dengesizlik: { epiasToplam: topEpias, teiasToplam: topTeias, aylik: dengesizlikAylik },[m
+[32m +        fatura: { toplam: faturasToplam, sebekeMwh: faturasSebeke, saatlik: faturasSaatlik },[m
+[32m +        baglanti: { toplamUretim: toplamUretim, toplamSebeke: toplamSebeke, karsilama: karsilama },[m
+[32m +        motorlar: { gm1: {}, gm2: {}, gm3: {} },[m
+[32m +        aylikOzet: { gunluk: aylikGunler }[m
+[32m++=======[m
+[32m+     // Hiç günlük veri yoksa uyarı mesajını döndür — success:true ile gelir,[m
+[32m+     // tablolar "Veri yok" gösterir; sahte veri üretilmez.[m
+[32m+     var maliyetObj = maliyet[m
+[32m+       ? { kojenMaliyet: maliyet.kojenMaliyet||0, yekdem: maliyet.yekdem||0, dagitim: maliyet.dagitim||0, vtcGider: maliyet.vtcGider||0, gucBedeli: maliyet.gucBedeli||0, birimMaliyet: maliyet.kojenMaliyet||0, net: maliyet.kojenMaliyet||0 }[m
+[32m+       : { kojenMaliyet: 0, yekdem: 0, dagitim: 0, vtcGider: 0, gucBedeli: 0, birimMaliyet: 0, net: 0 };[m
+[32m+ [m
+[32m+     var eksikUyari = eksikSayfalar.length > 0[m
+[32m+       ? 'Eksik sayfalar: ' + eksikSayfalar.join(', ')[m
+[32m+       : null;[m
+[32m+ [m
+[32m+     return {[m
+[32m+       success  : true,[m
+[32m+       uyari    : eksikUyari,[m
+[32m+       data: {[m
+[32m+         maliyet    : maliyetObj,[m
+[32m+         avantaj    : { toplam: topAvantaj,   gunSayisi: aylikGunler.length,    gunluk: aylikGunler.map(function(g) { return { tarih: g.tarih, avantaj: g.avantaj }; }) },[m
+[32m+         dengesizlik: { epiasToplam: topEpias, teiasToplam: topTeias,           aylik: dengesizlikAylik },[m
+[32m+         fatura     : { toplam: faturasToplam, sebekeMwh: faturasSebeke,        saatlik: faturasSaatlik },[m
+[32m+         baglanti   : { toplamUretim: toplamUretim, toplamSebeke: toplamSebeke, karsilama: karsilama },[m
+[32m+         motorlar   : { gm1: {}, gm2: {}, gm3: {} },[m
+[32m+         aylikOzet  : { gunluk: aylikGunler }[m
+[32m++>>>>>>> 1aa3d90 (Güncelleme)[m
+        }[m
+      };[m
+    } catch(e) {[m

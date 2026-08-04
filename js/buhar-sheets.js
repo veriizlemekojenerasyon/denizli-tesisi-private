@@ -40,8 +40,8 @@ const BuharApp = {
         this.checkExistingRecord();
         this.loadLastRecords();
         
-        // g��� OTOMATİK KAYIT KONTROLÜ BA�?LAT
-        this.startAutoRecordCheck();
+        // Gece yarısı tarih güncelleme — tek atışlık, döngü yok
+        this.scheduleMidnightRefresh();
         
         console.log('BuharApp baslatildi');
     },
@@ -51,67 +51,100 @@ const BuharApp = {
         const form = document.getElementById('buharForm');
         if (form) {
             form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+
+            // TEMIZLE butonu: sadece buhar miktarı alanını sıfırla,
+            // gizli tarih alanına dokunma
+            form.addEventListener('reset', (e) => {
+                e.preventDefault();
+                const buharInput = document.getElementById('buharMiktari');
+                if (buharInput) { buharInput.value = ''; buharInput.focus(); }
+            });
         }
-        
+
         // Çikis butonlari
         const sidebarLogout = document.getElementById('sidebarLogout');
-        const headerLogout = document.getElementById('headerLogout');
-        
-        if (sidebarLogout) {
-            sidebarLogout.addEventListener('click', () => this.handleLogout());
-        }
-        if (headerLogout) {
-            headerLogout.addEventListener('click', () => this.handleLogout());
-        }
+        const headerLogout  = document.getElementById('headerLogout');
+        if (sidebarLogout) sidebarLogout.addEventListener('click', () => this.handleLogout());
+        if (headerLogout)  headerLogout.addEventListener('click',  () => this.handleLogout());
     },
     
     // Varsayilan tarih ayarla
     setDefaultDate: function() {
-        const tarihInput = document.getElementById('buharTarih');
-        if (tarihInput) {
-            // Bir gün önceki tarihi ayarla
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            tarihInput.value = yesterday.toISOString().split('T')[0];
-            
-            // Tarih degistiginde kontrol et
-            tarihInput.addEventListener('change', () => {
-                this.checkExistingRecord();
+        // Dünkü tarihi hesapla
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const isoVal = yesterday.toISOString().split('T')[0];           // 'YYYY-MM-DD'
+        const trVal  = isoVal.split('-').reverse().join('.');            // 'DD.MM.YYYY'
+
+        // Gizli input — form değeri
+        const hiddenInput = document.getElementById('buharTarih');
+        if (hiddenInput) hiddenInput.value = isoVal;
+
+        // Görünür metin input — salt okunur, dokunulamaz
+        const displayInput = document.getElementById('buharTarihDisplay');
+        if (displayInput) {
+            displayInput.value = trVal;
+            // Mobil: her türlü etkileşimi engelle
+            ['focus', 'click', 'touchstart', 'touchend', 'mousedown', 'keydown'].forEach(function(evt) {
+                displayInput.addEventListener(evt, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    displayInput.blur();
+                }, { passive: false });
             });
         }
+
+        // checkExistingRecord artık gizli input'u okur, değişiklik eventi gerekmiyor
+        this.checkExistingRecord();
     },
     
     // Form gönderimi isleme
     handleFormSubmit: async function(e) {
         e.preventDefault();
-        
-        const formData = {
-            tarih: document.getElementById('buharTarih').value,
-            buharMiktari: document.getElementById('buharMiktari').value,
-            kaydeden: this.getUserName()
-        };
-        
+
+        // Çift submit engeli
+        if (this._submitting) return;
+
+        // Tarih: gizli input'tan al — reset öncesi sakla
+        const hiddenTarih = document.getElementById('buharTarih');
+        const tarihDeger  = hiddenTarih ? hiddenTarih.value : '';
+        const buharInput  = document.getElementById('buharMiktari');
+        const buharDeger  = buharInput ? buharInput.value.trim() : '';
+
         // Validasyon
-        if (!formData.tarih || !formData.buharMiktari) {
-            this.showNotification('error', 'Eksik Bilgi', 'Lütfen tüm alanlari doldurun!');
+        if (!tarihDeger) {
+            this.showNotification('error', 'Eksik Bilgi', 'Tarih alani bos. Sayfayi yenileyin.');
             return;
         }
-        
+        if (buharDeger === '' || isNaN(parseFloat(buharDeger.replace(',', '.')))) {
+            this.showNotification('error', 'Eksik Bilgi', 'Gecerli bir buhar miktari girin.');
+            if (buharInput) buharInput.focus();
+            return;
+        }
+
+        const formData = {
+            tarih        : tarihDeger,
+            buharMiktari : buharDeger,
+            kaydeden     : this.getUserName()
+        };
+
+        this._submitting = true;
         this.setSavingState(true);
 
         try {
-            // Kaydet
             const result = await this.addRecord(formData);
-            
+
             if (result.success) {
                 this.showNotification('success', 'Basarili', result.message);
-                e.target.reset();
-                this.setDefaultDate();
+                // Sadece buhar miktarı alanını temizle — gizli tarih alanına dokunma
+                if (buharInput) buharInput.value = '';
                 this.loadLastRecords();
+                this.checkExistingRecord(); // Kaydın gelip gelmediğini doğrula
             } else {
                 this.showNotification('error', 'Hata', result.error || 'Kayit yapilamadi!');
             }
         } finally {
+            this._submitting = false;
             this.setSavingState(false);
         }
     },
@@ -280,43 +313,40 @@ const BuharApp = {
     
     // Tarih kontrolü - ayni tarihte kayit varsa inputlari kilitle
     checkExistingRecord: async function() {
-        const tarihInput = document.getElementById('buharTarih');
-        const buharInput = document.getElementById('buharMiktari');
-        const submitBtn = document.querySelector('#buharForm button[type="submit"]');
-        
-        if (!tarihInput || !tarihInput.value) return;
-        
-        const currentDate = tarihInput.value;
-        
+        // Tarih değerini gizli input'tan oku (kullanıcı değiştiremez)
+        const hiddenInput = document.getElementById('buharTarih');
+        if (!hiddenInput || !hiddenInput.value) return;
+
+        // ISO formatı (YYYY-MM-DD) → TR formatına çevir (dd.MM.yyyy) — Sheets ile eşleşmesi için
+        const isoVal  = hiddenInput.value;
+        const trVal   = isoVal.split('-').reverse().join('.');
+
         try {
-            // Tüm kayitlari çek ve kontrol et
             const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
             url.searchParams.append('action', 'getRecords');
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                mode: 'cors'
-            });
-            
-            const result = await response.json();
-            
+
+            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            const result   = await response.json();
+
             if (result.success && result.data) {
-                // Ayni tarihte kayit var mi kontrol et
-                const existingRecord = result.data.find(record => record.tarih === currentDate);
-                
+                // Hem ISO hem TR formatında ara — hangisi gelirse eşleşsin
+                const existingRecord = result.data.find(function(record) {
+                    var t = String(record.tarih || '').trim();
+                    return t === isoVal || t === trVal;
+                });
+
                 if (existingRecord) {
-                    // Kayit varsa inputlari kilitle
                     this.lockInputs(true);
-                    this.showNotification('warning', 'Kayit Mevcut!', 
-                        `${this.formatDate(currentDate)} tarihinde zaten bir kayit bulunuyor. Yeni kayit yapilamaz.`);
+                    this.showNotification('warning', 'Kayit Mevcut!',
+                        trVal + ' tarihinde zaten bir kayit bulunuyor. Yeni kayit yapilamaz.');
                 } else {
-                    // Kayit yoksa inputlari aç
                     this.lockInputs(false);
                 }
             }
-            
         } catch (error) {
-            console.error('Tarih kontrol hatasi:', error);
+            console.warn('Tarih kontrol hatasi (CORS olabilir):', error.message);
+            // CORS hatası durumunda inputları açık bırak — GAS zaten mükerrer kaydı reddeder
+            this.lockInputs(false);
         }
     },
     
@@ -372,75 +402,70 @@ const BuharApp = {
         }
     },
     
-    // g��� OTOMATİK KAYIT KONTROLÜ
+    // OTOMATİK KAYIT KONTROLÜ — tarayıcı tarafı devre dışı
+    // Asıl kontrol GAS trigger ile yapılıyor (her gün 01:00, Code.gs)
+    // Tarayıcı kapalıyken de çalışması için GAS'a taşındı.
     startAutoRecordCheck: function() {
-        console.log('g��� Otomatik buhar kayıt kontrolü başlatılıyor...');
-        
-        // Her 5 dakikada bir kontrol et (günlük kontrol için)
-        setInterval(() => {
-            this.checkAndAutoRecord();
-        }, 300000); // 5 dakika
-        
-        // Sayfa yüklendiğinde de kontrol et
-        setTimeout(() => {
-            this.checkAndAutoRecord();
-        }, 10000); // 10 saniye
+        console.log('Otomatik buhar kayıt kontrolü GAS tarafında (01:00 trigger). Tarayıcı kontrolü devre dışı.');
     },
-    
-    // g��� OTOMATİK KAYIT KONTROLÜ VE GÖNDERİM
+
     checkAndAutoRecord: async function() {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        
-        console.log(`g��� Buhar kontrolü: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
-        
-        // Her gün 23:59'da kontrol et (günün sonu kontrolü)
-        if (currentHour !== 23 || currentMinute !== 59) {
-            return;
-        }
-        
-        console.log('g��� 23:59 kontrolü yapılıyor...');
-        
-        // Dünün tarihini al
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const year = yesterday.getFullYear();
-        const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-        const day = String(yesterday.getDate()).padStart(2, '0');
-        const yesterdayStr = `${year}-${month}-${day}`;
-        
-        // Dünün kaydı var mı kontrol et
-        const hasRecord = await this.isExistingRecord(yesterdayStr);
-        
-        if (!hasRecord) {
-            console.log('g��� Dün için buhar kaydı bulunamadı! Otomatik kayıt gönderiliyor...');
-            
-            // Otomatik kayıt verileri
-            const autoData = {
-                tarih: yesterdayStr,
-                buharMiktari: '0',
-                kaydeden: 'OTOMATİK SİSTEM'
-            };
-            
-            // Kaydı gönder
-            const result = await this.addRecord(autoData);
-            
-            if (result.success) {
-                console.log('✅ Otomatik dün kaydı başarıyla gönderildi!');
-                this.showNotification('warning', 'Otomatik Kayıt', 'Dün için buhar verisi otomatik olarak kaydedildi (Değer girilmedi)');
-                this.loadLastRecords();
-                
-                // g��� Mail gönder
-                const mailBody = `Buhar Verisi Uyarısı\n\nTarih: ${yesterdayStr}\n\n${yesterdayStr} için buhar verisi girilmedi. Otomatik olarak boş kayıt yapıldı.\n\nLütfen ilgili personeli bilgilendirin.`;
-                await this.sendEmailAlert(`Buhar Verisi Uyarısı - ${yesterdayStr} Değer Girilmedi`, mailBody);
-                
+        // GAS tarafına taşındı — burada bir şey yapılmıyor
+    },
+
+    // ─── GECEYARISı TARİH GÜNCELLEMESİ ─────────────────────────────────────
+    // Sayfa açık kalsa bile saat 00:00:05'te bir kez tetiklenir.
+    // Operatör buhar miktarı girmeye başlamışsa forma dokunulmaz,
+    // sadece gizli tarih alanı sessizce güncellenir.
+    scheduleMidnightRefresh: function() {
+        var now   = new Date();
+        // Bugün gece yarısı + 5 saniyelik tampon
+        var gece  = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+        var msKaldi = gece.getTime() - now.getTime();
+
+        console.log('Gece yarısı tarih güncellemesi planlandı: ' +
+                    Math.round(msKaldi / 1000) + ' saniye sonra.');
+
+        setTimeout(function() {
+            var buharInput = document.getElementById('buharMiktari');
+            var doluMu     = buharInput &&
+                             buharInput.value &&
+                             buharInput.value.trim() !== '' &&
+                             buharInput.value.trim() !== '0';
+
+            // Dünkü (artık bugün olan) tarihi hesapla
+            var hedef = new Date();
+            hedef.setDate(hedef.getDate() - 1);
+            var isoVal = hedef.toISOString().split('T')[0];          // YYYY-MM-DD
+            var trVal  = isoVal.split('-').reverse().join('.');        // DD.MM.YYYY
+
+            if (!doluMu) {
+                // Alan boş — tarihi, göstergeyi ve tabloyu güncelle
+                var hidden = document.getElementById('buharTarih');
+                if (hidden) hidden.value = isoVal;
+
+                var display = document.getElementById('buharTarihDisplay');
+                if (display) display.value = trVal;
+
+                BuharApp.checkExistingRecord();
+                BuharApp.loadLastRecords();
+                console.log('Gece yarısı: tarih ve tablo güncellendi → ' + trVal);
             } else {
-                console.error('❌ Otomatik kayıt başarısız:', result.error);
+                // Operatör veri giriyor — sadece gizli tarihi güncelle, formu bozma
+                var hidden2 = document.getElementById('buharTarih');
+                if (hidden2) hidden2.value = isoVal;
+
+                var display2 = document.getElementById('buharTarihDisplay');
+                if (display2) display2.value = trVal;
+
+                console.log('Gece yarısı: operatör giriş yapıyor, sadece tarih güncellendi → ' + trVal);
             }
-        } else {
-            console.log('✅ Dün kaydı mevcut, otomatik kayıt gerekmiyor');
-        }
+
+            // Sonraki gece yarısı için kendini yeniden planla
+            // (sayfa 2. gün de açık kalırsa diye)
+            BuharApp.scheduleMidnightRefresh();
+
+        }, msKaldi);
     },
     
     // Kayıt var mı kontrol et

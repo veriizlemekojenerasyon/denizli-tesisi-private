@@ -146,12 +146,38 @@ function getRaporData(params) {
   try {
     var ay  = parseInt(params.month || params.ay  || new Date().getMonth() + 1, 10);
     var yil = parseInt(params.year  || params.yil || new Date().getFullYear(),  10);
+<<<<<<< HEAD
     var ss  = cfgSsAc();
     var maliyet = maliyetBedeliOku(ay, yil) || {};
 
     var fdSheet = ss.getSheetByName(CFG_PREF_FATURA    + yil + '_' + cfgPad2(ay));
     var dmSheet = ss.getSheetByName(CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay));
     var kcSheet = ss.getSheetByName(CFG_PREF_KOJEN_CALISMA + yil + '_' + cfgPad2(ay));
+=======
+
+    if (!ay || ay < 1 || ay > 12)        return { success: false, error: 'Geçersiz ay: ' + ay };
+    if (!yil || yil < 2020 || yil > 2100) return { success: false, error: 'Geçersiz yıl: ' + yil };
+
+    var ss  = cfgSsAc();
+    var maliyet = maliyetBedeliOku(ay, yil);
+
+    var fdSheetAdi = CFG_PREF_FATURA      + yil + '_' + cfgPad2(ay);
+    var dmSheetAdi = CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay);
+    var kcSheetAdi = CFG_PREF_KOJEN_CALISMA + yil + '_' + cfgPad2(ay);
+
+    var fdSheet = ss.getSheetByName(fdSheetAdi);
+    var dmSheet = ss.getSheetByName(dmSheetAdi);
+    var kcSheet = ss.getSheetByName(kcSheetAdi);
+
+    // Hangi sayfaların eksik olduğunu logla
+    var eksikSayfalar = [];
+    if (!fdSheet) eksikSayfalar.push(fdSheetAdi);
+    if (!dmSheet) eksikSayfalar.push(dmSheetAdi);
+    if (!kcSheet) eksikSayfalar.push(kcSheetAdi);
+    if (eksikSayfalar.length > 0) {
+      Logger.log('⚠️ getRaporData: Eksik sayfalar → ' + eksikSayfalar.join(', '));
+    }
+>>>>>>> 1aa3d90 (Güncelleme)
 
     var gunSayisi = new Date(yil, ay, 0).getDate();
     var aylikGunler = [], topAvantaj = 0, topSebekeMal = 0, topKojenUretim = 0, topKojenMal = 0;
@@ -220,6 +246,7 @@ function getRaporData(params) {
     }
     var karsilama = toplamSebeke > 0 ? toplamUretim / toplamSebeke * 100 : 0;
 
+<<<<<<< HEAD
     return {
       success: true,
       data: {
@@ -230,6 +257,29 @@ function getRaporData(params) {
         baglanti: { toplamUretim: toplamUretim, toplamSebeke: toplamSebeke, karsilama: karsilama },
         motorlar: { gm1: {}, gm2: {}, gm3: {} },
         aylikOzet: { gunluk: aylikGunler }
+=======
+    // Hiç günlük veri yoksa uyarı mesajını döndür — success:true ile gelir,
+    // tablolar "Veri yok" gösterir; sahte veri üretilmez.
+    var maliyetObj = maliyet
+      ? { kojenMaliyet: maliyet.kojenMaliyet||0, yekdem: maliyet.yekdem||0, dagitim: maliyet.dagitim||0, vtcGider: maliyet.vtcGider||0, gucBedeli: maliyet.gucBedeli||0, birimMaliyet: maliyet.kojenMaliyet||0, net: maliyet.kojenMaliyet||0 }
+      : { kojenMaliyet: 0, yekdem: 0, dagitim: 0, vtcGider: 0, gucBedeli: 0, birimMaliyet: 0, net: 0 };
+
+    var eksikUyari = eksikSayfalar.length > 0
+      ? 'Eksik sayfalar: ' + eksikSayfalar.join(', ')
+      : null;
+
+    return {
+      success  : true,
+      uyari    : eksikUyari,
+      data: {
+        maliyet    : maliyetObj,
+        avantaj    : { toplam: topAvantaj,   gunSayisi: aylikGunler.length,    gunluk: aylikGunler.map(function(g) { return { tarih: g.tarih, avantaj: g.avantaj }; }) },
+        dengesizlik: { epiasToplam: topEpias, teiasToplam: topTeias,           aylik: dengesizlikAylik },
+        fatura     : { toplam: faturasToplam, sebekeMwh: faturasSebeke,        saatlik: faturasSaatlik },
+        baglanti   : { toplamUretim: toplamUretim, toplamSebeke: toplamSebeke, karsilama: karsilama },
+        motorlar   : { gm1: {}, gm2: {}, gm3: {} },
+        aylikOzet  : { gunluk: aylikGunler }
+>>>>>>> 1aa3d90 (Güncelleme)
       }
     };
   } catch(e) {
