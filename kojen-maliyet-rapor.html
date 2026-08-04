@@ -62,6 +62,10 @@
                         <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
                         Maliyet Giriş
                     </button>
+                    <button class="btn secondary" type="button" id="otoHesaplaBtn">
+                        <svg viewBox="0 0 24 24"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 22v-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M22 12h-4"/><path d="m19.07 4.93-2.83 2.83"/></svg>
+                        Otomatik Hesapla
+                    </button>
                     <span class="current-user" id="userNameDisplay">Admin</span>
                 </div>
             </header>
@@ -562,6 +566,76 @@
         </div>
     </div>
     <!-- ── MODAL SONU ─────────────────────────────────────────────────────── -->
+
+    <!-- ── OTOMATİK HESAPLAMA MODALI ──────────────────────────────────────── -->
+    <div id="otoHesaplaModal" class="km-modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="otoModalTitle">
+        <div class="km-modal">
+            <div class="km-modal-header">
+                <div>
+                    <h2 id="otoModalTitle">Otomatik Hesaplama</h2>
+                    <p>Seçilen tarih aralığı için veri çekme ve hesaplama işlemini başlatır.</p>
+                </div>
+                <button class="km-modal-close" id="otoModalKapat" type="button" aria-label="Kapat">
+                    <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="km-modal-body">
+
+                <!-- Tarih Aralığı -->
+                <div class="km-field-row">
+                    <div class="km-field">
+                        <label for="otoBaslangic">Başlangıç Tarihi</label>
+                        <input type="date" id="otoBaslangic">
+                    </div>
+                    <div class="km-field">
+                        <label for="otoBitis">Bitiş Tarihi</label>
+                        <input type="date" id="otoBitis">
+                    </div>
+                </div>
+
+                <!-- Bilgi kutusu -->
+                <div style="margin-top:12px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:13px;color:#1e40af;line-height:1.5;">
+                    <strong>Çalışma sırası:</strong>
+                    <ol style="margin:6px 0 0 16px;padding:0;">
+                        <li>Bağlantı Noktaları verisi çekilir</li>
+                        <li>AMR gerçek tüketim verisi çekilir</li>
+                        <li>PTF/SMF piyasa fiyatları çekilir</li>
+                        <li>Saatlik hesaplama yapılır</li>
+                        <li>KojenCalisma / Dengesizlik / Faturalaşma sayfaları güncellenir</li>
+                    </ol>
+                    <p style="margin:8px 0 0;color:#9a3412;font-weight:600;">⚠️ En fazla 60 günlük aralık seçilebilir. İşlem birkaç dakika sürebilir.</p>
+                </div>
+
+                <!-- Hızlı seçim butonları -->
+                <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;">
+                    <button type="button" class="btn ghost sm" id="otoDun">Dün</button>
+                    <button type="button" class="btn ghost sm" id="otoBuHafta">Bu Hafta</button>
+                    <button type="button" class="btn ghost sm" id="otoBuAy">Bu Ay</button>
+                    <button type="button" class="btn ghost sm" id="otoGecenAy">Geçen Ay</button>
+                </div>
+
+            </div>
+
+            <div class="km-modal-footer">
+                <div id="otoModalNotice" class="km-notice" hidden></div>
+                <div id="otoProgress" hidden style="width:100%;margin-bottom:10px;">
+                    <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                        <div id="otoProgressBar" style="height:100%;width:0%;background:#2c5282;border-radius:3px;transition:width 0.4s ease;"></div>
+                    </div>
+                    <p id="otoProgressText" style="margin:6px 0 0;font-size:12px;color:#4a5568;text-align:center;"></p>
+                </div>
+                <div class="km-footer-actions">
+                    <button class="btn ghost" type="button" id="otoIptalBtn">İptal</button>
+                    <button class="btn primary" type="button" id="otoBaslatBtn">
+                        <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 22v-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M22 12h-4"/><path d="m19.07 4.93-2.83 2.83"/></svg>
+                        Hesaplamayı Başlat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ── OTOMATİK HESAPLAMA MODAL SONU ──────────────────────────────────── -->
 
     <script src="js/app-config.js"></script>
     <script src="js/sidebar-menu.js"></script>

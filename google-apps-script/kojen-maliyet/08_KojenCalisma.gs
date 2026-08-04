@@ -91,7 +91,7 @@ function kojenCalismaSayfasiOlustur(ay, yil, gun) {
     sheet.getRange(28, 5, 1, 2)
       .setBackground('#276749').setFontColor('#FFFFFF')
       .setFontWeight('bold').setHorizontalAlignment('center')
-      .setNumberFormat('#,##0.00');
+      .setNumberFormat('#,##0.00 "₺"');
 
     // Aylık avantaj tablosu
     _kcAylikAvantajTablosu(sheet, ss, ay, yil);
@@ -130,16 +130,16 @@ function _kcSatirBicimlendir(sheet, satirNo) {
   sheet.getRange(satirNo, 1).setFontWeight('bold').setHorizontalAlignment('center');
   sheet.getRange(satirNo, 2).setNumberFormat('0.000');
   sheet.getRange(satirNo, 3).setNumberFormat('0.#####');
-  sheet.getRange(satirNo, 4).setNumberFormat('#,##0.00');
-  sheet.getRange(satirNo, 5).setNumberFormat('#,##0.00');
-  sheet.getRange(satirNo, 6).setNumberFormat('#,##0.00');
+  sheet.getRange(satirNo, 4).setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(satirNo, 5).setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(satirNo, 6).setNumberFormat('#,##0.00 "₺"');
 }
 
 function _kcToplamSatirBicimlendir(sheet) {
   sheet.getRange(27, 1, 1, 7).setBackground('#1e3a5f').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
   sheet.getRange(27, 2).setNumberFormat('0.000');
-  sheet.getRange(27, 4).setNumberFormat('#,##0.00');
-  sheet.getRange(27, 6).setNumberFormat('#,##0.00');
+  sheet.getRange(27, 4).setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(27, 6).setNumberFormat('#,##0.00 "₺"');
 }
 
 // ─── AYLIK AVANTAJ TABLOSU ────────────────────────────────────────────────────
@@ -174,13 +174,13 @@ function _kcAylikAvantajTablosu(sheet, ss, ay, yil) {
     } else {
       iHucre.setValue('').setBackground(g % 2 === 0 ? '#F7F9FC' : '#FFFFFF');
     }
-    iHucre.setNumberFormat('#,##0.00');
+    iHucre.setNumberFormat('#,##0.00 "₺"');
   }
 
   // Toplam
   var toplamSatir = gunSayisi + 3;
   sheet.getRange(toplamSatir, 8).setValue('TOPLAM').setBackground('#1e3a5f').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
-  sheet.getRange(toplamSatir, 9).setFormula('=SUM(I3:I' + (gunSayisi + 2) + ')').setBackground('#1e3a5f').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00');
+  sheet.getRange(toplamSatir, 9).setFormula('=SUM(I3:I' + (gunSayisi + 2) + ')').setBackground('#1e3a5f').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
 }
 
 // ─── PTF DEĞER OKUMA ──────────────────────────────────────────────────────────

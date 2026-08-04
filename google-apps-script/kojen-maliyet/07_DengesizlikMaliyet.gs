@@ -74,8 +74,8 @@ function dengesizlikMaliyetSayfasiOlustur(ay, yil, gun) {
       sheet.getRange(satirNo, 3).setValue(amrDeger).setNumberFormat('0.000')
         .setNote('Kaynak: AMR_Saatlik B' + (i + 2));
 
-      // D: Fark
-      var fark = amrDeger - tahmin;
+      // D: Fark = TAHMİN - GERÇEK
+      var fark = tahmin - amrDeger;
       sheet.getRange(satirNo, 4).setValue(fark).setNumberFormat('0.000');
 
       // E–H: Fiyatlar
@@ -86,27 +86,31 @@ function dengesizlikMaliyetSayfasiOlustur(ay, yil, gun) {
 
       // I: Pozitif Fark = PozDen - PTF
       var pozFark = pozDen - ptf;
-      sheet.getRange(satirNo, 9).setValue(pozFark).setNumberFormat('#,##0.00')
+      sheet.getRange(satirNo, 9).setValue(pozFark).setNumberFormat('#,##0.00 "₺"')
         .setNote('PozDen − PTF = ' + pozDen + ' − ' + ptf);
 
       // J: Negatif Fark = NegDen - PTF
       var negFark = negDen - ptf;
-      sheet.getRange(satirNo, 10).setValue(negFark).setNumberFormat('#,##0.00')
+      sheet.getRange(satirNo, 10).setValue(negFark).setNumberFormat('#,##0.00 "₺"')
         .setNote('NegDen − PTF = ' + negDen + ' − ' + ptf);
 
       // K: Ayraç
       sheet.getRange(satirNo, 11).setValue('');
 
-      // L: EPİAŞ
+      // L: EPİAŞ = MUTLAK(EĞER(D>0; D*I; D*J))
       var epias = Math.abs(fark > 0 ? fark * pozFark : fark * negFark);
-      sheet.getRange(satirNo, 12).setValue(epias).setNumberFormat('#,##0.00');
+      sheet.getRange(satirNo, 12).setValue(epias).setNumberFormat('#,##0.00 "₺"');
 
-      // M: TEİAŞ
+      // M: TEİAŞ — 16:00-21:00 arası 0.04, diğer saatler 0
       var teias = 0;
-      if (Math.abs(fark) > tahmin * 0.15) {
-        teias = Math.abs(fark * Math.max(ptf, smf) * 0.08);
+      var saat = i; // 0-23 arası
+      if (saat >= 16 && saat <= 21) {
+        if (Math.abs(fark) > tahmin * 0.15) {
+          teias = Math.abs(fark * Math.max(ptf, smf) * 0.04);
+        }
       }
-      sheet.getRange(satirNo, 13).setValue(teias).setNumberFormat('#,##0.00');
+      // diğer saatler: 0.08 * 0 = 0
+      sheet.getRange(satirNo, 13).setValue(teias).setNumberFormat('#,##0.00 "₺"');
 
       // Satır rengi
       sheet.getRange(satirNo, 2, 1, 12).setBackground(i % 2 === 0 ? '#F7F9FC' : '#FFFFFF');
@@ -167,10 +171,10 @@ function _dmToplamSatirYaz(sheet) {
   sheet.getRange(r, 2).setFormula('=SUM(B3:B26)').setNumberFormat('0.000');
   sheet.getRange(r, 3).setFormula('=SUM(C3:C26)').setNumberFormat('0.000');
   sheet.getRange(r, 4).setFormula('=SUM(D3:D26)').setNumberFormat('0.000');
-  sheet.getRange(r, 9).setFormula('=SUM(I3:I26)').setNumberFormat('#,##0.00');
-  sheet.getRange(r, 10).setFormula('=SUM(J3:J26)').setNumberFormat('#,##0.00');
-  sheet.getRange(r, 12).setFormula('=SUM(L3:L26)').setNumberFormat('#,##0.00');
-  sheet.getRange(r, 13).setFormula('=SUM(M3:M26)').setNumberFormat('#,##0.00');
+  sheet.getRange(r, 9).setFormula('=SUM(I3:I26)').setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(r, 10).setFormula('=SUM(J3:J26)').setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(r, 12).setFormula('=SUM(L3:L26)').setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(r, 13).setFormula('=SUM(M3:M26)').setNumberFormat('#,##0.00 "₺"');
   sheet.getRange(r, 1, 1, 13).setBackground('#1e3a5f').setFontColor('#FFFFFF').setFontWeight('bold');
 }
 
@@ -204,17 +208,17 @@ function _dmAylikDengesizlikTablosu(sheet, ss, ay, yil, hesaplananGun) {
       qHucre.setValue('').setBackground(bg);
       rHucre.setFormula('=P' + satirNo + '+Q' + satirNo).setBackground(bg);
     }
-    pHucre.setNumberFormat('#,##0.00');
-    qHucre.setNumberFormat('#,##0.00');
-    rHucre.setNumberFormat('#,##0.00');
+    pHucre.setNumberFormat('#,##0.00 "₺"');
+    qHucre.setNumberFormat('#,##0.00 "₺"');
+    rHucre.setNumberFormat('#,##0.00 "₺"');
   }
 
   // Toplam satırı
   var topSatir = gunSayisi + 3;
   sheet.getRange(topSatir, 15).setValue('TOP').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
-  sheet.getRange(topSatir, 16).setFormula('=SUM(P3:P' + (gunSayisi + 2) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00');
-  sheet.getRange(topSatir, 17).setFormula('=SUM(Q3:Q' + (gunSayisi + 2) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00');
-  sheet.getRange(topSatir, 18).setFormula('=SUM(R3:R' + (gunSayisi + 2) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00');
+  sheet.getRange(topSatir, 16).setFormula('=SUM(P3:P' + (gunSayisi + 2) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(topSatir, 17).setFormula('=SUM(Q3:Q' + (gunSayisi + 2) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(topSatir, 18).setFormula('=SUM(R3:R' + (gunSayisi + 2) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
 }
 
 // ─── VERİ OKUMA ───────────────────────────────────────────────────────────────

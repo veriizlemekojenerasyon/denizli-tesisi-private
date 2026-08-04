@@ -135,8 +135,8 @@ function _amrSaatlikYaz(ss, items, isoTarih) {
   for (var h = 0; h < 24; h++) {
     var saat = cfgPad2(h) + ':00:00';
     var item = map[saat] || null;
-    var kwh  = item ? cfgYuvarla(parseFloat(item.consumption) || 0) : 0;  // MWh
-    var ukwh = item ? cfgYuvarla(parseFloat(item.generation)  || 0) : 0;  // MWh
+    var kwh  = item ? cfgYuvarla((parseFloat(item.consumption) || 0) / 1000) : 0;  // kWh → MWh
+    var ukwh = item ? cfgYuvarla((parseFloat(item.generation)  || 0) / 1000) : 0;  // kWh → MWh
     var net  = cfgYuvarla(kwh - ukwh);
     var auto = (item && item.consumptionAutoFilled) ? 'EVET' : '';
     var row  = h + 2;
@@ -212,8 +212,8 @@ function _amrAylikYaz(ss, items, ay, yil) {
     var d       = new Date(item.readAt);
     var tr      = new Date(d.getTime() + 3 * 3600000);
     var trTarih = cfgPad2(tr.getUTCDate()) + '.' + cfgPad2(tr.getUTCMonth() + 1) + '.' + tr.getUTCFullYear();
-    var kwh     = cfgYuvarla(parseFloat(item.consumption) || 0);
-    var ukwh    = cfgYuvarla(parseFloat(item.generation)  || 0);
+    var kwh     = cfgYuvarla((parseFloat(item.consumption) || 0) / 1000);  // kWh → MWh
+    var ukwh    = cfgYuvarla((parseFloat(item.generation)  || 0) / 1000);  // kWh → MWh
     var net     = cfgYuvarla(kwh - ukwh);
     var durum   = item.consumptionAutoFilled ? '⚠ Tahmini' : '✓';
     var row     = i + 2;

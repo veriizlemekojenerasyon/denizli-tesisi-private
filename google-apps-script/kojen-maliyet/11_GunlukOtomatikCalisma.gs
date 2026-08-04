@@ -171,7 +171,7 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
       if (kcSheet) {
         kcSheet.getRange(gun + 2, 9)
           .setValue(gunHesap.kojenAvantaj)
-          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00')
+          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('Kojen Avantaj (sabit)\nTarih: ' + gun + '.' + ayKisa + '\nDeğer: ' + gunHesap.kojenAvantaj.toFixed(2));
         SpreadsheetApp.flush();
         Logger.log('  KC : OK Avantaj=' + gunHesap.kojenAvantaj.toFixed(2));
@@ -191,13 +191,13 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
       if (dmSheet) {
         var dmSatir = gun + 2;
         dmSheet.getRange(dmSatir, 16).setValue(gunHesap.epias)
-          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00')
+          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('EPİAŞ (sabit)\nTarih: ' + gun + '.' + ayKisa);
         dmSheet.getRange(dmSatir, 17).setValue(gunHesap.teias)
-          .setBackground('#EBF8EE').setNumberFormat('#,##0.00')
+          .setBackground('#EBF8EE').setNumberFormat('#,##0.00 "₺"')
           .setNote('TEİAŞ (sabit)\nTarih: ' + gun + '.' + ayKisa);
         dmSheet.getRange(dmSatir, 18).setValue(gunHesap.epias + gunHesap.teias)
-          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00')
+          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('EPİAŞ + TEİAŞ\nTarih: ' + gun + '.' + ayKisa);
         SpreadsheetApp.flush();
         Logger.log('  DM : OK EPİAŞ=' + gunHesap.epias.toFixed(2) + ' TEİAŞ=' + gunHesap.teias.toFixed(2));
@@ -216,26 +216,52 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
       }
       if (fdSheet) {
         var fdSatir = gun + 1;
-        var birimMal = gunHesap.sebeke > 0 ? gunHesap.toplamMaliyet / gunHesap.sebeke : 0;
-        var uretim   = yillikToplamUretimCek(gun, ay, yil);
+        var uretim  = yillikToplamUretimCek(gun, ay, yil);
 
-        fdSheet.getRange(fdSatir, 11).setValue(gunHesap.toplamMaliyet)
-          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00')
-          .setNote('Toplam Maliyet (sabit)\nTarih: ' + gun + '.' + ayKisa);
-        fdSheet.getRange(fdSatir, 12).setValue(gunHesap.sebeke)
-          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00')
+        // D28 değerini hesapla — Faturalaşma sayfasındaki günlük toplam maliyet
+        // Excel: =11293 + D26 + E26 + G26 + DM!X35 - F26
+        // Bizim: maliyetK2 + C26(EPİAŞ) + D26(Dağıtım) + F26(VTC) + DM!Toplam - E26(Koruma)
+        var d28Val = 0;
+        try {
+          SpreadsheetApp.flush();
+          var malSheet2  = ss.getSheetByName(CFG_SAYFA_MALIYET);
+          var maliyetK2  = malSheet2 ? (parseFloat(malSheet2.getRange(2, 11).getValue()) || 0) : 0;
+          var c26epias   = parseFloat(fdSheet.getRange(26, 3).getValue()) || 0;
+          var d26dagitim = parseFloat(fdSheet.getRange(26, 4).getValue()) || 0;
+          var e26koruma  = parseFloat(fdSheet.getRange(26, 5).getValue()) || 0;
+          var f26vtc     = parseFloat(fdSheet.getRange(26, 6).getValue()) || 0;
+          var dmAdi2     = CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay);
+          var dmSheet2   = ss.getSheetByName(dmAdi2);
+          var dmTopSatir = new Date(yil, ay, 0).getDate() + 3;
+          var dmToplam   = dmSheet2 && dmSheet2.getLastRow() >= dmTopSatir
+            ? (parseFloat(dmSheet2.getRange(dmTopSatir, 18).getValue()) || 0) : 0;
+          d28Val = maliyetK2 + c26epias + d26dagitim + f26vtc + dmToplam - e26koruma;
+        } catch(e2) {
+          Logger.log('  FD D28 hesap hatası: ' + e2.toString());
+          d28Val = gunHesap.toplamMaliyet; // fallback
+        }
+
+        var sebeke   = parseFloat(fdSheet.getRange(26, 8).getValue()) || gunHesap.sebeke;
+        var birimMal = sebeke > 0 ? d28Val / sebeke : 0;
+
+        // K: D28 değeri — o günün toplam maliyet
+        fdSheet.getRange(fdSatir, 11).setValue(d28Val)
+          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
+          .setNote('D28 Toplam Maliyet\nTarih: ' + gun + '.' + ayKisa);
+        fdSheet.getRange(fdSatir, 12).setValue(sebeke)
+          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('0.000')
           .setNote('Şebeke Tüketim (sabit)\nTarih: ' + gun + '.' + ayKisa);
         fdSheet.getRange(fdSatir, 13).setValue(birimMal)
-          .setBackground('#FFF9C4').setFontWeight('bold').setNumberFormat('0.00000')
-          .setNote('Birim Maliyet (sabit)\nTarih: ' + gun + '.' + ayKisa);
+          .setBackground('#FFF9C4').setFontWeight('bold').setNumberFormat('0.00000 "₺"')
+          .setNote('Birim Maliyet (D28/H26)\nTarih: ' + gun + '.' + ayKisa);
         fdSheet.getRange(fdSatir, 16).setValue(uretim)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.000')
           .setNote('Kojen Üretim\nTarih: ' + gun + '.' + ayKisa);
         fdSheet.getRange(fdSatir, 17).setValue(uretim * 1300)
-          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00')
+          .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('P × 1300\nTarih: ' + gun + '.' + ayKisa);
         SpreadsheetApp.flush();
-        Logger.log('  FD : OK Maliyet=' + gunHesap.toplamMaliyet.toFixed(2) + ' Üretim=' + uretim + ' MWh');
+        Logger.log('  FD : OK D28=' + d28Val.toFixed(2) + ' Şebeke=' + sebeke.toFixed(3) + ' Üretim=' + uretim + ' MWh');
       } else {
         Logger.log('  FD : Sayfa yok, atlandı (' + fdAdi + ')');
       }
@@ -325,19 +351,22 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
       var gercek = (amrSheet.getLastRow() >= amrRow)
         ? (parseFloat(amrSheet.getRange(amrRow, 2).getValue()) || 0) : 0;
 
-      var fark    = gercek - tahmin;
+      var fark    = tahmin - gercek;  // TAHMİN - GERÇEK
       var ptf     = ptfDizi[i], smf = smfDizi[i];
-      var pozFark = pozDizi[i] - ptf;
-      var negFark = negDizi[i] - ptf;
+      var pozFark = pozDizi[i] - ptf;  // PozDen - PTF
+      var negFark = negDizi[i] - ptf;  // NegDen - PTF
 
-      // EPİAŞ dengesizlik maliyeti
+      // EPİAŞ dengesizlik maliyeti = MUTLAK(EĞER(D>0; D*I; D*J))
       var epias = Math.abs(fark > 0 ? fark * pozFark : fark * negFark);
 
-      // TEİAŞ: fark eşiği %15 aşarsa
+      // TEİAŞ — 16:00-21:00 arası 0.04, diğer saatler 0
       var teias = 0;
-      if (Math.abs(fark) > tahmin * 0.15) {
-        teias = Math.abs(fark * Math.max(ptf, smf) * 0.08);
+      if (i >= 16 && i <= 21) {
+        if (Math.abs(fark) > tahmin * 0.15) {
+          teias = Math.abs(fark * Math.max(ptf, smf) * 0.04);
+        }
       }
+      // diğer saatler: 0.08 * 0 = 0
 
       // Toplam fatura maliyeti bu saat için
       var dagYek   = gercek * (yekdem + dagitim + vtc);
@@ -361,6 +390,54 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
   }
 
   return sonuc;
+}
+
+// ─── WEB APP KÖPRÜSÜ — otomatikHesaplaAralik ─────────────────────────────────
+
+/**
+ * Web sayfasından gelen 'otomatikHesapla' action'ını karşılar.
+ * GAS zaman aşımı (6 dk) nedeniyle çok uzun aralıklar reddedilir.
+ *
+ * @param {object} params  { baslangic: 'YYYY-MM-DD', bitis: 'YYYY-MM-DD' }
+ * @returns {{ success, basarili, hatali, hatalar, sure }}
+ */
+function otomatikHesaplaAralik(params) {
+  var baslangic = String(params.baslangic || '').trim();
+  var bitis     = String(params.bitis     || '').trim();
+
+  // Basit format doğrulama
+  var isoRe = /^\d{4}-\d{2}-\d{2}$/;
+  if (!isoRe.test(baslangic)) return { success: false, error: 'Geçersiz başlangıç tarihi: ' + baslangic };
+  if (!isoRe.test(bitis))     return { success: false, error: 'Geçersiz bitiş tarihi: '     + bitis     };
+
+  var bas = new Date(baslangic);
+  var bit = new Date(bitis);
+
+  if (isNaN(bas.getTime())) return { success: false, error: 'Başlangıç tarihi okunamadı.' };
+  if (isNaN(bit.getTime())) return { success: false, error: 'Bitiş tarihi okunamadı.'     };
+  if (bas > bit)            return { success: false, error: 'Başlangıç tarihi bitiş tarihinden sonra olamaz.' };
+
+  // Gün sayısı kısıtlaması — GAS 6 dk zaman aşımı
+  var gunFarki = Math.round((bit - bas) / 86400000) + 1;
+  if (gunFarki > 60) return { success: false, error: 'En fazla 60 günlük aralık hesaplanabilir. Seçilen: ' + gunFarki + ' gün.' };
+
+  var baslangicMs = Date.now();
+  try {
+    var sonuc = tumVerileriCekTarihAralik(baslangic, bitis);
+    var sureSn = ((Date.now() - baslangicMs) / 1000).toFixed(1);
+    return {
+      success  : true,
+      basarili : sonuc.basarili,
+      hatali   : sonuc.hatali,
+      hatalar  : sonuc.hatalar || [],
+      gunSayisi: gunFarki,
+      sure     : sureSn + ' sn',
+      mesaj    : gunFarki + ' gün işlendi. Başarılı: ' + sonuc.basarili + ', Hatalı: ' + sonuc.hatali
+    };
+  } catch(e) {
+    Logger.log('❌ otomatikHesaplaAralik: ' + e.toString());
+    return { success: false, error: e.toString() };
+  }
 }
 
 // ─── TEST FONKSİYONLARI ──────────────────────────────────────────────────────

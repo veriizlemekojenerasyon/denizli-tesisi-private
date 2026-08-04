@@ -265,7 +265,7 @@ function renderFaturaTable(fatura) {
       +'<td>'+fmt3(v[5])+'</td><td>'+fmt3(v[6])+'</td></tr>';
   }).join('');
   tfoot.innerHTML = '<tr><td>TOPLAM</td>'+tot.slice(0,5).map(function(v){return '<td><strong>'+fmtTL(v)+'</strong></td>';}).join('')+tot.slice(5).map(function(v){return '<td>'+fmt3(v)+'</td>';}).join('')+'</tr>';
-  setEl('faturaToplamBadge', fmtTL(tot[1]+tot[2]+Math.max(0,tot[3])));
+  setEl('faturaToplamBadge', fmtTL(Math.abs(tot[0])+Math.abs(tot[1])+Math.abs(tot[2])+Math.abs(tot[3])+Math.abs(tot[4])));
 }
 
 function renderMotorKartlari(motorlar) {
@@ -742,8 +742,207 @@ var KM_MODAL = {
 };
 
 // ─── MODAL INIT — DOMContentLoaded'e bağla ───────────────────────────────────
-// Mevcut DOMContentLoaded bloğunun sonundaki bindEvents() çağrısının ardından
-// KM_MODAL.init() otomatik çağrılır; bunun için dosya sonuna ayrı bir listener ekliyoruz.
 document.addEventListener('DOMContentLoaded', function () {
   KM_MODAL.init();
+  OtoHesap.init();
 });
+
+// ─── OTOMATİK HESAPLAMA MODALI ────────────────────────────────────────────────
+
+var OtoHesap = {
+  overlay  : null,
+  calisıyor: false,
+  _timer   : null,
+
+  init: function () {
+    this.overlay = document.getElementById('otoHesaplaModal');
+    if (!this.overlay) return;
+
+    on('otoHesaplaBtn',  'click', function () { OtoHesap.ac(); });
+    on('otoModalKapat',  'click', function () { OtoHesap.kapat(); });
+    on('otoIptalBtn',    'click', function () { OtoHesap.kapat(); });
+    on('otoBaslatBtn',   'click', function () { OtoHesap.baslat(); });
+
+    // Hızlı seçim butonları
+    on('otoDun',      'click', function () { OtoHesap.hizliSec('dun');      });
+    on('otoBuHafta',  'click', function () { OtoHesap.hizliSec('buHafta');  });
+    on('otoBuAy',     'click', function () { OtoHesap.hizliSec('buAy');     });
+    on('otoGecenAy',  'click', function () { OtoHesap.hizliSec('gecenAy'); });
+
+    // Backdrop tıklaması
+    this.overlay.addEventListener('click', function (e) {
+      if (e.target === OtoHesap.overlay && !OtoHesap.calisıyor) OtoHesap.kapat();
+    });
+
+    // Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !OtoHesap.overlay.hidden && !OtoHesap.calisıyor) OtoHesap.kapat();
+    });
+  },
+
+  ac: function () {
+    this.noticeGizle();
+    this.progressGizle();
+    // Varsayılan: dün
+    var dun = new Date(); dun.setDate(dun.getDate() - 1);
+    setVal('otoBaslangic', isoDate(dun));
+    setVal('otoBitis',     isoDate(dun));
+    this.overlay.hidden = false;
+    var ilk = document.getElementById('otoBaslangic');
+    if (ilk) setTimeout(function () { ilk.focus(); }, 80);
+  },
+
+  kapat: function () {
+    if (this.calisıyor) return;
+    clearTimeout(this._timer);
+    this.overlay.hidden = true;
+    this.noticeGizle();
+    this.progressGizle();
+  },
+
+  hizliSec: function (key) {
+    var now = new Date();
+    var y = now.getFullYear(), m = now.getMonth();
+    var bas, bit;
+    if (key === 'dun') {
+      var dun = new Date(y, now.getMonth(), now.getDate() - 1);
+      bas = bit = isoDate(dun);
+    } else if (key === 'buHafta') {
+      var gunNo = now.getDay() || 7; // Pazartesi=1
+      bas = isoDate(new Date(now.getTime() - (gunNo - 1) * 86400000));
+      bit = isoDate(new Date(now.getTime() - 86400000)); // dün
+    } else if (key === 'buAy') {
+      bas = isoDate(new Date(y, now.getMonth(), 1));
+      bit = isoDate(new Date(now.getTime() - 86400000)); // dün
+    } else if (key === 'gecenAy') {
+      bas = isoDate(new Date(y, m - 1, 1));
+      bit = isoDate(new Date(y, m, 0));
+    }
+    if (bas) setVal('otoBaslangic', bas);
+    if (bit) setVal('otoBitis',     bit);
+  },
+
+  /** GUN sayısını hesaplar, 0 gün ya da negatif ise uyarı verir */
+  gunSayisi: function () {
+    var bas = new Date(getVal('otoBaslangic'));
+    var bit = new Date(getVal('otoBitis'));
+    if (isNaN(bas) || isNaN(bit)) return 0;
+    return Math.round((bit - bas) / 86400000) + 1;
+  },
+
+  baslat: async function () {
+    if (this.calisıyor) return;
+
+    var bas = getVal('otoBaslangic');
+    var bit = getVal('otoBitis');
+
+    // Doğrulama
+    if (!bas) { this.noticeCal('Başlangıç tarihi seçin.', 'error'); return; }
+    if (!bit) { this.noticeCal('Bitiş tarihi seçin.',     'error'); return; }
+    if (bas > bit) { this.noticeCal('Başlangıç tarihi bitiş tarihinden sonra olamaz.', 'error'); return; }
+    var gun = this.gunSayisi();
+    if (gun > 60) { this.noticeCal('En fazla 60 günlük aralık seçilebilir. Seçilen: ' + gun + ' gün.', 'error'); return; }
+    if (!KMR_URL) { this.noticeCal('GAS URL tanımlı değil.', 'error'); return; }
+
+    this.calisıyor = true;
+    this.noticeGizle();
+    this.setBtn(true);
+    this.progressGoster('Bağlantı kuruluyor...');
+
+    // Sahte ilerleme animasyonu — GAS yanıt gelene kadar
+    var pct = 0;
+    var self = this;
+    this._timer = setInterval(function () {
+      pct = Math.min(pct + (pct < 60 ? 2 : pct < 85 ? 0.5 : 0.1), 90);
+      self.progressGuncelle(pct, gun + ' gün hesaplanıyor... (' + Math.round(pct) + '%)');
+    }, 1000);
+
+    try {
+      var params = new URLSearchParams({
+        action    : 'otomatikHesapla',
+        baslangic : bas,
+        bitis     : bit
+      });
+      var res = await fetch(KMR_URL + '?' + params.toString());
+      if (!res.ok) throw new Error('Sunucu hatası: HTTP ' + res.status);
+      var json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Sunucu hatası');
+
+      clearInterval(this._timer);
+      this.progressGuncelle(100, '✅ Tamamlandı!');
+
+      var mesaj = json.mesaj || (json.basarili + ' gün işlendi.');
+      if (json.sure) mesaj += ' (' + json.sure + ')';
+
+      if (json.hatali > 0) {
+        var hataMesaj = json.hatalar.slice(0,3).map(function(h){ return h.tarih + ': ' + h.hata; }).join('\n');
+        this.noticeCal('⚠️ ' + mesaj + '\nHatalı günler:\n' + hataMesaj, 'warn');
+      } else {
+        this.noticeCal('✓ ' + mesaj, 'success');
+      }
+
+      showToast(mesaj, json.hatali > 0 ? 'warn' : 'success');
+
+      // Başarılıysa raporu otomatik yenile
+      this._timer = setTimeout(function () {
+        OtoHesap.kapat();
+        handleGenerateReport();
+      }, 3000);
+
+    } catch (err) {
+      clearInterval(this._timer);
+      this.progressGizle();
+      this.noticeCal('Hata: ' + err.message, 'error');
+    } finally {
+      this.calisıyor = false;
+      this.setBtn(false);
+    }
+  },
+
+  setBtn: function (durum) {
+    var btn = document.getElementById('otoBaslatBtn');
+    var kapat = document.getElementById('otoModalKapat');
+    var iptal = document.getElementById('otoIptalBtn');
+    if (btn) {
+      btn.disabled = durum;
+      btn.innerHTML = durum
+        ? '<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span>Hesaplanıyor...'
+        : '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 22v-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M22 12h-4"/><path d="m19.07 4.93-2.83 2.83"/></svg> Hesaplamayı Başlat';
+    }
+    if (kapat) kapat.disabled = durum;
+    if (iptal) iptal.disabled = durum;
+  },
+
+  progressGoster: function (metin) {
+    var el = document.getElementById('otoProgress');
+    if (el) el.hidden = false;
+    this.progressGuncelle(5, metin);
+  },
+
+  progressGuncelle: function (pct, metin) {
+    var bar  = document.getElementById('otoProgressBar');
+    var text = document.getElementById('otoProgressText');
+    if (bar)  bar.style.width = Math.min(pct, 100) + '%';
+    if (text) text.textContent = metin || '';
+  },
+
+  progressGizle: function () {
+    var el = document.getElementById('otoProgress');
+    if (el) el.hidden = true;
+    this.progressGuncelle(0, '');
+  },
+
+  noticeCal: function (msg, tip) {
+    var el = document.getElementById('otoModalNotice');
+    if (!el) return;
+    el.className  = 'km-notice ' + (tip || '');
+    el.textContent = msg;
+    el.hidden = false;
+  },
+
+  noticeGizle: function () {
+    var el = document.getElementById('otoModalNotice');
+    if (el) { el.hidden = true; el.className = 'km-notice'; }
+  }
+};
+

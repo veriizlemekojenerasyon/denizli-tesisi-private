@@ -25,13 +25,14 @@ function doGet(e) {
   var callback = String(params.callback || '');
 
   var sonuc;
-  if      (action === 'maliyetBedeliKaydet')  sonuc = maliyetBedeliKaydet(params);
-  else if (action === 'maliyetBedeliOku')     sonuc = maliyetBedeliOku(parseInt(params.ay||'0',10), parseInt(params.yil||'0',10));
-  else if (action === 'maliyetBedeliListesi') sonuc = maliyetBedeliListesi();
-  else if (action === 'getRaporData')         sonuc = getRaporData(params);
-  else if (action === 'getBaglantiNoktalari') sonuc = getBaglantiNoktalari(params);
-  else if (action === 'excelIndir')           sonuc = excelIndir(params);
-  else                                        sonuc = { success: false, error: 'Bilinmeyen action: ' + action };
+  if      (action === 'maliyetBedeliKaydet')      sonuc = maliyetBedeliKaydet(params);
+  else if (action === 'maliyetBedeliOku')         sonuc = maliyetBedeliOku(parseInt(params.ay||'0',10), parseInt(params.yil||'0',10));
+  else if (action === 'maliyetBedeliListesi')     sonuc = maliyetBedeliListesi();
+  else if (action === 'getRaporData')             sonuc = getRaporData(params);
+  else if (action === 'getBaglantiNoktalari')     sonuc = getBaglantiNoktalari(params);
+  else if (action === 'excelIndir')               sonuc = excelIndir(params);
+  else if (action === 'otomatikHesapla')          sonuc = otomatikHesaplaAralik(params);
+  else                                            sonuc = { success: false, error: 'Bilinmeyen action: ' + action };
 
   // JSONP: callback parametresi varsa callback(json) formatında döndür
   if (callback) {
@@ -231,7 +232,11 @@ function getRaporData(params) {
           vtc        : parseFloat(fRow[5]) || 0, tahmin: parseFloat(fRow[6]) || 0,
           gercek     : parseFloat(fRow[7]) || 0
         });
-        faturasToplam += (parseFloat(fRow[2])||0) + (parseFloat(fRow[3])||0) + Math.max(0, parseFloat(fRow[4])||0);
+        faturasToplam += Math.abs(parseFloat(fRow[1])||0)   // Dengesizlik alış/satış
+                      + Math.abs(parseFloat(fRow[2])||0)   // EPİAŞ
+                      + Math.abs(parseFloat(fRow[3])||0)   // Dağıtım+YEKDEM
+                      + Math.abs(parseFloat(fRow[4])||0)   // Koruma
+                      + Math.abs(parseFloat(fRow[5])||0);  // VTC
         faturasSebeke += parseFloat(fRow[7]) || 0;
       }
     }
