@@ -15,8 +15,8 @@
         kullanici: 'https://script.google.com/macros/s/AKfycbzTBptAv4FoxIh1PTgoR207hxrV2EPuUTUyxUZluW1iPxDpV06I8HGRo7Jp0-9cPsnA/exec',
         stok: 'https://script.google.com/macros/s/AKfycbwdgKAxZ9J4NdxKFvlTUPnr-pCGD7UfHXqM8q3VWR4OHgKXs0eCjVAy9LHU-EkcHVKv/exec',
         motorTakip: 'https://script.google.com/macros/s/AKfycbyxfk2wUCJVDzHETdYWf4-zTxeMMwwd4wJ1uPkgVSFy1x6Ujy-lkWAkqPRMQlt3ZyPx/exec',
-        elzMainpage: 'https://script.google.com/macros/s/AKfycbz4AvUGwSfpgVSEYDkaJs41fFWTFmfPQd3kuJzTr2N3SEWNdFsRD0l4K9K8KxyVtYSd/exec',
-        kojenMaliyetRapor: ''  // Apps Script deploy edilince buraya URL ekleyin
+        elzMainpage: 'https://script.google.com/macros/s/AKfycbza7E5qh7K1FCiCpotWe8M95Uzfb5sutcZTkpRkG4pzhjpmhBuvvXdaW16DmqKNlSpR/exec',
+        kojenMaliyetRapor: 'https://script.google.com/macros/s/AKfycbzugxfwsSlh6f4zJ4tsM6VHY1240ksO0D64EMMqK8GAYthYYttDUP6suolNdL8MMIyJ/exec'  // Apps Script deploy edilince buraya URL ekleyin
     };
 
     function getScriptUrl(key) {

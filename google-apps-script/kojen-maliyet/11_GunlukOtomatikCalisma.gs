@@ -107,7 +107,7 @@ function tumVerileriCekTarihAralik(baslangicIso, bitisIso) {
       Logger.log('❌ ' + iso + ': ' + gunSonuc.hata);
     }
 
-    Utilities.sleep(500); // GAS kota koruması
+    Utilities.sleep(1500); // GAS kota koruması + yazma gecikmesi
   }
 
   Logger.log('=== Toplu çekme bitti ===');
@@ -132,14 +132,16 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
     var ayinIlkGunu = (gun === 1);
 
     // ── 1. Bağlantı Noktaları (tahmin verisi — ÖNCE gelir) ───────────────────
+    var bagSonuc = { success: false, saatlikTahmin: [], saatlikKojenUretim: [] };
     try {
-      var bagSonuc = baglantiTarihCek(isoTarih);
+      bagSonuc = baglantiTarihCek(isoTarih);
       Logger.log('  BAG: ' + (bagSonuc.success ? 'OK ' + bagSonuc.assetSayisi + ' asset' : 'HATA ' + bagSonuc.error));
     } catch(e) { Logger.log('  BAG: HATA ' + e.toString()); }
 
     // ── 2. AMR Gerçek Tüketim ────────────────────────────────────────────────
+    var amrSonuc = { success: false, saatlikMwh: [] };
     try {
-      var amrSonuc = amrTarihCek(isoTarih);
+      amrSonuc = amrTarihCek(isoTarih);
       Logger.log('  AMR: ' + (amrSonuc.success ? 'OK ' + amrSonuc.kayitSayisi + ' kayıt' : 'HATA ' + amrSonuc.error));
     } catch(e) { Logger.log('  AMR: HATA ' + e.toString()); }
 
@@ -150,8 +152,10 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
     } catch(e) { Logger.log('  PTF: HATA ' + e.toString()); }
 
     // ── 4. Saatlik hesaplama (GAS tarafında) ─────────────────────────────────
+    SpreadsheetApp.flush(); // BAG ve AMR sayfalarının tamamen yazılmasını bekle
+    Utilities.sleep(1000);  // API yazma gecikmesi için ekstra bekleme
     var ss        = cfgSsAc();
-    var gunHesap  = _gocSaatlikHesapla(ss, gun, ay, yil);
+    var gunHesap  = _gocSaatlikHesapla(ss, gun, ay, yil, bagSonuc, amrSonuc);
     Logger.log('  HESAP: EPIAS=' + gunHesap.epias.toFixed(2) +
                ' TEIAS=' + gunHesap.teias.toFixed(2) +
                ' TopMaliyet=' + gunHesap.toplamMaliyet.toFixed(2) +
@@ -352,18 +356,44 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
  *   }]
  * }}
  */
-function _gocSaatlikHesapla(ss, gun, ay, yil) {
+function _gocSaatlikHesapla(ss, gun, ay, yil, bagSonuc, amrSonuc) {
   var sonuc = { epias: 0, teias: 0, toplamMaliyet: 0, sebeke: 0, kojenAvantaj: 0, saatlik: [] };
 
   try {
-    var bagSheet = ss.getSheetByName(CFG_SAYFA_BAGLANTI);
-    var amrSheet = ss.getSheetByName(CFG_SAYFA_AMR_SAATLIK);
     var ptfSheet = ss.getSheetByName(CFG_SAYFA_PIYASA);
     var malSheet = ss.getSheetByName(CFG_SAYFA_MALIYET);
 
-    if (!bagSheet || !amrSheet || !ptfSheet) {
-      Logger.log('  ⚠️ Eksik kaynak — BAG:' + !!bagSheet + ' AMR:' + !!amrSheet + ' PTF:' + !!ptfSheet);
+    if (!ptfSheet) {
+      Logger.log('  ⚠️ Eksik kaynak — PTF:' + !!ptfSheet);
       return sonuc;
+    }
+
+    // API'den gelen saatlik veriler — sayfa gecikmesi yok
+    var saatlikTahmin     = (bagSonuc && bagSonuc.saatlikTahmin     && bagSonuc.saatlikTahmin.length     === 24) ? bagSonuc.saatlikTahmin     : null;
+    var saatlikKojen      = (bagSonuc && bagSonuc.saatlikKojenUretim && bagSonuc.saatlikKojenUretim.length === 24) ? bagSonuc.saatlikKojenUretim : null;
+    var saatlikAmr        = (amrSonuc && amrSonuc.saatlikMwh         && amrSonuc.saatlikMwh.length         === 24) ? amrSonuc.saatlikMwh         : null;
+
+    // Fallback: API verisi yoksa sayfadan oku
+    if (!saatlikTahmin || !saatlikAmr) {
+      Logger.log('  ⚠️ API verisi eksik, sayfadan okunuyor...');
+      var bagSheet = ss.getSheetByName(CFG_SAYFA_BAGLANTI);
+      var amrSheet = ss.getSheetByName(CFG_SAYFA_AMR_SAATLIK);
+      saatlikTahmin = saatlikTahmin || [];
+      saatlikKojen  = saatlikKojen  || [];
+      saatlikAmr    = saatlikAmr    || [];
+      if (bagSheet && bagSheet.getLastRow() >= 25) {
+        var bagVeriler = bagSheet.getRange(2, 1, 24, 7).getValues();
+        for (var h = 0; h < 24; h++) {
+          saatlikTahmin[h] = saatlikTahmin[h] || (parseFloat(bagVeriler[h][6]) || 0);
+          saatlikKojen[h]  = saatlikKojen[h]  || (parseFloat(bagVeriler[h][5]) || 0);
+        }
+      }
+      if (amrSheet && amrSheet.getLastRow() >= 25) {
+        var amrVeriler = amrSheet.getRange(2, 1, 24, 2).getValues();
+        for (var h = 0; h < 24; h++) {
+          saatlikAmr[h] = saatlikAmr[h] || (parseFloat(amrVeriler[h][1]) || 0);
+        }
+      }
     }
 
     // Maliyet sayfasından o dönemin değerlerini oku
@@ -416,9 +446,9 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
 
     // Saatlik hesaplar
     for (var i = 0; i < 24; i++) {
-      var tahmin      = bagVeriler[i] ? (parseFloat(bagVeriler[i][6]) || 0) : 0; // G sütunu
-      var kojenUretim = bagVeriler[i] ? (parseFloat(bagVeriler[i][5]) || 0) : 0; // F sütunu
-      var gercek      = amrVeriler[i] ? (parseFloat(amrVeriler[i][1]) || 0) : 0; // B sütunu
+      var tahmin      = saatlikTahmin[i] || 0;
+      var kojenUretim = saatlikKojen[i]  || 0;
+      var gercek      = saatlikAmr[i]    || 0;
 
       var fark    = tahmin - gercek;
       var ptf     = ptfDizi[i], smf = smfDizi[i];
@@ -438,11 +468,11 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
       }
 
       // Faturalaşma sütunları
-      var bVal = fark > 0 ? fark * pozDen : fark * negDen;  // B: DM.D×DM.G veya DM.D×DM.H (ham fiyat)
-      var cVal = tahmin * ptf;                               // C: EPİAŞ = TAHMİN × PTF
-      var dVal = gercek * (yekdem + dagitim + vtc);          // D: Dağıtım+YEKDEM
-      var eVal = bVal > 0 ? bVal : 0;                       // E: Koruma
-      var fVal = bVal < 0 ? bVal : 0;                       // F: VTC
+      var bVal = fark > 0 ? fark * pozFark : fark * negFark; // Dengesizlik alış/satış
+      var cVal = tahmin * ptf;                                // EPİAŞ = TAHMİN × PTF
+      var dVal = gercek * (yekdem + dagitim + vtc);           // Dağıtım+YEKDEM
+      var eVal = bVal > 0 ? bVal : 0;                        // Koruma
+      var fVal = bVal < 0 ? bVal : 0;                        // VTC
 
       // Toplam fatura maliyeti bu saat için
       var satirMal    = epias + (gercek * ptf) + dVal;

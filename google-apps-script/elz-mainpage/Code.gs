@@ -555,8 +555,8 @@ function clearElzCachedToken_() {
 }
 
 function setupElzLoginPropertiesOnce() {
-  var username = 'korumadenizli';
-  var password = 'KD2024kd';
+  var username = '';
+  var password = '';
 
   if (password === 'SIFREYI_BURAYA_YAZIP_BIR_KEZ_CALISTIR') {
     throw new Error('ELZ sifresi bu fonksiyon icine bir defalik yazilmali. Calistirdiktan sonra bu fonksiyonu silebilirsin.');

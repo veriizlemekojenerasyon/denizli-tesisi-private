@@ -53,11 +53,24 @@ function amrTarihCek(isoTarih) {
     var data  = _amrApidenCek(isoTarih, isoTarih, 'Hourly');
     var ss    = cfgSsAc();
     var sheet = _amrSaatlikYaz(ss, data.items, isoTarih);
+
+    // Saatlik veriyi map olarak döndür — 0-23 arası MWh değerleri
+    var saatlikMwh = [];
+    for (var h = 0; h < 24; h++) saatlikMwh.push(0);
+    var map = {};
+    data.items.forEach(function(item) {
+      var d   = new Date(item.readAt);
+      var tr  = new Date(d.getTime() + 3 * 3600000);
+      var key = tr.getUTCHours();
+      map[key] = cfgYuvarla((parseFloat(item.consumption) || 0) / 1000); // kWh → MWh
+    });
+    for (var h = 0; h < 24; h++) saatlikMwh[h] = map[h] || 0;
+
     Logger.log('✅ AMR_Saatlik güncellendi: ' + isoTarih + ' (' + data.items.length + ' kayıt)');
-    return { success: true, tarih: isoTarih, kayitSayisi: data.items.length };
+    return { success: true, tarih: isoTarih, kayitSayisi: data.items.length, saatlikMwh: saatlikMwh };
   } catch(e) {
     Logger.log('❌ AMR saatlik hata [' + isoTarih + ']: ' + e.toString());
-    return { success: false, tarih: isoTarih, error: e.toString() };
+    return { success: false, tarih: isoTarih, error: e.toString(), saatlikMwh: [] };
   }
 }
 
