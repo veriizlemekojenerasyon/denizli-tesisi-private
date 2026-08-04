@@ -35,10 +35,10 @@ var _PROP_PASSWORD   = 'VGEN_PASSWORD';
  * @param {string} sifre      VTC şifresi
  */
 function vgenKurulumYap(kullanici, sifre) {
-  if (!kullanici || kullanici === '') {
+  if (!kullanici || kullanici === 'BURAYA_EMAIL_YAZ') {
     throw new Error('vgenKurulumYap: geçerli bir e-posta adresi girin.');
   }
-  if (!sifre || sifre === '') {
+  if (!sifre || sifre === 'BURAYA_SIFRE_YAZ') {
     throw new Error('vgenKurulumYap: geçerli bir şifre girin.');
   }
 
@@ -58,13 +58,8 @@ function vgenKurulumYap(kullanici, sifre) {
  * Kullanım: aşağıdaki satırları doldurup bu fonksiyonu çalıştırın.
  */
 function vgenKurulum() {
-<<<<<<< HEAD
-  var KULLANICI_ADI = '';  // ← değiştirin
-  var SIFRE         = '';  // ← değiştirin
-=======
-  var KULLANICI_ADI = '';  // ← değiştirin
-  var SIFRE         = '';  // ← değiştirin
->>>>>>> 1aa3d90 (Güncelleme)
+  var KULLANICI_ADI = 'BURAYA_EMAIL_YAZ';  // ← değiştirin
+  var SIFRE         = 'BURAYA_SIFRE_YAZ';  // ← değiştirin
   return vgenKurulumYap(KULLANICI_ADI, SIFRE);
 }
 

@@ -53,33 +53,12 @@ function baglantiTarihCek(isoTarih) {
     var ss      = cfgSsAc();
     var sheet   = _baglantiSayfayaYaz(ss, tablo, isoTarih);
 
-    // Saatlik veriyi dizilere çıkar — 0-23 arası
-    var saatlikTahmin     = []; // G sütunu — Şebeke Hattı
-    var saatlikKojenUretim = []; // F sütunu — Toplam Kojen
-    for (var h = 0; h < 24; h++) { saatlikTahmin.push(0); saatlikKojenUretim.push(0); }
-
-    // Sayfa yazıldıktan sonra G ve F sütunlarını oku
-    SpreadsheetApp.flush();
-    if (sheet.getLastRow() >= 25) {
-      var bagVeriler = sheet.getRange(2, 1, 24, 7).getValues();
-      for (var i = 0; i < 24; i++) {
-        saatlikKojenUretim[i] = parseFloat(bagVeriler[i][5]) || 0; // F sütunu (index 5)
-        saatlikTahmin[i]      = parseFloat(bagVeriler[i][6]) || 0; // G sütunu (index 6)
-      }
-    }
-
     Logger.log('✅ BaglantiNoktalari güncellendi: ' + isoTarih +
                ' (' + tablo.assetler.length + ' asset)');
-    return {
-      success          : true,
-      tarih            : isoTarih,
-      assetSayisi      : tablo.assetler.length,
-      saatlikTahmin    : saatlikTahmin,
-      saatlikKojenUretim: saatlikKojenUretim
-    };
+    return { success: true, tarih: isoTarih, assetSayisi: tablo.assetler.length };
   } catch(e) {
     Logger.log('❌ Bağlantı veri hatası [' + isoTarih + ']: ' + e.toString());
-    return { success: false, tarih: isoTarih, error: e.toString(), saatlikTahmin: [], saatlikKojenUretim: [] };
+    return { success: false, tarih: isoTarih, error: e.toString() };
   }
 }
 

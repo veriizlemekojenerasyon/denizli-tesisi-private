@@ -155,6 +155,7 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
     SpreadsheetApp.flush(); // BAG ve AMR sayfalarının tamamen yazılmasını bekle
     Utilities.sleep(1000);  // API yazma gecikmesi için ekstra bekleme
     var ss        = cfgSsAc();
+    Logger.log('  SS ID kontrol: ' + ss.getId());
     var gunHesap  = _gocSaatlikHesapla(ss, gun, ay, yil, bagSonuc, amrSonuc);
     Logger.log('  HESAP: EPIAS=' + gunHesap.epias.toFixed(2) +
                ' TEIAS=' + gunHesap.teias.toFixed(2) +
@@ -225,10 +226,10 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
           dmSheet.getRange(dmSaatSatir, 2).setValue(saatlik[si].tahmin).setNumberFormat('0.000');
           dmSheet.getRange(dmSaatSatir, 3).setValue(saatlik[si].gercek).setNumberFormat('0.000');
           dmSheet.getRange(dmSaatSatir, 4).setValue(saatlik[si].fark).setNumberFormat('0.000');
-          dmSheet.getRange(dmSaatSatir, 5).setValue(saatlik[si].ptf).setNumberFormat('#,##0.00');
-          dmSheet.getRange(dmSaatSatir, 6).setValue(saatlik[si].smf).setNumberFormat('#,##0.00');
-          dmSheet.getRange(dmSaatSatir, 7).setValue(saatlik[si].pozDen).setNumberFormat('#,##0.00');
-          dmSheet.getRange(dmSaatSatir, 8).setValue(saatlik[si].negDen).setNumberFormat('#,##0.00');
+          dmSheet.getRange(dmSaatSatir, 5).setValue(saatlik[si].ptf).setNumberFormat('#,##0.00 "₺"');
+          dmSheet.getRange(dmSaatSatir, 6).setValue(saatlik[si].smf).setNumberFormat('#,##0.00 "₺"');
+          dmSheet.getRange(dmSaatSatir, 7).setValue(saatlik[si].pozDen).setNumberFormat('#,##0.00 "₺"');
+          dmSheet.getRange(dmSaatSatir, 8).setValue(saatlik[si].negDen).setNumberFormat('#,##0.00 "₺"');
           dmSheet.getRange(dmSaatSatir, 9).setValue(saatlik[si].pozFark).setNumberFormat('#,##0.00 "₺"');
           dmSheet.getRange(dmSaatSatir, 10).setValue(saatlik[si].negFark).setNumberFormat('#,##0.00 "₺"');
         }
@@ -373,25 +374,27 @@ function _gocSaatlikHesapla(ss, gun, ay, yil, bagSonuc, amrSonuc) {
     var saatlikKojen      = (bagSonuc && bagSonuc.saatlikKojenUretim && bagSonuc.saatlikKojenUretim.length === 24) ? bagSonuc.saatlikKojenUretim : null;
     var saatlikAmr        = (amrSonuc && amrSonuc.saatlikMwh         && amrSonuc.saatlikMwh.length         === 24) ? amrSonuc.saatlikMwh         : null;
 
+    // Sayfa referansları — fallback içi veya döngü içi her iki yerde lazım olduğu için dışarıda tanımla
+    var bagSheet = ss.getSheetByName(CFG_SAYFA_BAGLANTI);
+    var amrSheet = ss.getSheetByName(CFG_SAYFA_AMR_SAATLIK);
+
     // Fallback: API verisi yoksa sayfadan oku
     if (!saatlikTahmin || !saatlikAmr) {
       Logger.log('  ⚠️ API verisi eksik, sayfadan okunuyor...');
-      var bagSheet = ss.getSheetByName(CFG_SAYFA_BAGLANTI);
-      var amrSheet = ss.getSheetByName(CFG_SAYFA_AMR_SAATLIK);
       saatlikTahmin = saatlikTahmin || [];
       saatlikKojen  = saatlikKojen  || [];
       saatlikAmr    = saatlikAmr    || [];
       if (bagSheet && bagSheet.getLastRow() >= 25) {
-        var bagVeriler = bagSheet.getRange(2, 1, 24, 7).getValues();
+        var bagVerilerFallback = bagSheet.getRange(2, 1, 24, 7).getValues();
         for (var h = 0; h < 24; h++) {
-          saatlikTahmin[h] = saatlikTahmin[h] || (parseFloat(bagVeriler[h][6]) || 0);
-          saatlikKojen[h]  = saatlikKojen[h]  || (parseFloat(bagVeriler[h][5]) || 0);
+          saatlikTahmin[h] = saatlikTahmin[h] || (parseFloat(bagVerilerFallback[h][6]) || 0);
+          saatlikKojen[h]  = saatlikKojen[h]  || (parseFloat(bagVerilerFallback[h][5]) || 0);
         }
       }
       if (amrSheet && amrSheet.getLastRow() >= 25) {
-        var amrVeriler = amrSheet.getRange(2, 1, 24, 2).getValues();
+        var amrVerilerFallback = amrSheet.getRange(2, 1, 24, 2).getValues();
         for (var h = 0; h < 24; h++) {
-          saatlikAmr[h] = saatlikAmr[h] || (parseFloat(amrVeriler[h][1]) || 0);
+          saatlikAmr[h] = saatlikAmr[h] || (parseFloat(amrVerilerFallback[h][1]) || 0);
         }
       }
     }
@@ -436,19 +439,19 @@ function _gocSaatlikHesapla(ss, gun, ay, yil, bagSonuc, amrSonuc) {
       });
     }
 
-    // BaglantiNoktalari tüm satırları tek seferde oku (hız için)
-    var bagVeriler = bagSheet.getLastRow() >= 25
-      ? bagSheet.getRange(2, 1, 24, 7).getValues() : [];
-
-    // AMR_Saatlik tüm satırları tek seferde oku
-    var amrVeriler = amrSheet.getLastRow() >= 25
-      ? amrSheet.getRange(2, 1, 24, 2).getValues() : [];
-
     // Saatlik hesaplar
     for (var i = 0; i < 24; i++) {
       var tahmin      = saatlikTahmin[i] || 0;
       var kojenUretim = saatlikKojen[i]  || 0;
       var gercek      = saatlikAmr[i]    || 0;
+
+      // İlk saat için tanı logu
+      if (i === 0) {
+        Logger.log('  [TANILAMA 00:00] tahmin=' + tahmin + ' gercek=' + gercek +
+                   ' kojenUretim=' + kojenUretim +
+                   ' ptf=' + ptfDizi[0] + ' smf=' + smfDizi[0] +
+                   ' pozDen=' + pozDizi[0] + ' negDen=' + negDizi[0]);
+      }
 
       var fark    = tahmin - gercek;
       var ptf     = ptfDizi[i], smf = smfDizi[i];
@@ -459,16 +462,16 @@ function _gocSaatlikHesapla(ss, gun, ay, yil, bagSonuc, amrSonuc) {
       // EPİAŞ = MUTLAK(EĞER(D>0; D*I; D*J))
       var epias = Math.abs(fark > 0 ? fark * pozFark : fark * negFark);
 
-      // TEİAŞ — 16:00-21:00 arası 0.04, diğer saatler 0
+      // TEİAŞ — 16:00-22:00 arası (dahil) %15 sapma aşılırsa 0.04, diğer saatler 0
       var teias = 0;
-      if (i >= 16 && i <= 21) {
+      if (i >= 16 && i <= 22) {
         if (Math.abs(fark) > tahmin * 0.15) {
           teias = Math.abs(fark * Math.max(ptf, smf) * 0.04);
         }
       }
 
       // Faturalaşma sütunları
-      var bVal = fark > 0 ? fark * pozFark : fark * negFark; // Dengesizlik alış/satış
+      var bVal = fark > 0 ? fark * pozDen : fark * negDen;   // Dengesizlik alış/satış = Fark × Den.Fiyatı
       var cVal = tahmin * ptf;                                // EPİAŞ = TAHMİN × PTF
       var dVal = gercek * (yekdem + dagitim + vtc);           // Dağıtım+YEKDEM
       var eVal = bVal > 0 ? bVal : 0;                        // Koruma

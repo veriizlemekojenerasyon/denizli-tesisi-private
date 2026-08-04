@@ -10,7 +10,7 @@
 // ─── SPREADSHEET ─────────────────────────────────────────────────────────────
 
 /** Ana Kojen Maliyet Google Sheets dosyası */
-var CFG_SS_ID = '1lZ7HtzEdvRCk94JAMP63XAtI78AT_GABM2dsPkkEsdY';
+var CFG_SS_ID = '1kind4MK2iLG2b7ATgyR8pVacUh4jCI4F9oXuUdxs_UQ';
 
 /** Yıllık enerji üretim toplamları (harici dosya) */
 var CFG_YILLIK_SS_ID  = '1ncEnE6vG76HIXFzJRRWz2yehiN2oolg4t2pzfbKt2vI';

@@ -32,44 +32,24 @@ function faturaDetaySayfasiOlustur(ay, yil, gun) {
     ay  = ay  || (bugun.getMonth() + 1);
     yil = yil || bugun.getFullYear();
     var ss = cfgSsAc();
+    if (!gun) {
+      var bgTarih = _fdHesaplananGunuBul(ss, ay, yil);
+      gun = bgTarih ? bgTarih.getDate() : (bugun.getDate() - 1 || 1);
+    }
 
     var sayfaAdi = CFG_PREF_FATURA + yil + '_' + cfgPad2(ay);
+    var sheet    = cfgSayfayiSifirla(ss, sayfaAdi);
 
-    // Sayfa zaten varsa sadece başlık ve iskelet güncelle, veriyi silme
-    var mevcutSheet = ss.getSheetByName(sayfaAdi);
-    if (mevcutSheet) {
-      Logger.log('ℹ️ ' + sayfaAdi + ' zaten var, iskelet güncelleniyor.');
-      _fdBasliklariYaz(mevcutSheet, ay, yil);
-      _fdToplamSatirYaz(mevcutSheet);
-      _fdAylikTablolariYaz(mevcutSheet, ay, yil);
-      SpreadsheetApp.flush();
-      return { success: true, sayfa: sayfaAdi };
-    }
-
-    // Sayfa yoksa sıfırdan oluştur — sadece iskelet
-    var sheet = cfgSayfayiSifirla(ss, sayfaAdi);
     _fdBasliklariYaz(sheet, ay, yil);
-
-    // Saatlik satırları boş ama formatlı oluştur
-    for (var i = 0; i < 24; i++) {
-      var satirNo = i + 2;
-      var bg      = i % 2 === 0 ? '#F7F9FC' : '#FFFFFF';
-      sheet.getRange(satirNo, 1).setValue(CFG_SAATLER_24[i])
-        .setBackground('#1C2B3A').setFontColor('#FFFFFF')
-        .setFontWeight('bold').setHorizontalAlignment('center');
-      sheet.getRange(satirNo, 2, 1, 5).setBackground(bg).setNumberFormat('#,##0.00 "₺"');
-      sheet.getRange(satirNo, 7, 1, 2).setBackground(bg).setNumberFormat('0.000');
-      sheet.getRange(satirNo, 9).setBackground('#E2E8F0');
-    }
-
+    _fdSaatlikSatirlariYaz(sheet, ss, ay, yil, gun);
     _fdToplamSatirYaz(sheet);
-    // D28 boş bırak — veri gelince hesaplanacak
-    sheet.getRange(28, 7).setValue('ŞEBEKE').setBackground('#2c5282').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
-    sheet.getRange(28, 8).setFormula('=H26').setNumberFormat('0.000').setBackground('#EEF4FF');
-    _fdAylikTablolariYaz(sheet, ay, yil);
+    _fdOzetSatirlariYaz(sheet, ay, yil, ss);
+
+    var hesaplananGun = _fdHesaplananGunuBul(ss, ay, yil);
+    _fdAylikTablolariYaz(sheet, ay, yil, hesaplananGun);
 
     SpreadsheetApp.flush();
-    Logger.log('✅ ' + sayfaAdi + ' iskelet oluşturuldu.');
+    Logger.log('✅ ' + sayfaAdi + ' oluşturuldu.');
     return { success: true, sayfa: sayfaAdi };
 
   } catch(e) {
@@ -115,10 +95,10 @@ function _fdSaatlikSatirlariYaz(sheet, ss, ay, yil, gun) {
   var amrSheet = ss.getSheetByName(CFG_SAYFA_AMR_SAATLIK);
   var bagSheet = ss.getSheetByName(CFG_SAYFA_BAGLANTI);
 
-  // DengesizlikMaliyet D, G, H, E(PTF) sütunları (satır 3-26)
+  // DengesizlikMaliyet D, G, H sütunları (satır 3-26)
   var dmVeriler = null;
   if (dmSheet && dmSheet.getLastRow() >= 26) {
-    dmVeriler = dmSheet.getRange(3, 4, 24, 5).getValues(); // D,E,F,G,H
+    dmVeriler = dmSheet.getRange(3, 4, 24, 5).getValues();
   }
 
   // PTF dizisi
@@ -177,20 +157,20 @@ function _fdSaatlikSatirlariYaz(sheet, ss, ay, yil, gun) {
     }
     sheet.getRange(satirNo, 2).setValue(bVal).setBackground(bg).setNumberFormat('#,##0.00 "₺"');
 
-    // C: EPİAŞ = TAHMİN × PTF (DM.E sütunundan)
-    var ptf = (dmVeriler && dmVeriler[i]) ? (parseFloat(dmVeriler[i][1]) || 0) : (ptfMap[i] || 0);
+    // C: EPİAŞ = TAHMİN × PTF
+    var ptf = ptfMap[i] || 0;
     sheet.getRange(satirNo, 3).setValue(tahminVal * ptf).setBackground(bg).setNumberFormat('#,##0.00 "₺"')
-      .setNote('TAHMİN=' + tahminVal.toFixed(3) + ' × PTF(DM.E)=' + ptf.toFixed(2));
+      .setNote('TAHMİN=' + tahminVal.toFixed(3) + ' × PTF=' + ptf.toFixed(2));
 
     // D: Dağıtım+YEKDEM = GERÇEK × (YEKDEM+DAĞ+VTC)
     sheet.getRange(satirNo, 4).setValue(gercekVal * (yekdem + dagitim + vtc))
       .setBackground(bg).setNumberFormat('#,##0.00 "₺"')
       .setNote('GERÇEK=' + gercekVal.toFixed(3) + ' × ' + (yekdem+dagitim+vtc).toFixed(2));
 
-    // E: Koruma = EĞER(B2>0; B2; 0)
+    // E: Koruma = B>0 ? B : 0
     sheet.getRange(satirNo, 5).setValue(bVal > 0 ? bVal : 0).setBackground(bg).setNumberFormat('#,##0.00 "₺"');
 
-    // F: VTC = EĞER(B2<0; B2; 0)
+    // F: VTC = B<0 ? B : 0
     sheet.getRange(satirNo, 6).setValue(bVal < 0 ? bVal : 0).setBackground(bg).setNumberFormat('#,##0.00 "₺"');
 
     // G: Tahmin (MWh)
@@ -210,13 +190,7 @@ function _fdToplamSatirYaz(sheet) {
   sheet.getRange(r, 1).setValue('TOPLAM').setBackground('#1e3a5f').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
   for (var s = 2; s <= 8; s++) {
     var harf = String.fromCharCode(64 + s);
-    if (s === 6) {
-      sheet.getRange(r, s).setFormula('=ABS(SUM(' + harf + '2:' + harf + '25))').setNumberFormat('#,##0.00 "₺"');
-    } else if (s <= 6) {
-      sheet.getRange(r, s).setFormula('=SUM(' + harf + '2:' + harf + '25)').setNumberFormat('#,##0.00 "₺"');
-    } else {
-      sheet.getRange(r, s).setFormula('=SUM(' + harf + '2:' + harf + '25)').setNumberFormat('0.000');
-    }
+    sheet.getRange(r, s).setFormula('=SUM(' + harf + '2:' + harf + '25)').setNumberFormat(s <= 6 ? '#,##0.00' : '0.000');
   }
   sheet.getRange(r, 1, 1, 8).setBackground('#1e3a5f').setFontColor('#FFFFFF').setFontWeight('bold');
   sheet.getRange(r, 9).setBackground('#E2E8F0');
@@ -231,27 +205,17 @@ function _fdOzetSatirlariYaz(sheet, ay, yil, ss) {
   var malSheet = ss.getSheetByName(CFG_SAYFA_MALIYET);
   var dmSheet  = ss.getSheetByName(CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay));
 
-  var maliyetK2 = 0, d26 = 0, e26 = 0, f26 = 0, g26 = 0, dmToplam = 0;
+  var maliyetK2 = 0, c26 = 0, d26 = 0, e26 = 0, f26 = 0, dmR29 = 0;
   if (malSheet && malSheet.getLastRow() >= 2) maliyetK2 = parseFloat(malSheet.getRange(2, 11).getValue()) || 0;
-  d26 = parseFloat(sheet.getRange(26, 4).getValue()) || 0;  // D: Dağıtım+YEKDEM
-  e26 = parseFloat(sheet.getRange(26, 5).getValue()) || 0;  // E: Koruma
-  f26 = parseFloat(sheet.getRange(26, 6).getValue()) || 0;  // F: VTC
-  g26 = parseFloat(sheet.getRange(26, 7).getValue()) || 0;  // G: Tahmin (MWh) — kullanılmıyor
-  var c26epias = parseFloat(sheet.getRange(26, 3).getValue()) || 0; // C: EPİAŞ
+  c26 = parseFloat(sheet.getRange(26, 3).getValue()) || 0;
+  d26 = parseFloat(sheet.getRange(26, 4).getValue()) || 0;
+  e26 = parseFloat(sheet.getRange(26, 5).getValue()) || 0;
+  f26 = parseFloat(sheet.getRange(26, 6).getValue()) || 0;
+  if (dmSheet && dmSheet.getLastRow() >= 27) dmR29 = parseFloat(dmSheet.getRange(27, 18).getValue()) || 0;
 
-  // DengesizlikMaliyet toplam satırı: gün sayısı + 2 (başlık) + 1 (toplam)
-  var gunSayisi   = new Date(yil, ay, 0).getDate();
-  var dmTopSatir  = gunSayisi + 3;
-  if (dmSheet && dmSheet.getLastRow() >= dmTopSatir) {
-    dmToplam = parseFloat(dmSheet.getRange(dmTopSatir, 18).getValue()) || 0;
-  }
-
-  // D28 = 11293 + D26 + E26 + G26(VTC=F26) + DM!toplam - F26(Koruma=E26)
-  // Excel: =11293 + D26 + E26 + G26 + DM!X35 - F26
-  // Bizim: C=EPİAŞ, D=Dağıtım, E=Koruma, F=VTC
-  var d28Val = maliyetK2 + c26epias + d26 + f26 + dmToplam - e26;
+  var d28Val = maliyetK2 + c26 + d26 + f26 + dmR29 - e26;
   sheet.getRange(28, 4).setValue(d28Val).setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
-    .setNote('Maliyet!K2=' + maliyetK2.toFixed(2) + ' + C26(EPİAŞ)=' + c26epias.toFixed(2) + ' + D26(Dağıtım)=' + d26.toFixed(2) + ' + F26(VTC)=' + f26.toFixed(2) + ' + DM!Toplam=' + dmToplam.toFixed(2) + ' − E26(Koruma)=' + e26.toFixed(2));
+    .setNote('Maliyet!K2=' + maliyetK2.toFixed(2) + ' + C26=' + c26.toFixed(2) + ' + D26=' + d26.toFixed(2) + ' + F26=' + f26.toFixed(2) + ' + DM!R29=' + dmR29.toFixed(2) + ' − E26=' + e26.toFixed(2));
 
   sheet.getRange(28, 7).setValue('ŞEBEKE').setBackground('#2c5282').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
   sheet.getRange(28, 8).setFormula('=H26').setNumberFormat('0.000').setBackground('#EEF4FF');
@@ -259,14 +223,18 @@ function _fdOzetSatirlariYaz(sheet, ay, yil, ss) {
 
 // ─── AYLIK TABLOLAR ───────────────────────────────────────────────────────────
 
-function _fdAylikTablolariYaz(sheet, ay, yil) {
+function _fdAylikTablolariYaz(sheet, ay, yil, hesaplananGun) {
   var gunSayisi = new Date(yil, ay, 0).getDate();
   var ayKisa    = CFG_AYLAR_KISA[ay] || ay;
+  var hesGun    = hesaplananGun ? hesaplananGun.getDate()      : 0;
+  var hesAy     = hesaplananGun ? hesaplananGun.getMonth() + 1 : 0;
+  var hesYil    = hesaplananGun ? hesaplananGun.getFullYear()  : 0;
 
   for (var g = 1; g <= gunSayisi; g++) {
     var satirNo = g + 1;
     var bg      = g % 2 === 0 ? '#F7F9FC' : '#FFFFFF';
     var tarihEt = g + '.' + ayKisa;
+    var buGun   = (g === hesGun && hesAy === ay && hesYil === yil);
 
     sheet.getRange(satirNo, 10).setValue(tarihEt).setHorizontalAlignment('center').setBackground(bg);
 
@@ -274,40 +242,52 @@ function _fdAylikTablolariYaz(sheet, ay, yil) {
     var lHucre = sheet.getRange(satirNo, 12);
     var mHucre = sheet.getRange(satirNo, 13);
 
-    // Zaten dolu hücrelere dokunma — 11_GunlukOtomatikCalisma tarafından doldurulacak
-    if (!kHucre.getValue()) kHucre.setValue('').setBackground(bg);
-    if (!lHucre.getValue()) lHucre.setValue('').setBackground(bg);
-    if (!mHucre.getValue()) mHucre.setValue('').setBackground('#FFF9C4');
-
+    if (buGun) {
+      SpreadsheetApp.flush();
+      var d28Val = parseFloat(sheet.getRange(28, 4).getValue()) || 0;
+      var h26Val = parseFloat(sheet.getRange(26, 8).getValue()) || 0;
+      kHucre.setValue(d28Val).setBackground('#EBF8EE').setFontWeight('bold');
+      lHucre.setValue(h26Val).setBackground('#EBF8EE').setFontWeight('bold');
+      mHucre.setValue(h26Val > 0 ? d28Val / h26Val : 0).setBackground('#FFF9C4').setFontWeight('bold');
+    } else {
+      kHucre.setValue('').setBackground(bg);
+      lHucre.setValue('').setBackground(bg);
+      mHucre.setValue('').setBackground('#FFF9C4');
+    }
     kHucre.setNumberFormat('#,##0.00 "₺"');
-    lHucre.setNumberFormat('0.000');
+    lHucre.setNumberFormat('#,##0.00 "₺"');
     mHucre.setNumberFormat('0.00000 "₺"');
 
     sheet.getRange(satirNo, 14).setBackground('#E2E8F0');
+
     sheet.getRange(satirNo, 15).setValue(tarihEt).setHorizontalAlignment('center').setBackground(bg);
 
     var pHucre = sheet.getRange(satirNo, 16);
     var qHucre = sheet.getRange(satirNo, 17);
-
-    if (!pHucre.getValue()) pHucre.setValue('').setBackground(bg);
-    if (!qHucre.getValue()) qHucre.setValue('').setBackground(bg);
-
-    pHucre.setNumberFormat('#,##0.000');
-    qHucre.setNumberFormat('#,##0.00 "₺"');
+    if (buGun) {
+      var uretimMwh = yillikToplamUretimCek(g, ay, yil);
+      pHucre.setValue(uretimMwh).setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.000');
+      SpreadsheetApp.flush();
+      var pVal = parseFloat(sheet.getRange(satirNo, 16).getValue()) || 0;
+      qHucre.setValue(pVal * 1300).setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
+    } else {
+      pHucre.setValue('').setBackground(bg).setNumberFormat('#,##0.000');
+      qHucre.setValue('').setBackground(bg).setNumberFormat('#,##0.00 "₺"');
+    }
   }
 
   // Toplam satırları
   var topSatir = gunSayisi + 2;
   sheet.getRange(topSatir, 10).setValue('TOPLAM').setBackground('#2c5282').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
   sheet.getRange(topSatir, 11).setFormula('=SUM(K2:K' + (gunSayisi+1) + ')').setBackground('#2c5282').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
-  sheet.getRange(topSatir, 12).setFormula('=SUM(L2:L' + (gunSayisi+1) + ')').setBackground('#2c5282').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('0.000');
+  sheet.getRange(topSatir, 12).setFormula('=SUM(L2:L' + (gunSayisi+1) + ')').setBackground('#2c5282').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
   SpreadsheetApp.flush();
   var kTop = parseFloat(sheet.getRange(topSatir, 11).getValue()) || 0;
   var lTop = parseFloat(sheet.getRange(topSatir, 12).getValue()) || 0;
   sheet.getRange(topSatir, 13).setValue(lTop > 0 ? kTop / lTop : 0).setBackground('#b7950b').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('0.00000 "₺"');
   sheet.getRange(topSatir, 14).setBackground('#E2E8F0');
   sheet.getRange(topSatir, 15).setValue('TOPLAM').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
-  sheet.getRange(topSatir, 16).setFormula('=SUM(P2:P' + (gunSayisi+1) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.000');
+  sheet.getRange(topSatir, 16).setFormula('=SUM(P2:P' + (gunSayisi+1) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
   sheet.getRange(topSatir, 17).setFormula('=SUM(Q2:Q' + (gunSayisi+1) + ')').setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
 }
 

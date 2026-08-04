@@ -53,24 +53,11 @@ function amrTarihCek(isoTarih) {
     var data  = _amrApidenCek(isoTarih, isoTarih, 'Hourly');
     var ss    = cfgSsAc();
     var sheet = _amrSaatlikYaz(ss, data.items, isoTarih);
-
-    // Saatlik veriyi map olarak döndür — 0-23 arası MWh değerleri
-    var saatlikMwh = [];
-    for (var h = 0; h < 24; h++) saatlikMwh.push(0);
-    var map = {};
-    data.items.forEach(function(item) {
-      var d   = new Date(item.readAt);
-      var tr  = new Date(d.getTime() + 3 * 3600000);
-      var key = tr.getUTCHours();
-      map[key] = cfgYuvarla((parseFloat(item.consumption) || 0) / 1000); // kWh → MWh
-    });
-    for (var h = 0; h < 24; h++) saatlikMwh[h] = map[h] || 0;
-
     Logger.log('✅ AMR_Saatlik güncellendi: ' + isoTarih + ' (' + data.items.length + ' kayıt)');
-    return { success: true, tarih: isoTarih, kayitSayisi: data.items.length, saatlikMwh: saatlikMwh };
+    return { success: true, tarih: isoTarih, kayitSayisi: data.items.length };
   } catch(e) {
     Logger.log('❌ AMR saatlik hata [' + isoTarih + ']: ' + e.toString());
-    return { success: false, tarih: isoTarih, error: e.toString(), saatlikMwh: [] };
+    return { success: false, tarih: isoTarih, error: e.toString() };
   }
 }
 
@@ -148,8 +135,8 @@ function _amrSaatlikYaz(ss, items, isoTarih) {
   for (var h = 0; h < 24; h++) {
     var saat = cfgPad2(h) + ':00:00';
     var item = map[saat] || null;
-    var kwh  = item ? cfgYuvarla((parseFloat(item.consumption) || 0) / 1000) : 0;  // kWh → MWh
-    var ukwh = item ? cfgYuvarla((parseFloat(item.generation)  || 0) / 1000) : 0;  // kWh → MWh
+    var kwh  = item ? cfgYuvarla((parseFloat(item.consumption) || 0) / 1000) : 0;  // API kWh → MWh
+    var ukwh = item ? cfgYuvarla((parseFloat(item.generation)  || 0) / 1000) : 0;  // API kWh → MWh
     var net  = cfgYuvarla(kwh - ukwh);
     var auto = (item && item.consumptionAutoFilled) ? 'EVET' : '';
     var row  = h + 2;
@@ -225,8 +212,8 @@ function _amrAylikYaz(ss, items, ay, yil) {
     var d       = new Date(item.readAt);
     var tr      = new Date(d.getTime() + 3 * 3600000);
     var trTarih = cfgPad2(tr.getUTCDate()) + '.' + cfgPad2(tr.getUTCMonth() + 1) + '.' + tr.getUTCFullYear();
-    var kwh     = cfgYuvarla((parseFloat(item.consumption) || 0) / 1000);  // kWh → MWh
-    var ukwh    = cfgYuvarla((parseFloat(item.generation)  || 0) / 1000);  // kWh → MWh
+    var kwh     = cfgYuvarla((parseFloat(item.consumption) || 0) / 1000);  // API kWh → MWh
+    var ukwh    = cfgYuvarla((parseFloat(item.generation)  || 0) / 1000);  // API kWh → MWh
     var net     = cfgYuvarla(kwh - ukwh);
     var durum   = item.consumptionAutoFilled ? '⚠ Tahmini' : '✓';
     var row     = i + 2;

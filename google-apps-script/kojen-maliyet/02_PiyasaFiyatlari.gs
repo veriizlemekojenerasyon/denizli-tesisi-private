@@ -121,7 +121,7 @@ function _ptfSayfayaYaz(ss, items, isoTarih) {
 
   var insertRow = sheet.getLastRow() + 1;
   sheet.getRange(insertRow, 1, 24, 6).setValues(satirlar);
-  sheet.getRange(insertRow, 3, 24, 4).setNumberFormat('#,##0.00');
+  sheet.getRange(insertRow, 3, 24, 4).setNumberFormat('#,##0.00 "₺"');
 
   // Zebra renklendirme
   for (var z = 0; z < 24; z++) {

@@ -16,7 +16,7 @@
         stok: 'https://script.google.com/macros/s/AKfycbwdgKAxZ9J4NdxKFvlTUPnr-pCGD7UfHXqM8q3VWR4OHgKXs0eCjVAy9LHU-EkcHVKv/exec',
         motorTakip: 'https://script.google.com/macros/s/AKfycbyxfk2wUCJVDzHETdYWf4-zTxeMMwwd4wJ1uPkgVSFy1x6Ujy-lkWAkqPRMQlt3ZyPx/exec',
         elzMainpage: 'https://script.google.com/macros/s/AKfycbza7E5qh7K1FCiCpotWe8M95Uzfb5sutcZTkpRkG4pzhjpmhBuvvXdaW16DmqKNlSpR/exec',
-        kojenMaliyetRapor: 'https://script.google.com/macros/s/AKfycbzugxfwsSlh6f4zJ4tsM6VHY1240ksO0D64EMMqK8GAYthYYttDUP6suolNdL8MMIyJ/exec'  // Apps Script deploy edilince buraya URL ekleyin
+        kojenMaliyetRapor: 'https://script.google.com/macros/s/AKfycbysr-rbVD0zXbTu_ZEUdn3nEh07VvKiwJDfz10pI5oOn493NjuZFI_meMPmESTvNgbS/exec'
     };
 
     function getScriptUrl(key) {

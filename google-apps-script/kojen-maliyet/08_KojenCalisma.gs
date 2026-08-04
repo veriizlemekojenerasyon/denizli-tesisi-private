@@ -168,8 +168,10 @@ function _kcAylikAvantajTablosu(sheet, ss, ay, yil) {
       .setBackground(g % 2 === 0 ? '#F7F9FC' : '#FFFFFF');
 
     var iHucre = sheet.getRange(satirNo, 9);
-    // Zaten dolu hücrelere dokunma — 11_GunlukOtomatikCalisma tarafından doldurulacak
-    if (!iHucre.getValue()) {
+    if (g === hesGun && hesAy === ay && hesYil === yil) {
+      iHucre.setFormula('=F28').setBackground('#EBF8EE').setFontWeight('bold')
+        .setNote('Kaynak: F28 (Toplam Kojen Avantaj)\nTarih: ' + tarihStr);
+    } else {
       iHucre.setValue('').setBackground(g % 2 === 0 ? '#F7F9FC' : '#FFFFFF');
     }
     iHucre.setNumberFormat('#,##0.00 "₺"');

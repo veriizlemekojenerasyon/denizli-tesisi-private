@@ -5,7 +5,8 @@
 // ─── KONFİGÜRASYON ───────────────────────────────────────────────────────────
 
 // Maliyet kayıt + Rapor verisi GAS Web App URL
-var KMR_URL = 'https://script.google.com/macros/s/AKfycbzugxfwsSlh6f4zJ4tsM6VHY1240ksO0D64EMMqK8GAYthYYttDUP6suolNdL8MMIyJ/exec';
+var KMR_URL = (window.AppConfig && window.AppConfig.getScriptUrl('kojenMaliyetRapor'))
+  || 'https://script.google.com/macros/s/AKfycbysr-rbVD0zXbTu_ZEUdn3nEh07VvKiwJDfz10pI5oOn493NjuZFI_meMPmESTvNgbS/exec';
 
 // Excel dışa aktarım — ayrı GAS projesi
 var EXCEL_URL = 'https://script.google.com/macros/s/AKfycbxFBU3VMIQ_mf7FWnMERiW7huCEw-tToRcVAx9QH0o_3ximbwBw5z_5ZdVBWAlbC9ir/exec';
@@ -140,26 +141,52 @@ async function handleGenerateReport() {
   }
 }
 
-async function fetchReportData(filter) {
-  if (!KMR_URL) throw new Error('GAS URL tanımlı değil.');
-  if (window.location.protocol === 'file:') throw new Error('Sayfa doğrudan dosyadan açılıyor (file://). Lütfen bir web sunucusu veya GitHub Pages üzerinden erişin.');
-  var params = new URLSearchParams({ action: 'getRaporData', startDate: filter.startDate,
-    endDate: filter.endDate, month: filter.month, year: filter.year, type: filter.type });
-  var res;
-  try {
-    res = await fetch(KMR_URL + '?' + params.toString());
-  } catch(err) {
-    throw new Error('Sunucuya ulaşılamadı. İnternet bağlantısını kontrol edin. (' + err.message + ')');
-  }
-  if (!res.ok) throw new Error('Sunucu hatası: HTTP ' + res.status);
-  var json;
-  try {
-    json = await res.json();
-  } catch(err) {
-    throw new Error('Sunucudan geçersiz yanıt alındı.');
-  }
-  if (!json.success) throw new Error(json.error || 'Sunucu hatası');
-  return json.data;
+function fetchReportData(filter) {
+  return new Promise(function (resolve, reject) {
+    if (!KMR_URL) { reject(new Error('GAS URL tanımlı değil.')); return; }
+
+    var cbName = '_raporCb_' + Date.now();
+    var timer;
+
+    window[cbName] = function (json) {
+      clearTimeout(timer);
+      var s = document.getElementById(cbName);
+      if (s && s.parentNode) s.parentNode.removeChild(s);
+      delete window[cbName];
+      if (!json || !json.success) {
+        reject(new Error(json && json.error ? json.error : 'Sunucu hatası'));
+      } else {
+        resolve(json.data);
+      }
+    };
+
+    timer = setTimeout(function () {
+      var s = document.getElementById(cbName);
+      if (s && s.parentNode) s.parentNode.removeChild(s);
+      delete window[cbName];
+      reject(new Error('Zaman aşımı: Sunucu 30 saniye içinde yanıt vermedi.'));
+    }, 30000);
+
+    var script = document.createElement('script');
+    script.id  = cbName;
+    script.src = KMR_URL + '?' + [
+      'action=getRaporData',
+      'startDate=' + encodeURIComponent(filter.startDate || ''),
+      'endDate='   + encodeURIComponent(filter.endDate   || ''),
+      'month='     + encodeURIComponent(filter.month     || ''),
+      'year='      + encodeURIComponent(filter.year      || ''),
+      'type='      + encodeURIComponent(filter.type      || ''),
+      'callback='  + encodeURIComponent(cbName),
+      '_t='        + Date.now()
+    ].join('&');
+    script.onerror = function () {
+      clearTimeout(timer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window[cbName];
+      reject(new Error('Sunucuya ulaşılamadı.'));
+    };
+    document.body.appendChild(script);
+  });
 }
 
 // ─── KPI ──────────────────────────────────────────────────────────────────────
@@ -308,23 +335,51 @@ async function handleBaglantiCek() {
   if (!KMR_URL) { showToast('GAS URL tanımlı değil','error'); return; }
   setEl('baglantiTarihLabel','Yükleniyor...');
   document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row">Yükleniyor...</td></tr>';
-  try {
-    var res = await fetch(KMR_URL+'?'+new URLSearchParams({action:'getBaglantiNoktalari',date:tarih}).toString());
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var json = await res.json();
-    if (!json.success) throw new Error(json.error||'Sunucu hatası');
+
+  var cbName = '_bagCb_' + Date.now();
+  var timer = setTimeout(function () {
+    var s = document.getElementById(cbName);
+    if (s && s.parentNode) s.parentNode.removeChild(s);
+    delete window[cbName];
+    document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row" style="color:#c53030">Zaman aşımı</td></tr>';
+    setEl('baglantiTarihLabel','Bağlantı noktası verileri');
+  }, 20000);
+
+  window[cbName] = function (json) {
+    clearTimeout(timer);
+    var s = document.getElementById(cbName);
+    if (s && s.parentNode) s.parentNode.removeChild(s);
+    delete window[cbName];
+    if (!json || !json.success) {
+      document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row" style="color:#c53030">Hata: '+(json&&json.error?json.error:'Sunucu hatası')+'</td></tr>';
+      setEl('baglantiTarihLabel','Bağlantı noktası verileri');
+      return;
+    }
     var rows = json.data || [];
     if (!rows.length) {
       document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row">Bu tarih için veri bulunamadı.</td></tr>';
-      setEl('baglantiTarihLabel','Tarih: '+formatDateTR(tarih));
-      return;
+    } else {
+      renderBaglantiTable(rows);
     }
-    renderBaglantiTable(rows);
     setEl('baglantiTarihLabel','Tarih: '+formatDateTR(tarih));
-  } catch(err) {
-    document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row" style="color:#c53030">Hata: '+err.message+'</td></tr>';
+  };
+
+  var script = document.createElement('script');
+  script.id  = cbName;
+  script.src = KMR_URL + '?' + [
+    'action=getBaglantiNoktalari',
+    'date='     + encodeURIComponent(tarih),
+    'callback=' + encodeURIComponent(cbName),
+    '_t='       + Date.now()
+  ].join('&');
+  script.onerror = function () {
+    clearTimeout(timer);
+    if (script.parentNode) script.parentNode.removeChild(script);
+    delete window[cbName];
+    document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row" style="color:#c53030">Bağlantı hatası</td></tr>';
     setEl('baglantiTarihLabel','Bağlantı noktası verileri');
-  }
+  };
+  document.body.appendChild(script);
 }
 
 function renderBaglantiTable(rows) {
@@ -830,7 +885,7 @@ var OtoHesap = {
     return Math.round((bit - bas) / 86400000) + 1;
   },
 
-  baslat: async function () {
+  baslat: function () {
     if (this.calisıyor) return;
 
     var bas = getVal('otoBaslangic');
@@ -852,51 +907,83 @@ var OtoHesap = {
     // Sahte ilerleme animasyonu — GAS yanıt gelene kadar
     var pct = 0;
     var self = this;
-    this._timer = setInterval(function () {
+    this._progressTimer = setInterval(function () {
       pct = Math.min(pct + (pct < 60 ? 2 : pct < 85 ? 0.5 : 0.1), 90);
       self.progressGuncelle(pct, gun + ' gün hesaplanıyor... (' + Math.round(pct) + '%)');
     }, 1000);
 
-    try {
-      var params = new URLSearchParams({
-        action    : 'otomatikHesapla',
-        baslangic : bas,
-        bitis     : bit
-      });
-      var res = await fetch(KMR_URL + '?' + params.toString());
-      if (!res.ok) throw new Error('Sunucu hatası: HTTP ' + res.status);
-      var json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Sunucu hatası');
+    // JSONP — file:// ve CORS sorunlarını aşar
+    var cbName = '_otoHesapCb_' + Date.now();
+    window[cbName] = function (json) {
+      clearInterval(self._progressTimer);
+      clearTimeout(self._timeoutTimer);
+      // script tag'i temizle
+      var s = document.getElementById(cbName);
+      if (s && s.parentNode) s.parentNode.removeChild(s);
+      delete window[cbName];
 
-      clearInterval(this._timer);
-      this.progressGuncelle(100, '✅ Tamamlandı!');
+      self.calisıyor = false;
+      self.setBtn(false);
+
+      if (!json || !json.success) {
+        self.progressGizle();
+        self.noticeCal('Hata: ' + (json && json.error ? json.error : 'Sunucu yanıt vermedi'), 'error');
+        return;
+      }
+
+      self.progressGuncelle(100, '✅ Tamamlandı!');
 
       var mesaj = json.mesaj || (json.basarili + ' gün işlendi.');
       if (json.sure) mesaj += ' (' + json.sure + ')';
 
       if (json.hatali > 0) {
-        var hataMesaj = json.hatalar.slice(0,3).map(function(h){ return h.tarih + ': ' + h.hata; }).join('\n');
-        this.noticeCal('⚠️ ' + mesaj + '\nHatalı günler:\n' + hataMesaj, 'warn');
+        var hataMesaj = json.hatalar.slice(0, 3).map(function (h) { return h.tarih + ': ' + h.hata; }).join('\n');
+        self.noticeCal('⚠️ ' + mesaj + '\nHatalı günler:\n' + hataMesaj, 'warn');
       } else {
-        this.noticeCal('✓ ' + mesaj, 'success');
+        self.noticeCal('✓ ' + mesaj, 'success');
       }
 
       showToast(mesaj, json.hatali > 0 ? 'warn' : 'success');
 
-      // Başarılıysa raporu otomatik yenile
-      this._timer = setTimeout(function () {
+      // 3 sn sonra kapat + raporu yenile
+      self._timer = setTimeout(function () {
         OtoHesap.kapat();
         handleGenerateReport();
       }, 3000);
+    };
 
-    } catch (err) {
-      clearInterval(this._timer);
-      this.progressGizle();
-      this.noticeCal('Hata: ' + err.message, 'error');
-    } finally {
-      this.calisıyor = false;
-      this.setBtn(false);
-    }
+    // GAS timeout — 5 dakika (hesaplama uzun sürebilir)
+    this._timeoutTimer = setTimeout(function () {
+      clearInterval(self._progressTimer);
+      var s = document.getElementById(cbName);
+      if (s && s.parentNode) s.parentNode.removeChild(s);
+      delete window[cbName];
+      self.calisıyor = false;
+      self.setBtn(false);
+      self.progressGizle();
+      self.noticeCal('Zaman aşımı: Sunucu 5 dakika içinde yanıt vermedi.', 'error');
+    }, 300000);
+
+    var script = document.createElement('script');
+    script.id  = cbName;
+    script.src = KMR_URL + '?' + [
+      'action=otomatikHesapla',
+      'baslangic=' + encodeURIComponent(bas),
+      'bitis='     + encodeURIComponent(bit),
+      'callback='  + encodeURIComponent(cbName),
+      '_t='        + Date.now()
+    ].join('&');
+    script.onerror = function () {
+      clearInterval(self._progressTimer);
+      clearTimeout(self._timeoutTimer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window[cbName];
+      self.calisıyor = false;
+      self.setBtn(false);
+      self.progressGizle();
+      self.noticeCal('Bağlantı hatası: GAS\'a ulaşılamadı.', 'error');
+    };
+    document.body.appendChild(script);
   },
 
   setBtn: function (durum) {
