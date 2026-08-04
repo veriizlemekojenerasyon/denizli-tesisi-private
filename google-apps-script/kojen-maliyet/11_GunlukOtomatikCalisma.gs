@@ -159,20 +159,30 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
 
     // ── 5. Aylık tablolara bu günün sabit değerlerini yaz ────────────────────
     var ayKisa = CFG_AYLAR_KISA[ay] || ay;
+    var saatlik = gunHesap.saatlik || [];
 
-    // KojenCalisma
+    // KojenCalisma — I sütunu (kojenAvantaj) + saatlik D, F sütunları
     try {
       var kcAdi   = CFG_PREF_KOJEN_CALISMA + yil + '_' + cfgPad2(ay);
       var kcSheet = ss.getSheetByName(kcAdi);
-      if (!kcSheet && ayinIlkGunu) {
+      if (!kcSheet) {
         kojenCalismaSayfasiOlustur(ay, yil, gun);
         kcSheet = ss.getSheetByName(kcAdi);
       }
       if (kcSheet) {
+        // I sütunu: günlük kojen avantaj toplamı
         kcSheet.getRange(gun + 2, 9)
           .setValue(gunHesap.kojenAvantaj)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('Kojen Avantaj (sabit)\nTarih: ' + gun + '.' + ayKisa + '\nDeğer: ' + gunHesap.kojenAvantaj.toFixed(2));
+        // Saatlik D (Bedel=KojenUretim×KojenMaliyet) ve F (SebekeMal=KojenUretim×(PTF+YEKDEM+DAG+VTC))
+        for (var si = 0; si < saatlik.length; si++) {
+          var kcSatir = si + 3;
+          kcSheet.getRange(kcSatir, 4).setValue(saatlik[si].kojenBedel)
+            .setBackground('#EBF8EE').setNumberFormat('#,##0.00 "₺"');
+          kcSheet.getRange(kcSatir, 6).setValue(saatlik[si].sebekeMal)
+            .setBackground('#EBF8EE').setNumberFormat('#,##0.00 "₺"');
+        }
         SpreadsheetApp.flush();
         Logger.log('  KC : OK Avantaj=' + gunHesap.kojenAvantaj.toFixed(2));
       } else {
@@ -180,7 +190,7 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
       }
     } catch(e) { Logger.log('  KC : HATA ' + e.toString()); }
 
-    // DengesizlikMaliyet
+    // DengesizlikMaliyet — P/Q/R (aylık) + saatlik L/M sütunları
     try {
       var dmAdi   = CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay);
       var dmSheet = ss.getSheetByName(dmAdi);
@@ -190,6 +200,7 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
       }
       if (dmSheet) {
         var dmSatir = gun + 2;
+        // Aylık özet: P=EPİAŞ, Q=TEİAŞ, R=Toplam
         dmSheet.getRange(dmSatir, 16).setValue(gunHesap.epias)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('EPİAŞ (sabit)\nTarih: ' + gun + '.' + ayKisa);
@@ -199,6 +210,24 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
         dmSheet.getRange(dmSatir, 18).setValue(gunHesap.epias + gunHesap.teias)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('EPİAŞ + TEİAŞ\nTarih: ' + gun + '.' + ayKisa);
+        // Saatlik L=EPİAŞ, M=TEİAŞ (satır 3'ten başlar)
+        for (var si = 0; si < saatlik.length; si++) {
+          var dmSaatSatir = si + 3;
+          dmSheet.getRange(dmSaatSatir, 12).setValue(saatlik[si].epias)
+            .setBackground('#EBF8EE').setNumberFormat('#,##0.00 "₺"');
+          dmSheet.getRange(dmSaatSatir, 13).setValue(saatlik[si].teias)
+            .setBackground('#EBF8EE').setNumberFormat('#,##0.00 "₺"');
+          // B=Tahmin, C=Gerçek, D=Fark, E=PTF, F=SMF, G=PozDen, H=NegDen, I=PozFark, J=NegFark
+          dmSheet.getRange(dmSaatSatir, 2).setValue(saatlik[si].tahmin).setNumberFormat('0.000');
+          dmSheet.getRange(dmSaatSatir, 3).setValue(saatlik[si].gercek).setNumberFormat('0.000');
+          dmSheet.getRange(dmSaatSatir, 4).setValue(saatlik[si].fark).setNumberFormat('0.000');
+          dmSheet.getRange(dmSaatSatir, 5).setValue(saatlik[si].ptf).setNumberFormat('#,##0.00');
+          dmSheet.getRange(dmSaatSatir, 6).setValue(saatlik[si].smf).setNumberFormat('#,##0.00');
+          dmSheet.getRange(dmSaatSatir, 7).setValue(saatlik[si].pozDen).setNumberFormat('#,##0.00');
+          dmSheet.getRange(dmSaatSatir, 8).setValue(saatlik[si].negDen).setNumberFormat('#,##0.00');
+          dmSheet.getRange(dmSaatSatir, 9).setValue(saatlik[si].pozFark).setNumberFormat('#,##0.00 "₺"');
+          dmSheet.getRange(dmSaatSatir, 10).setValue(saatlik[si].negFark).setNumberFormat('#,##0.00 "₺"');
+        }
         SpreadsheetApp.flush();
         Logger.log('  DM : OK EPİAŞ=' + gunHesap.epias.toFixed(2) + ' TEİAŞ=' + gunHesap.teias.toFixed(2));
       } else {
@@ -206,7 +235,7 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
       }
     } catch(e) { Logger.log('  DM : HATA ' + e.toString()); }
 
-    // Faturalasma
+    // Faturalasma — K/L/M/P/Q (aylık) + saatlik A-H sütunları
     try {
       var fdAdi   = CFG_PREF_FATURA + yil + '_' + cfgPad2(ay);
       var fdSheet = ss.getSheetByName(fdAdi);
@@ -215,45 +244,79 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
         fdSheet = ss.getSheetByName(fdAdi);
       }
       if (fdSheet) {
-        var fdSatir = gun + 1;
-        var uretim  = yillikToplamUretimCek(gun, ay, yil);
-
-        // D28 değerini hesapla — Faturalaşma sayfasındaki günlük toplam maliyet
-        // Excel: =11293 + D26 + E26 + G26 + DM!X35 - F26
-        // Bizim: maliyetK2 + C26(EPİAŞ) + D26(Dağıtım) + F26(VTC) + DM!Toplam - E26(Koruma)
-        var d28Val = 0;
-        try {
-          SpreadsheetApp.flush();
-          var malSheet2  = ss.getSheetByName(CFG_SAYFA_MALIYET);
-          var maliyetK2  = malSheet2 ? (parseFloat(malSheet2.getRange(2, 11).getValue()) || 0) : 0;
-          var c26epias   = parseFloat(fdSheet.getRange(26, 3).getValue()) || 0;
-          var d26dagitim = parseFloat(fdSheet.getRange(26, 4).getValue()) || 0;
-          var e26koruma  = parseFloat(fdSheet.getRange(26, 5).getValue()) || 0;
-          var f26vtc     = parseFloat(fdSheet.getRange(26, 6).getValue()) || 0;
-          var dmAdi2     = CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay);
-          var dmSheet2   = ss.getSheetByName(dmAdi2);
-          var dmTopSatir = new Date(yil, ay, 0).getDate() + 3;
-          var dmToplam   = dmSheet2 && dmSheet2.getLastRow() >= dmTopSatir
-            ? (parseFloat(dmSheet2.getRange(dmTopSatir, 18).getValue()) || 0) : 0;
-          d28Val = maliyetK2 + c26epias + d26dagitim + f26vtc + dmToplam - e26koruma;
-        } catch(e2) {
-          Logger.log('  FD D28 hesap hatası: ' + e2.toString());
-          d28Val = gunHesap.toplamMaliyet; // fallback
+        // Saatlik A-H sütunlarını yaz (satır 2'den başlar)
+        for (var si = 0; si < saatlik.length; si++) {
+          var fdSaatSatir = si + 2;
+          var s = saatlik[si];
+          fdSheet.getRange(fdSaatSatir, 1).setValue(s.saat)
+            .setBackground('#1C2B3A').setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center');
+          fdSheet.getRange(fdSaatSatir, 2).setValue(s.bVal).setNumberFormat('#,##0.00 "₺"');
+          fdSheet.getRange(fdSaatSatir, 3).setValue(s.cVal).setNumberFormat('#,##0.00 "₺"')
+            .setNote('TAHMİN=' + s.tahmin.toFixed(3) + ' × PTF=' + s.ptf.toFixed(2));
+          fdSheet.getRange(fdSaatSatir, 4).setValue(s.dVal).setNumberFormat('#,##0.00 "₺"')
+            .setNote('GERÇEK=' + s.gercek.toFixed(3) + ' × ' + (s.yekdem+s.dagitim+s.vtc).toFixed(2));
+          fdSheet.getRange(fdSaatSatir, 5).setValue(s.eVal).setNumberFormat('#,##0.00 "₺"');
+          fdSheet.getRange(fdSaatSatir, 6).setValue(s.fVal).setNumberFormat('#,##0.00 "₺"');
+          fdSheet.getRange(fdSaatSatir, 7).setValue(s.tahmin).setNumberFormat('0.000');
+          fdSheet.getRange(fdSaatSatir, 8).setValue(s.gercek).setNumberFormat('0.000');
+          var bg = si % 2 === 0 ? '#F7F9FC' : '#FFFFFF';
+          fdSheet.getRange(fdSaatSatir, 2, 1, 7).setBackground(bg);
         }
+        SpreadsheetApp.flush();
 
-        var sebeke   = parseFloat(fdSheet.getRange(26, 8).getValue()) || gunHesap.sebeke;
+        // Toplam satırı (26) formülleri — her gün yenile
+        for (var ts = 2; ts <= 8; ts++) {
+          var harf = String.fromCharCode(64 + ts);
+          if (ts === 6) {
+            fdSheet.getRange(26, ts).setFormula('=ABS(SUM(' + harf + '2:' + harf + '25))').setNumberFormat('#,##0.00 "₺"');
+          } else if (ts <= 6) {
+            fdSheet.getRange(26, ts).setFormula('=SUM(' + harf + '2:' + harf + '25)').setNumberFormat('#,##0.00 "₺"');
+          } else {
+            fdSheet.getRange(26, ts).setFormula('=SUM(' + harf + '2:' + harf + '25)').setNumberFormat('0.000');
+          }
+        }
+        fdSheet.getRange(26, 1, 1, 8).setBackground('#1e3a5f').setFontColor('#FFFFFF').setFontWeight('bold');
+        SpreadsheetApp.flush();
+
+        // D28 hesapla
+        var fdSatir  = gun + 1;
+        var uretim   = yillikToplamUretimCek(gun, ay, yil);
+        var malSheet2 = ss.getSheetByName(CFG_SAYFA_MALIYET);
+        var maliyetSatir = malSheet2 ? (cfgMaliyetSatiriBul(ss, ay, yil) || 2) : 2;
+        var maliyetK2 = malSheet2 ? (parseFloat(malSheet2.getRange(maliyetSatir, 11).getValue()) || 0) : 0;
+        var c26epias   = parseFloat(fdSheet.getRange(26, 3).getValue()) || 0;
+        var d26dagitim = parseFloat(fdSheet.getRange(26, 4).getValue()) || 0;
+        var e26koruma  = parseFloat(fdSheet.getRange(26, 5).getValue()) || 0;
+        var f26vtc     = parseFloat(fdSheet.getRange(26, 6).getValue()) || 0;
+        // O günün EPİAŞ + TEİAŞ değeri — DM sayfasında gun+2. satır, P ve Q sütunları
+        var dmSheet3  = ss.getSheetByName(CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay));
+        var dmGunSatir = gun + 2;  // 01/07 → satır 3, 02/07 → satır 4 ...
+        var dmGunEpias = dmSheet3 && dmSheet3.getLastRow() >= dmGunSatir
+          ? (parseFloat(dmSheet3.getRange(dmGunSatir, 16).getValue()) || 0) : gunHesap.epias;
+        var dmGunTeias = dmSheet3 && dmSheet3.getLastRow() >= dmGunSatir
+          ? (parseFloat(dmSheet3.getRange(dmGunSatir, 17).getValue()) || 0) : gunHesap.teias;
+        var dmGunToplam = dmGunEpias + dmGunTeias;
+        var d28Val     = maliyetK2 + c26epias + d26dagitim + f26vtc + dmGunToplam - e26koruma;
+
+        fdSheet.getRange(28, 4).setValue(d28Val)
+          .setBackground('#276749').setFontColor('#FFFFFF').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
+          .setNote('K2=' + maliyetK2 + ' C26=' + c26epias + ' D26=' + d26dagitim + ' F26=' + f26vtc + ' DM(gun' + gun + ')=' + dmGunToplam + ' E26=' + e26koruma);
+        fdSheet.getRange(28, 8).setFormula('=H26').setNumberFormat('0.000').setBackground('#EEF4FF');
+        SpreadsheetApp.flush();
+
+        var sebeke   = parseFloat(fdSheet.getRange(28, 8).getValue()) || gunHesap.sebeke;
         var birimMal = sebeke > 0 ? d28Val / sebeke : 0;
 
-        // K: D28 değeri — o günün toplam maliyet
+        // Aylık K/L/M/P/Q satırına yaz
         fdSheet.getRange(fdSatir, 11).setValue(d28Val)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('D28 Toplam Maliyet\nTarih: ' + gun + '.' + ayKisa);
         fdSheet.getRange(fdSatir, 12).setValue(sebeke)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('0.000')
-          .setNote('Şebeke Tüketim (sabit)\nTarih: ' + gun + '.' + ayKisa);
+          .setNote('Şebeke Tüketim\nTarih: ' + gun + '.' + ayKisa);
         fdSheet.getRange(fdSatir, 13).setValue(birimMal)
           .setBackground('#FFF9C4').setFontWeight('bold').setNumberFormat('0.00000 "₺"')
-          .setNote('Birim Maliyet (D28/H26)\nTarih: ' + gun + '.' + ayKisa);
+          .setNote('Birim Maliyet (D28/H28)\nTarih: ' + gun + '.' + ayKisa);
         fdSheet.getRange(fdSatir, 16).setValue(uretim)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.000')
           .setNote('Kojen Üretim\nTarih: ' + gun + '.' + ayKisa);
@@ -261,7 +324,7 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
           .setNote('P × 1300\nTarih: ' + gun + '.' + ayKisa);
         SpreadsheetApp.flush();
-        Logger.log('  FD : OK D28=' + d28Val.toFixed(2) + ' Şebeke=' + sebeke.toFixed(3) + ' Üretim=' + uretim + ' MWh');
+        Logger.log('  FD : OK D28=' + d28Val.toFixed(2) + ' Şebeke=' + sebeke.toFixed(3) + ' Üretim=' + uretim);
       } else {
         Logger.log('  FD : Sayfa yok, atlandı (' + fdAdi + ')');
       }
@@ -280,10 +343,17 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
  * Belirli bir gün için BaglantiNoktalari + AMR_Saatlik + PiyasaFiyatlari +
  * Maliyet sayfalarını okuyarak tüm saatlik hesapları GAS tarafında yapar.
  *
- * @returns {{ epias, teias, toplamMaliyet, sebeke, kojenAvantaj }}
+ * @returns {{
+ *   epias, teias, toplamMaliyet, sebeke, kojenAvantaj,
+ *   saatlik: [{
+ *     tahmin, gercek, fark, ptf, smf, pozDen, negDen,
+ *     pozFark, negFark, bVal, cVal, dVal, eVal, fVal,
+ *     epias, teias, kojenUretim, kojenBedel, sebekeMal
+ *   }]
+ * }}
  */
 function _gocSaatlikHesapla(ss, gun, ay, yil) {
-  var sonuc = { epias: 0, teias: 0, toplamMaliyet: 0, sebeke: 0, kojenAvantaj: 0 };
+  var sonuc = { epias: 0, teias: 0, toplamMaliyet: 0, sebeke: 0, kojenAvantaj: 0, saatlik: [] };
 
   try {
     var bagSheet = ss.getSheetByName(CFG_SAYFA_BAGLANTI);
@@ -302,10 +372,10 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
       var malVeriler = malSheet.getRange(2, 2, malSheet.getLastRow() - 1, 7).getValues();
       for (var m = 0; m < malVeriler.length; m++) {
         if (parseInt(malVeriler[m][0]) === ay && parseInt(malVeriler[m][1]) === yil) {
-          kojenMaliyet = parseFloat(malVeriler[m][3]) || 0; // E sütunu (B offset 3)
-          yekdem       = parseFloat(malVeriler[m][4]) || 0; // F
-          dagitim      = parseFloat(malVeriler[m][5]) || 0; // G
-          vtc          = parseFloat(malVeriler[m][6]) || 0; // H
+          kojenMaliyet = parseFloat(malVeriler[m][3]) || 0;
+          yekdem       = parseFloat(malVeriler[m][4]) || 0;
+          dagitim      = parseFloat(malVeriler[m][5]) || 0;
+          vtc          = parseFloat(malVeriler[m][6]) || 0;
           break;
         }
       }
@@ -319,7 +389,6 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
       ptfSheet.getRange(2, 1, ptfSheet.getLastRow() - 1, 6).getValues().forEach(function(r) {
         var tarihObj = r[0], saatObj = r[1];
         var rAy, rYil, rGun, sHour;
-
         if (tarihObj instanceof Date) {
           rAy = tarihObj.getMonth() + 1; rYil = tarihObj.getFullYear(); rGun = tarihObj.getDate();
         } else {
@@ -327,11 +396,9 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
           if (p.length < 3) return;
           rGun = parseInt(p[0]); rAy = parseInt(p[1]); rYil = parseInt(p[2]);
         }
-        if (rAy !== ay || rYil !== yil || rGun !== gun) return; // sadece bu günün verisi
-
+        if (rAy !== ay || rYil !== yil || rGun !== gun) return;
         sHour = (saatObj instanceof Date) ? saatObj.getHours() : parseInt(String(saatObj).split(':')[0]);
         if (isNaN(sHour) || sHour < 0 || sHour > 23) return;
-
         ptfDizi[sHour] = parseFloat(r[2]) || 0;
         smfDizi[sHour] = parseFloat(r[3]) || 0;
         pozDizi[sHour] = parseFloat(r[4]) || 0;
@@ -339,24 +406,27 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
       });
     }
 
+    // BaglantiNoktalari tüm satırları tek seferde oku (hız için)
+    var bagVeriler = bagSheet.getLastRow() >= 25
+      ? bagSheet.getRange(2, 1, 24, 7).getValues() : [];
+
+    // AMR_Saatlik tüm satırları tek seferde oku
+    var amrVeriler = amrSheet.getLastRow() >= 25
+      ? amrSheet.getRange(2, 1, 24, 2).getValues() : [];
+
     // Saatlik hesaplar
     for (var i = 0; i < 24; i++) {
-      var bagRow = i + 2, amrRow = i + 2;
+      var tahmin      = bagVeriler[i] ? (parseFloat(bagVeriler[i][6]) || 0) : 0; // G sütunu
+      var kojenUretim = bagVeriler[i] ? (parseFloat(bagVeriler[i][5]) || 0) : 0; // F sütunu
+      var gercek      = amrVeriler[i] ? (parseFloat(amrVeriler[i][1]) || 0) : 0; // B sütunu
 
-      // Tahmin: BaglantiNoktalari G = Şebeke Hattı Tüketimi (MWh)
-      var tahmin = (bagSheet.getLastRow() >= bagRow)
-        ? (parseFloat(bagSheet.getRange(bagRow, 7).getValue()) || 0) : 0;
-
-      // Gerçek: AMR_Saatlik B (MWh)
-      var gercek = (amrSheet.getLastRow() >= amrRow)
-        ? (parseFloat(amrSheet.getRange(amrRow, 2).getValue()) || 0) : 0;
-
-      var fark    = tahmin - gercek;  // TAHMİN - GERÇEK
+      var fark    = tahmin - gercek;
       var ptf     = ptfDizi[i], smf = smfDizi[i];
-      var pozFark = pozDizi[i] - ptf;  // PozDen - PTF
-      var negFark = negDizi[i] - ptf;  // NegDen - PTF
+      var pozDen  = pozDizi[i], negDen = negDizi[i];
+      var pozFark = pozDen - ptf;
+      var negFark = negDen - ptf;
 
-      // EPİAŞ dengesizlik maliyeti = MUTLAK(EĞER(D>0; D*I; D*J))
+      // EPİAŞ = MUTLAK(EĞER(D>0; D*I; D*J))
       var epias = Math.abs(fark > 0 ? fark * pozFark : fark * negFark);
 
       // TEİAŞ — 16:00-21:00 arası 0.04, diğer saatler 0
@@ -366,15 +436,16 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
           teias = Math.abs(fark * Math.max(ptf, smf) * 0.04);
         }
       }
-      // diğer saatler: 0.08 * 0 = 0
+
+      // Faturalaşma sütunları
+      var bVal = fark > 0 ? fark * pozDen : fark * negDen;  // B: DM.D×DM.G veya DM.D×DM.H (ham fiyat)
+      var cVal = tahmin * ptf;                               // C: EPİAŞ = TAHMİN × PTF
+      var dVal = gercek * (yekdem + dagitim + vtc);          // D: Dağıtım+YEKDEM
+      var eVal = bVal > 0 ? bVal : 0;                       // E: Koruma
+      var fVal = bVal < 0 ? bVal : 0;                       // F: VTC
 
       // Toplam fatura maliyeti bu saat için
-      var dagYek   = gercek * (yekdem + dagitim + vtc);
-      var satirMal = epias + (gercek * ptf) + dagYek;
-
-      // Kojen avantajı: şebeke maliyeti − kojen bedeli
-      var kojenUretim = (bagSheet.getLastRow() >= bagRow)
-        ? (parseFloat(bagSheet.getRange(bagRow, 6).getValue()) || 0) : 0;
+      var satirMal    = epias + (gercek * ptf) + dVal;
       var kojenBedel  = kojenUretim * kojenMaliyet;
       var sebekeMal   = kojenUretim * (ptf + yekdem + dagitim + vtc);
 
@@ -383,6 +454,34 @@ function _gocSaatlikHesapla(ss, gun, ay, yil) {
       sonuc.toplamMaliyet += satirMal;
       sonuc.sebeke        += gercek;
       sonuc.kojenAvantaj  += (sebekeMal - kojenBedel);
+
+      // Saatlik detayı sakla
+      sonuc.saatlik.push({
+        saat        : CFG_SAATLER_24[i],
+        tahmin      : tahmin,
+        gercek      : gercek,
+        fark        : fark,
+        ptf         : ptf,
+        smf         : smf,
+        pozDen      : pozDen,
+        negDen      : negDen,
+        pozFark     : pozFark,
+        negFark     : negFark,
+        bVal        : bVal,
+        cVal        : cVal,
+        dVal        : dVal,
+        eVal        : eVal,
+        fVal        : fVal,
+        epias       : epias,
+        teias       : teias,
+        kojenUretim : kojenUretim,
+        kojenBedel  : kojenBedel,
+        sebekeMal   : sebekeMal,
+        yekdem      : yekdem,
+        dagitim     : dagitim,
+        vtc         : vtc,
+        kojenMaliyet: kojenMaliyet
+      });
     }
 
   } catch(e) {

@@ -37,90 +37,50 @@ function dengesizlikMaliyetSayfasiOlustur(ay, yil, gun) {
     ay  = ay  || (bugun.getMonth() + 1);
     yil = yil || bugun.getFullYear();
     var ss  = cfgSsAc();
-    if (!gun) gun = cfgBaglantiTarihiOku(ss).getDate();
 
     var sayfaAdi = CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay);
-    var sheet    = cfgSayfayiSifirla(ss, sayfaAdi);
 
+    // Sayfa zaten varsa sadece başlıkları yaz, veriyi silme
+    var mevcutSheet = ss.getSheetByName(sayfaAdi);
+    if (mevcutSheet) {
+      Logger.log('ℹ️ ' + sayfaAdi + ' zaten var, iskelet güncelleniyor.');
+      _dmBasliklariYaz(mevcutSheet);
+      _dmToplamSatirYaz(mevcutSheet);
+      _dmAylikDengesizlikTablosu(mevcutSheet, ss, ay, yil);
+      SpreadsheetApp.flush();
+      return { success: true, sayfa: sayfaAdi };
+    }
+
+    // Sayfa yoksa sıfırdan oluştur
+    var sheet = cfgSayfayiSifirla(ss, sayfaAdi);
     _dmBasliklariYaz(sheet);
 
-    var baglantiVerisi = _dmBaglantiNoktasiOku(ss);
-    var piyasaVerisi   = _dmPiyasaVerisiOku(ss, ay, yil, gun);
-    var hesaplananGun  = cfgBaglantiTarihiOku(ss);
-
+    // Saatlik satırları boş olarak oluştur (veri 11_GunlukOtomatikCalisma tarafından yazılacak)
     for (var i = 0; i < 24; i++) {
       var satirNo = i + 3;
-      var ptf     = piyasaVerisi.ptf[i]    || 0;
-      var smf     = piyasaVerisi.smf[i]    || 0;
-      var pozDen  = piyasaVerisi.pozDen[i] || 0;
-      var negDen  = piyasaVerisi.negDen[i] || 0;
-
-      // A: SAAT
       sheet.getRange(satirNo, 1).setValue(CFG_SAATLER_24[i])
         .setBackground('#1C2B3A').setFontColor('#FFFFFF')
         .setFontWeight('bold').setHorizontalAlignment('center');
-
-      // B: Şebeke Tahmini
-      var tahmin = baglantiVerisi[i] || 0;
-      sheet.getRange(satirNo, 2).setValue(tahmin).setNumberFormat('0.000')
-        .setNote('Kaynak: BaglantiNoktalari!G' + (i + 2));
-
-      // C: Gerçek tüketim — AMR_Saatlik
-      var amrDeger = 0;
-      var amrSheet = ss.getSheetByName(CFG_SAYFA_AMR_SAATLIK);
-      if (amrSheet && amrSheet.getLastRow() >= i + 2) {
-        amrDeger = parseFloat(amrSheet.getRange(i + 2, 2).getValue()) || 0;
-      }
-      sheet.getRange(satirNo, 3).setValue(amrDeger).setNumberFormat('0.000')
-        .setNote('Kaynak: AMR_Saatlik B' + (i + 2));
-
-      // D: Fark = TAHMİN - GERÇEK
-      var fark = tahmin - amrDeger;
-      sheet.getRange(satirNo, 4).setValue(fark).setNumberFormat('0.000');
-
-      // E–H: Fiyatlar
-      sheet.getRange(satirNo, 5).setValue(ptf).setNumberFormat('#,##0.00');
-      sheet.getRange(satirNo, 6).setValue(smf).setNumberFormat('#,##0.00');
-      sheet.getRange(satirNo, 7).setValue(pozDen).setNumberFormat('#,##0.00');
-      sheet.getRange(satirNo, 8).setValue(negDen).setNumberFormat('#,##0.00');
-
-      // I: Pozitif Fark = PozDen - PTF
-      var pozFark = pozDen - ptf;
-      sheet.getRange(satirNo, 9).setValue(pozFark).setNumberFormat('#,##0.00 "₺"')
-        .setNote('PozDen − PTF = ' + pozDen + ' − ' + ptf);
-
-      // J: Negatif Fark = NegDen - PTF
-      var negFark = negDen - ptf;
-      sheet.getRange(satirNo, 10).setValue(negFark).setNumberFormat('#,##0.00 "₺"')
-        .setNote('NegDen − PTF = ' + negDen + ' − ' + ptf);
-
-      // K: Ayraç
-      sheet.getRange(satirNo, 11).setValue('');
-
-      // L: EPİAŞ = MUTLAK(EĞER(D>0; D*I; D*J))
-      var epias = Math.abs(fark > 0 ? fark * pozFark : fark * negFark);
-      sheet.getRange(satirNo, 12).setValue(epias).setNumberFormat('#,##0.00 "₺"');
-
-      // M: TEİAŞ — 16:00-21:00 arası 0.04, diğer saatler 0
-      var teias = 0;
-      var saat = i; // 0-23 arası
-      if (saat >= 16 && saat <= 21) {
-        if (Math.abs(fark) > tahmin * 0.15) {
-          teias = Math.abs(fark * Math.max(ptf, smf) * 0.04);
-        }
-      }
-      // diğer saatler: 0.08 * 0 = 0
-      sheet.getRange(satirNo, 13).setValue(teias).setNumberFormat('#,##0.00 "₺"');
-
-      // Satır rengi
       sheet.getRange(satirNo, 2, 1, 12).setBackground(i % 2 === 0 ? '#F7F9FC' : '#FFFFFF');
+      // Format ata — veri gelince görünüm hazır olsun
+      sheet.getRange(satirNo, 2).setNumberFormat('0.000');
+      sheet.getRange(satirNo, 3).setNumberFormat('0.000');
+      sheet.getRange(satirNo, 4).setNumberFormat('0.000');
+      sheet.getRange(satirNo, 5).setNumberFormat('#,##0.00');
+      sheet.getRange(satirNo, 6).setNumberFormat('#,##0.00');
+      sheet.getRange(satirNo, 7).setNumberFormat('#,##0.00');
+      sheet.getRange(satirNo, 8).setNumberFormat('#,##0.00');
+      sheet.getRange(satirNo, 9).setNumberFormat('#,##0.00 "₺"');
+      sheet.getRange(satirNo, 10).setNumberFormat('#,##0.00 "₺"');
+      sheet.getRange(satirNo, 12).setNumberFormat('#,##0.00 "₺"');
+      sheet.getRange(satirNo, 13).setNumberFormat('#,##0.00 "₺"');
     }
 
     _dmToplamSatirYaz(sheet);
-    _dmAylikDengesizlikTablosu(sheet, ss, ay, yil, hesaplananGun);
+    _dmAylikDengesizlikTablosu(sheet, ss, ay, yil);
 
     SpreadsheetApp.flush();
-    Logger.log('✅ ' + sayfaAdi + ' oluşturuldu.');
+    Logger.log('✅ ' + sayfaAdi + ' iskelet oluşturuldu.');
     return { success: true, sayfa: sayfaAdi, ay: ay, yil: yil };
 
   } catch(e) {
@@ -180,11 +140,8 @@ function _dmToplamSatirYaz(sheet) {
 
 // ─── AYLIK DENGESİZLİK TABLOSU ───────────────────────────────────────────────
 
-function _dmAylikDengesizlikTablosu(sheet, ss, ay, yil, hesaplananGun) {
+function _dmAylikDengesizlikTablosu(sheet, ss, ay, yil) {
   var gunSayisi = new Date(yil, ay, 0).getDate();
-  var hesGun    = hesaplananGun ? hesaplananGun.getDate()      : 0;
-  var hesAy     = hesaplananGun ? hesaplananGun.getMonth() + 1 : 0;
-  var hesYil    = hesaplananGun ? hesaplananGun.getFullYear()  : 0;
 
   for (var g = 1; g <= gunSayisi; g++) {
     var satirNo = g + 2;
@@ -196,18 +153,12 @@ function _dmAylikDengesizlikTablosu(sheet, ss, ay, yil, hesaplananGun) {
     var qHucre = sheet.getRange(satirNo, 17);
     var rHucre = sheet.getRange(satirNo, 18);
 
-    if (g === hesGun && hesAy === ay && hesYil === yil) {
-      SpreadsheetApp.flush();
-      var epiasVal = parseFloat(sheet.getRange(27, 12).getValue()) || 0;
-      var teiasVal = parseFloat(sheet.getRange(27, 13).getValue()) || 0;
-      pHucre.setValue(epiasVal).setBackground('#EBF8EE').setFontWeight('bold');
-      qHucre.setValue(teiasVal).setBackground('#EBF8EE');
-      rHucre.setValue(epiasVal + teiasVal).setBackground('#EBF8EE').setFontWeight('bold');
-    } else {
-      pHucre.setValue('').setBackground(bg);
-      qHucre.setValue('').setBackground(bg);
-      rHucre.setFormula('=P' + satirNo + '+Q' + satirNo).setBackground(bg);
-    }
+    // Veri yoksa boş bırak — 11_GunlukOtomatikCalisma dolduracak
+    // Zaten dolu hücrelere dokunma
+    if (!pHucre.getValue()) pHucre.setValue('').setBackground(bg);
+    if (!qHucre.getValue()) qHucre.setValue('').setBackground(bg);
+    if (!rHucre.getValue()) rHucre.setFormula('=P' + satirNo + '+Q' + satirNo).setBackground(bg);
+
     pHucre.setNumberFormat('#,##0.00 "₺"');
     qHucre.setNumberFormat('#,##0.00 "₺"');
     rHucre.setNumberFormat('#,##0.00 "₺"');
