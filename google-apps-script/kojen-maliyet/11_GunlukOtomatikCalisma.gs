@@ -750,9 +750,9 @@ function getRaporData(params) {
         avantaj = parseFloat(kcSheet.getRange(kcSatir, 9).getValue()) || 0;
       }
 
-      if (toplamMal || kojenUretim || epias || avantaj) {
+      if (toplamMal || kojenUretim || epias || avantaj || sebeke) {
         var tarih = cfgPad2(g) + '.' + cfgPad2(ay) + '.' + yil;
-        aylikGunler.push({ tarih: tarih, avantaj: avantaj, sebekeMal: toplamMal, birimMal: birimMal, kojenUretim: kojenUretim, kojenMal: kojenMal, dengesizlik: epias + teias });
+        aylikGunler.push({ tarih: tarih, avantaj: avantaj, sebekeMal: toplamMal, birimMal: birimMal, kojenUretim: kojenUretim, kojenMal: kojenMal, dengesizlik: epias + teias, sebeke: sebeke });
         topAvantaj     += avantaj;
         topSebekeMal   += toplamMal;
         topKojenUretim += kojenUretim;
@@ -780,13 +780,13 @@ function getRaporData(params) {
       }
     }
 
-    var bagSheet = ss.getSheetByName(CFG_SAYFA_BAGLANTI);
+    // Aylık şebeke ve kojen üretim toplamları — günlük verilerden hesapla
     var toplamUretim = 0, toplamSebeke = 0;
-    if (bagSheet && bagSheet.getLastRow() >= 26) {
-      var bagToplam = bagSheet.getRange(26, 1, 1, 7).getValues()[0];
-      toplamSebeke = parseFloat(bagToplam[1]) || 0;
-      toplamUretim = (parseFloat(bagToplam[2])||0) + (parseFloat(bagToplam[3])||0) + (parseFloat(bagToplam[4])||0);
+    for (var sg = 0; sg < aylikGunler.length; sg++) {
+      toplamSebeke += (aylikGunler[sg].sebeke      || 0);
+      toplamUretim += (aylikGunler[sg].kojenUretim || 0);
     }
+    var karsilama = toplamSebeke > 0 ? toplamUretim / toplamSebeke * 100 : 0;
 
     return {
       success: true,
@@ -794,7 +794,7 @@ function getRaporData(params) {
         maliyet: { kojenMaliyet: maliyet.kojenMaliyet||0, yekdem: maliyet.yekdem||0, dagitim: maliyet.dagitim||0, vtcGider: maliyet.vtcGider||0, birimMaliyet: maliyet.kojenMaliyet||0, net: maliyet.kojenMaliyet||0 },
         avantaj: { toplam: topAvantaj, gunSayisi: aylikGunler.length, gunluk: aylikGunler.map(function(g) { return { tarih: g.tarih, avantaj: g.avantaj }; }) },
         dengesizlik: { epiasToplam: topEpias, teiasToplam: topTeias, aylik: dengesizlikAylik },
-        fatura: { toplam: faturasToplam, sebekeMwh: faturasSebeke, saatlik: faturasSaatlik },
+        fatura: { toplam: topSebekeMal, sebekeMwh: toplamSebeke, saatlik: faturasSaatlik },
         baglanti: { toplamUretim: toplamUretim, toplamSebeke: toplamSebeke, karsilama: toplamSebeke > 0 ? toplamUretim / toplamSebeke * 100 : 0 },
         motorlar: { gm1: {}, gm2: {}, gm3: {} },
         aylikOzet: { gunluk: aylikGunler }

@@ -113,9 +113,23 @@ function handleLogout() {
 
 async function handleGenerateReport() {
   if (State.loading) return;
+  var startDate = getVal('reportStartDate');
+  var endDate   = getVal('reportEndDate');
+
+  // Başlangıç tarihinden ay ve yılı çıkar — dropdown'a bağımlı olma
+  var derivedMonth = parseInt(getVal('reportMonth'), 10);
+  var derivedYear  = parseInt(getVal('reportYear'),  10);
+  if (startDate) {
+    var parts = startDate.split('-');
+    if (parts.length === 3) {
+      derivedYear  = parseInt(parts[0], 10) || derivedYear;
+      derivedMonth = parseInt(parts[1], 10) || derivedMonth;
+    }
+  }
+
   var filter = {
-    month: parseInt(getVal('reportMonth'), 10), year: parseInt(getVal('reportYear'), 10),
-    type: getVal('reportType'), startDate: getVal('reportStartDate'), endDate: getVal('reportEndDate')
+    month: derivedMonth, year: derivedYear,
+    type: getVal('reportType'), startDate: startDate, endDate: endDate
   };
   State.currentFilter = filter;
   setLoading(true);
@@ -145,14 +159,14 @@ function fetchReportData(filter) {
   return new Promise(function (resolve, reject) {
     if (!KMR_URL) { reject(new Error('GAS URL tanımlı değil.')); return; }
 
-    var cbName = '_raporCb_' + Date.now();
+    var cbName = 'gasRaporCb' + Date.now();
     var timer;
 
     window[cbName] = function (json) {
       clearTimeout(timer);
       var s = document.getElementById(cbName);
       if (s && s.parentNode) s.parentNode.removeChild(s);
-      delete window[cbName];
+      try { delete window[cbName]; } catch(e) { window[cbName] = undefined; }
       if (!json || !json.success) {
         reject(new Error(json && json.error ? json.error : 'Sunucu hatası'));
       } else {
@@ -163,7 +177,7 @@ function fetchReportData(filter) {
     timer = setTimeout(function () {
       var s = document.getElementById(cbName);
       if (s && s.parentNode) s.parentNode.removeChild(s);
-      delete window[cbName];
+      try { delete window[cbName]; } catch(e) { window[cbName] = undefined; }
       reject(new Error('Zaman aşımı: Sunucu 30 saniye içinde yanıt vermedi.'));
     }, 30000);
 
@@ -210,7 +224,7 @@ function renderKpis(data) {
   setEl('kpiDengesizlik',    fmtTL((d.epiasToplam||0)+(d.teiasToplam||0)));
   setEl('kpiDengesizlikSub', 'EPİAŞ: ' + fmtTL(d.epiasToplam||0) + ' · TEİAŞ: ' + fmtTL(d.teiasToplam||0));
   setEl('kpiFatura',    fmtTL(f.toplam||0));
-  setEl('kpiFaturaSub', 'Şebeke: ' + fmtMwh(f.sebekeMwh||0));
+  setEl('kpiFaturaSub', 'Şebeke: ' + fmtMwh(f.sebekeMwh||0) + ' · Aylık toplam D28');
   setEl('kpiKojenUretim',    fmtMwh(aylikKojenUretim));
   setEl('kpiKojenUretimSub', 'GM1+GM2+GM3 aylık toplam');
   setEl('kpiSebeke',    fmtMwh(b.toplamSebeke||0));
@@ -343,7 +357,7 @@ async function handleBaglantiCek() {
   setEl('baglantiTarihLabel','Yükleniyor...');
   document.getElementById('baglantiTableBody').innerHTML='<tr><td colspan="7" class="empty-row">Yükleniyor...</td></tr>';
 
-  var cbName = '_bagCb_' + Date.now();
+  var cbName = 'gasBagCb' + Date.now();
   var timer = setTimeout(function () {
     var s = document.getElementById(cbName);
     if (s && s.parentNode) s.parentNode.removeChild(s);
@@ -729,7 +743,7 @@ var KM_MODAL = {
       gucBedeli         : getVal('kmGucBedeli').trim()    || '0',
       not               : getVal('kmNot').trim(),
       kaydedenKullanici : (State.user && (State.user.email || State.user.firstName)) || 'admin',
-      callback          : 'KM_MODAL._jsonpCevap'
+      callback          : 'KM_MODAL.gasJsonpCevap'
     };
 
     this.setSaving(true);
@@ -760,7 +774,7 @@ var KM_MODAL = {
   },
 
   /** JSONP callback — GAS'tan gelen yanıt buraya düşer */
-  _jsonpCevap: function (json) {
+  gasJsonpCevap: function (json) {
     clearTimeout(KM_MODAL._jsonpTimeout);
     KM_MODAL.setSaving(false);
 
@@ -775,6 +789,9 @@ var KM_MODAL = {
 
     KM_MODAL._kaydetBasarili(KM_MODAL._pendingPayload);
   },
+
+  /** Eski alias — geriye dönük uyumluluk */
+  _jsonpCevap: function (json) { KM_MODAL.gasJsonpCevap(json); },
 
   _kaydetBasarili: function (payload) {
     var AYLAR = ['','Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
@@ -920,7 +937,7 @@ var OtoHesap = {
     }, 1000);
 
     // JSONP — file:// ve CORS sorunlarını aşar
-    var cbName = '_otoHesapCb_' + Date.now();
+    var cbName = 'gasOtoCb' + Date.now();
     window[cbName] = function (json) {
       clearInterval(self._progressTimer);
       clearTimeout(self._timeoutTimer);
