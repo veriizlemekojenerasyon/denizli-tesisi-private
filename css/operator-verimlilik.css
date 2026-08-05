@@ -194,7 +194,7 @@
 }
 
 .operator-table {
-    min-width: 1400px;
+    min-width: 1960px;
 }
 
 .operator-table td:first-child {
@@ -240,5 +240,165 @@
     .motor-meta,
     .module-meta {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ─── 6. TREND PANELİ ─────────────────────────────────────────────────────── */
+
+.trend-grid {
+    grid-template-columns: 1fr;
+}
+
+.trend-panel {
+    display: grid;
+    gap: 0;
+}
+
+.trend-bars {
+    display: grid;
+    gap: 10px;
+    padding-bottom: 12px;
+}
+
+.trend-row {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr) 140px;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.trend-meta {
+    display: grid;
+    gap: 3px;
+}
+
+.trend-label {
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.trend-date {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.trend-bar-wrap {
+    height: 12px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.trend-bar {
+    height: 100%;
+    min-width: 3px;
+    border-radius: inherit;
+    background: var(--blue);
+    transition: width 0.4s ease;
+}
+
+.trend-bar.good  { background: var(--green); }
+.trend-bar.watch { background: var(--blue); }
+.trend-bar.warn  { background: var(--amber); }
+.trend-bar.risk  { background: var(--red, #ef4444); }
+
+.trend-stats {
+    display: grid;
+    gap: 3px;
+    text-align: right;
+}
+
+.trend-score {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--text);
+}
+
+.trend-score.good  { color: var(--green); }
+.trend-score.watch { color: var(--blue); }
+.trend-score.warn  { color: var(--amber); }
+.trend-score.risk  { color: var(--red, #ef4444); }
+.trend-score.muted { color: var(--muted); font-size: 14px; }
+
+.trend-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+/* Yön oklari */
+.trend-up   { color: var(--green); font-weight: 900; }
+.trend-down { color: var(--red, #ef4444); font-weight: 900; }
+.trend-flat { color: var(--muted); font-weight: 800; }
+
+/* Operator bazli trend özeti */
+.trend-op-section {
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    margin-top: 4px;
+    display: grid;
+    gap: 8px;
+}
+
+.trend-op-section > strong {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.trend-op-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #ffffff;
+}
+
+.trend-op-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trend-op-score {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.trend-op-arrow {
+    font-size: 16px;
+    font-weight: 900;
+    min-width: 20px;
+    text-align: center;
+}
+
+@media (max-width: 860px) {
+    .trend-row {
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+    }
+
+    .trend-bar-wrap {
+        grid-column: 1 / -1;
+    }
+
+    .trend-stats {
+        text-align: left;
     }
 }

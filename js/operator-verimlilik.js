@@ -26,6 +26,50 @@
     const TIMELINESS_PENALTY_MAX = 6;
     const REPEATED_VALUE_PENALTY_MAX = 3;
     const SHIFT_CLOSE_PENALTY_MAX = 5;
+    // Gece vardiyasi bonusu: 24-08 saatlik/motor/enerji girisleri icin ekstra agirlik
+    const NIGHT_SHIFT_BONUS_MAX = 3;
+    // Gecersiz/hatali deger cezasi
+    const INVALID_VALUE_PENALTY_MAX = 8;   // toplam ceza tavan
+    const INVALID_VALUE_PENALTY_PER = 0.5; // gecersiz deger basina ceza
+
+    // Modul bazli alan gecerlilik kurallari: { field, min, max, allowZero }
+    // min/max: fiziksel sinirlar. allowZero: true ise 0 gecerli sayilir.
+    const FIELD_VALIDITY_RULES = {
+        hourly: [
+            { field: 'aktifMwh',    min: 0,    max: 50,   allowZero: false },
+            { field: 'reaktifMwh',  min: -20,  max: 20,   allowZero: true  },
+            { field: 'aydemAktif',  min: 0,    max: 50,   allowZero: false },
+            { field: 'aydemReaktif',min: -20,  max: 20,   allowZero: true  }
+        ],
+        motor: [
+            { field: 'sarjSicaklik',    min: 0,   max: 100,  allowZero: false },
+            { field: 'sargiSicaklik1',  min: 0,   max: 200,  allowZero: false },
+            { field: 'sargiSicaklik2',  min: 0,   max: 200,  allowZero: false },
+            { field: 'sargiSicaklik3',  min: 0,   max: 200,  allowZero: false },
+            { field: 'yagBasinci',      min: 0,   max: 10,   allowZero: false },
+            { field: 'sogutmaSuyu',     min: 0,   max: 120,  allowZero: false }
+        ],
+        energy: [
+            { field: 'aktifGuc',        min: 0,   max: 4.5,  allowZero: false },
+            { field: 'aktifGucMw',      min: 0,   max: 4.5,  allowZero: false }
+        ],
+        daily: [
+            { field: 'yagSeviyesi',     min: 0,   max: 5000, allowZero: false },
+            { field: 'kuplaj',          min: 0,   max: 200,  allowZero: true  },
+            { field: 'gm1',             min: 0,   max: 200,  allowZero: true  },
+            { field: 'gm2',             min: 0,   max: 200,  allowZero: true  },
+            { field: 'gm3',             min: 0,   max: 200,  allowZero: true  },
+            { field: 'icihtiyac',       min: 0,   max: 100,  allowZero: true  },
+            { field: 'redresor1',       min: 0,   max: 50,   allowZero: true  },
+            { field: 'redresor2',       min: 0,   max: 50,   allowZero: true  },
+            { field: 'kojenIcihtiyac',  min: 0,   max: 5000, allowZero: true  },
+            { field: 'servisTrafo',     min: 0,   max: 50,   allowZero: true  }
+        ],
+        steam: [
+            { field: 'buharMiktari',    min: 0,   max: 1000, allowZero: false }
+        ],
+        shift: []  // Vardiya kaydi sayisal alan icermez, gecersizlik kontrolu yok
+    };
     const AUTO_OPERATOR_PATTERN = /(otomatik|automatic|system|sistem|kayit girilmedi|kayit yok)/i;
     const EXCLUDED_OPERATOR_NAME_KEYS = new Set(['MURAT COSKUN']);
     const HOURLY_REQUIRED_FIELDS = ['aktifMwh', 'reaktifMwh', 'aydemAktif', 'aydemReaktif'];
@@ -58,7 +102,9 @@
         operatorRows: [],
         loadErrors: [],
         quality: createEmptyQuality(),
-        motorAggregate: createMotorAggregate()
+        motorAggregate: createMotorAggregate(),
+        // Trend: son 3 haftalik puan ozeti (her hafta icin { label, avgScore, manualCount, missingRate })
+        trendWeeks: []
     };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -297,6 +343,7 @@
         const notes = String(row.notlar || row.aciklama || row.durum || '');
         const automatic = isAutomaticOperator(operator) || AUTO_OPERATOR_PATTERN.test(notes) || !operator;
         const fieldQuality = assessRecordQuality(module, row);
+        const invalidQuality = assessInvalidValues(module, row);
         const hourlyAccuracy = module === 'hourly'
             ? assessHourlyAccuracy(row)
             : { checked: 0, matched: 0, mismatched: 0 };
@@ -314,6 +361,7 @@
             automatic,
             endOfDay: time === '23:59',
             fieldQuality,
+            invalidQuality,
             hourlyAccuracy,
             extraWorkCount: 0,
             raw: row
@@ -365,6 +413,35 @@
             return countFilledFields(row, ['buharMiktari']);
         }
         return { passed: 1, total: 1 };
+    }
+
+    // Alan gecerlilik kontrolu: dolu olmanin otesinde fiziksel siniri da kontrol eder.
+    // Sonuc: { invalidCount, invalidFields }
+    function assessInvalidValues(module, row) {
+        const rules = FIELD_VALIDITY_RULES[module] || [];
+        const invalidFields = [];
+
+        rules.forEach(function (rule) {
+            // Alanda deger var mi?
+            if (!hasFilledValue(row[rule.field])) return; // bos = ayri metrik, burada atliyoruz
+            const val = toNumber(row[rule.field]);
+            // 0 izin verilmiyor ve deger 0 mu?
+            if (!rule.allowZero && val === 0) {
+                invalidFields.push(rule.field);
+                return;
+            }
+            // Negatif sinirlama (allowZero olsa bile min kontrolu)
+            if (val < rule.min) {
+                invalidFields.push(rule.field);
+                return;
+            }
+            // Fiziksel ust sinir asiliyor mu?
+            if (val > rule.max) {
+                invalidFields.push(rule.field);
+            }
+        });
+
+        return { invalidCount: invalidFields.length, invalidFields: invalidFields };
     }
 
     function countFilledFields(row, fields) {
@@ -448,6 +525,7 @@
         renderModuleSummary(quality);
         renderInsights(quality, operatorRows, motorAggregate);
         renderNotices(quality);
+        renderTrend(range);
         updateLabels(range, operatorRows);
     }
 
@@ -455,12 +533,14 @@
         state.operatorRows = [];
         state.quality = createEmptyQuality();
         state.motorAggregate = createMotorAggregate();
+        state.trendWeeks = [];
         renderKpis(state.quality, [], state.motorAggregate);
         renderScoreBoard([]);
         renderOperatorTable([]);
         renderMotorEfficiency(state.motorAggregate);
         renderModuleSummary(state.quality);
         renderInsights(state.quality, [], state.motorAggregate);
+        renderTrend(null);
     }
 
     function buildShiftOwnerMap(records) {
@@ -619,6 +699,7 @@
     function calculateOperatorRows(records, expectedEvents, missingEvents, ownerMap, range, allRangeRecords) {
         const stats = new Map();
         const selectedDays = Math.max(1, listDates(range.startDate, minIso(range.endDate, toIsoDate(getTodayDateOnly()))).length);
+        const workdayCount = countWorkdays(range.startDate, minIso(range.endDate, toIsoDate(getTodayDateOnly())));
         const motorConditionIndex = buildMotorConditionIndex(allRangeRecords || records);
         const repeatedHourlySlots = buildRepeatedHourlyValueSlots(allRangeRecords || records);
         const closedShiftIndex = buildClosedShiftIndex(allRangeRecords || records);
@@ -637,6 +718,10 @@
             applyMotorPowerScore(stat, record, motorConditionIndex);
             applyTimelinessScore(stat, record);
             applyRepeatedValueScore(stat, record, repeatedHourlySlots);
+            applyNightShiftBonus(stat, record);
+            applyCorrectionTracking(stat, record);
+            applyAlarmResponse(stat, record);
+            applyInvalidValuePenalty(stat, record);
             stat.days.add(record.dateIso);
         });
 
@@ -667,6 +752,9 @@
             });
         });
 
+        // Ardisik eksik cezasi: her operator icin sorumlu oldugu saatlerde 3+ ust uste eksik tespiti
+        applyConsecutiveMissingPenalty(stats, missingEvents, ownerMap);
+
         const rows = Array.from(stats.values());
         const maxManual = Math.max.apply(null, rows.map(row => row.manualTotal).concat([1]));
 
@@ -676,7 +764,7 @@
                 : 0;
             const qualityRatio = row.qualityTotal > 0 ? clamp(row.qualityPassed / row.qualityTotal, 0, 1) : 1;
             const volumeRatio = row.manualTotal / maxManual;
-            const activeDayRatio = Math.min(1, row.days.size / selectedDays);
+            const activeDayRatio = Math.min(1, row.days.size / Math.max(1, workdayCount));
             const moduleBreadth = MODULE_ORDER.filter(module => row.moduleCounts[module] > 0).length / MODULE_ORDER.length;
             const extraWorkRatio = Math.min(1, row.extraWorkCount / Math.max(1, row.moduleCounts.shift));
             const baseScore = row.assignedExpected > 0
@@ -692,7 +780,15 @@
             const timelinessAdjustment = calculateTimelinessAdjustment(row);
             const repeatedValueAdjustment = -Math.min(REPEATED_VALUE_PENALTY_MAX, row.repeatedValueWarnings);
             const shiftCloseAdjustment = -Math.min(SHIFT_CLOSE_PENALTY_MAX, row.shiftCloseWarnings * 0.5);
-            const score = baseScore + accuracyAdjustment + motorPowerAdjustment + timelinessAdjustment + repeatedValueAdjustment + shiftCloseAdjustment;
+            const nightShiftAdjustment = calculateNightShiftAdjustment(row);
+            const correctionAdjustment = calculateCorrectionAdjustment(row);
+            const alarmResponseAdjustment = calculateAlarmResponseAdjustment(row);
+            const consecutiveMissingPenalty = -Math.min(5, row.consecutiveMissingPenalty);
+            const invalidValuePenalty = -Math.min(INVALID_VALUE_PENALTY_MAX, row.invalidEntryCount * INVALID_VALUE_PENALTY_PER);
+            const score = baseScore + accuracyAdjustment + motorPowerAdjustment + timelinessAdjustment
+                + repeatedValueAdjustment + shiftCloseAdjustment
+                + nightShiftAdjustment + correctionAdjustment + alarmResponseAdjustment
+                + consecutiveMissingPenalty + invalidValuePenalty;
 
             row.completion = completion * 100;
             row.qualityPct = qualityRatio * 100;
@@ -708,6 +804,12 @@
             row.shiftCloseAdjustment = round(shiftCloseAdjustment);
             row.shiftCloseWarnings = round(row.shiftCloseWarnings);
             row.extraWorkCount = round(row.extraWorkCount);
+            row.nightShiftAdjustment = round(nightShiftAdjustment);
+            row.correctionAdjustment = round(correctionAdjustment);
+            row.alarmResponseAdjustment = round(alarmResponseAdjustment);
+            row.consecutiveMissingPenalty = round(consecutiveMissingPenalty);
+            row.invalidEntryCount = round(row.invalidEntryCount);
+            row.invalidValuePenalty = round(invalidValuePenalty);
             row.score = Math.round(clamp(score, 0, 100));
             row.assignedExpected = round(row.assignedExpected);
             row.assignedMissing = round(row.assignedMissing);
@@ -880,6 +982,164 @@
         return index;
     }
 
+    // ─── 1. GECE VARDİYASI BONUSU ───────────────────────────────────────────────
+    // 24-08 vardiyasina ait saatlik/motor/enerji girisleri bonus sayilir.
+    function applyNightShiftBonus(stat, record) {
+        if (!['hourly', 'motor', 'energy'].includes(record.module) || record.hour < 0) return;
+        stat.totalHourlyEntryCount += 1;
+        if (record.shift === '24-08') {
+            stat.nightShiftEntryCount += 1;
+        }
+    }
+
+    // Gece vardiyasi orani yuksekse bonus, yoksa ntr (ceza yok)
+    function calculateNightShiftAdjustment(row) {
+        if (row.totalHourlyEntryCount <= 0) return 0;
+        const nightRatio = row.nightShiftEntryCount / row.totalHourlyEntryCount;
+        // %30+ gece girisi → tam bonus, %15-30 arasi → kısmi bonus
+        if (nightRatio >= 0.3) return NIGHT_SHIFT_BONUS_MAX;
+        if (nightRatio >= 0.15) return Math.round(nightRatio / 0.3 * NIGHT_SHIFT_BONUS_MAX * 10) / 10;
+        return 0;
+    }
+
+    // ─── 2. HATA DÜZELTME TAKİBİ ────────────────────────────────────────────────
+    // updatedAt/guncellemeTarihi ile kayitTarihi karsilastirilarak duzeltme yapilmis mi kontrol edilir.
+    // Duzeltme yapilmissa hafif bonus, duzeltme yapilmamissa ceza yok (bilinmiyor varsayimi).
+    function applyCorrectionTracking(stat, record) {
+        if (!['hourly', 'motor', 'energy', 'daily'].includes(record.module)) return;
+        const raw = record.raw || {};
+        const updatedRaw = raw.guncellemeTarihi || raw.updatedAt || raw.UpdatedAt || raw.guncelleme || raw.sonGuncelleme;
+        const createdRaw = raw.kayitTarihi || raw.KayitTarihi || raw.createdAt;
+        if (!updatedRaw || !createdRaw) return;
+
+        const updated = parseRecordDateTime(updatedRaw);
+        const created = parseRecordDateTime(createdRaw);
+        if (!updated || !created) return;
+
+        // En az 1 dakika fark varsa duzeltme sayilir
+        const diffMinutes = (updated.getTime() - created.getTime()) / 60000;
+        if (diffMinutes >= 1) {
+            stat.correctedEntryCount += 1;
+        }
+    }
+
+    // Duzeltme yapan operator veri kalitesine ozeniyle yaklasiyor demektir → kucuk bonus
+    function calculateCorrectionAdjustment(row) {
+        if (row.correctedEntryCount <= 0) return 0;
+        // Her 5 duzeltmede +1 puan, maks +2
+        return Math.min(2, Math.floor(row.correctedEntryCount / 5));
+    }
+
+    // ─── 3. MOTOR ALARM MUDAHALE ────────────────────────────────────────────────
+    // Motor kaydinda alarm/dusuk yag/yuksek sicaklik varken operator mudahale notu girmisse bonus.
+    // alarm alanlarini motor raw verisinden okur.
+    function applyAlarmResponse(stat, record) {
+        if (record.module !== 'motor' || record.hour < 0) return;
+        const raw = record.raw || {};
+        const hasAlarm = detectMotorAlarm(raw);
+        if (!hasAlarm) return;
+
+        stat.alarmOccurrenceCount += 1;
+        // Mudahale notu: alarm, mudahale, aciklama, notlar alanlari
+        const notes = String(raw.alarm || raw.mudahale || raw.aciklama || raw.notlar || raw.durum || '').trim();
+        if (notes.length >= 5) {
+            stat.alarmResponseCount += 1;
+        }
+    }
+
+    function detectMotorAlarm(raw) {
+        // Alarm kodu/alarmi alanı dolu mu?
+        const alarmCode = String(raw.alarmKodu || raw.alarm || raw.alarmDurumu || '').trim();
+        if (alarmCode && alarmCode !== '0' && alarmCode.toLowerCase() !== 'yok' && alarmCode.toLowerCase() !== 'normal') return true;
+        // Yag basinci kritik esik (bar cinsinden, < 2.5 dusuk kabul)
+        const oilPressure = toNumber(raw.yagBasinci || raw.oilPressure || raw.yagBasinc);
+        if (oilPressure > 0 && oilPressure < 2.5) return true;
+        // Sogutma suyu sicakligi yuksek (> 90°C)
+        const coolantTemp = toNumber(raw.sogutmaSuyu || raw.sogutmaSicakligi || raw.coolantTemp || raw.sogutma);
+        if (coolantTemp > 90) return true;
+        // Sarj sicakligi zaten assessMotorCondition'da yuksek olarak isaretlenmis
+        const condition = assessMotorCondition(raw);
+        return condition.high;
+    }
+
+    function calculateAlarmResponseAdjustment(row) {
+        if (row.alarmOccurrenceCount <= 0) return 0;
+        const responseRate = row.alarmResponseCount / row.alarmOccurrenceCount;
+        // Alarm durumlarinin %80+'inde mudahale notu varsa +2, %50+'inde +1
+        if (responseRate >= 0.8) return 2;
+        if (responseRate >= 0.5) return 1;
+        return 0;
+    }
+
+    // ─── GEÇERSIZ/HATALI DEĞER CEZASI ────────────────────────────────────────────
+    // Record'daki invalidQuality.invalidCount > 0 ise operatorun invalidEntryCount'una eklenir.
+    // Her gecersiz alan basina INVALID_VALUE_PENALTY_PER puan dusuler, toplam max INVALID_VALUE_PENALTY_MAX.
+    function applyInvalidValuePenalty(stat, record) {
+        const iq = record.invalidQuality;
+        if (!iq || iq.invalidCount <= 0) return;
+        stat.invalidEntryCount += iq.invalidCount;
+    }
+
+    // ─── 4. ARDIŞIK EKSİK CEZASI ────────────────────────────────────────────────
+    // Bir operatorun sorumlu oldugu slotlarda 3+ ust uste eksik varsa ek ceza uygulanir.
+    function applyConsecutiveMissingPenalty(stats, missingEvents, ownerMap) {
+        // Sadece saatlik moduldeki ardisik eksikler degerlendiriliyor
+        const hourlyMissing = missingEvents
+            .filter(event => event.module === 'hourly' && event.hour >= 0)
+            .sort((a, b) => {
+                const ta = getExpectedRecordDateTime(a.dateIso, a.hour);
+                const tb = getExpectedRecordDateTime(b.dateIso, b.hour);
+                return (ta ? ta.getTime() : 0) - (tb ? tb.getTime() : 0);
+            });
+
+        // Her operator icin ardisik eksik zincirlerini bul
+        const operatorMissingTimestamps = new Map();
+        hourlyMissing.forEach(event => {
+            const owners = getOwnersForEvent(event, ownerMap);
+            if (!owners.length) return;
+            const ts = getExpectedRecordDateTime(event.dateIso, event.hour);
+            if (!ts) return;
+            owners.forEach(owner => {
+                if (!operatorMissingTimestamps.has(owner.key)) {
+                    operatorMissingTimestamps.set(owner.key, []);
+                }
+                operatorMissingTimestamps.get(owner.key).push(ts.getTime());
+            });
+        });
+
+        operatorMissingTimestamps.forEach((timestamps, key) => {
+            if (!stats.has(key)) return;
+            const stat = stats.get(key);
+            // Ust uste 3+ saati bul
+            let consecutive = 1;
+            let maxConsecutive = 1;
+            for (let i = 1; i < timestamps.length; i += 1) {
+                if (timestamps[i] - timestamps[i - 1] === 3600000) {
+                    consecutive += 1;
+                    maxConsecutive = Math.max(maxConsecutive, consecutive);
+                } else {
+                    consecutive = 1;
+                }
+            }
+            // 3 ardisik = 1 ceza puan, her ek 1 saat +0.5 daha
+            if (maxConsecutive >= 3) {
+                stat.consecutiveMissingPenalty = Math.min(5, (maxConsecutive - 2) * 1.0);
+            }
+        });
+    }
+
+    // ─── 5. HAFTA SONU NORMALİZASYONU ───────────────────────────────────────────
+    // activeDayRatio icin hafta sonu gunleri paydan cikarilir (is gunu bazi)
+    function countWorkdays(startIso, endIso) {
+        const dates = listDates(startIso, endIso);
+        const count = dates.filter(dateIso => {
+            const d = parseIsoDate(dateIso);
+            const day = d.getDay(); // 0=Pazar, 6=Cumartesi
+            return day !== 0 && day !== 6;
+        }).length;
+        return Math.max(1, count);
+    }
+
     function ensureOperatorStat(stats, key, name) {
         if (!stats.has(key)) {
             stats.set(key, {
@@ -909,6 +1169,23 @@
                 shiftCloseWarnings: 0,
                 shiftCloseAdjustment: 0,
                 extraWorkCount: 0,
+                // Gece vardiyasi bonusu
+                nightShiftEntryCount: 0,
+                totalHourlyEntryCount: 0,
+                nightShiftAdjustment: 0,
+                // Hata duzeltme takibi
+                correctedEntryCount: 0,
+                uncorrectedErrorCount: 0,
+                correctionAdjustment: 0,
+                // Motor alarm mudahale
+                alarmResponseCount: 0,
+                alarmOccurrenceCount: 0,
+                alarmResponseAdjustment: 0,
+                // Ardisik eksik cezasi
+                consecutiveMissingPenalty: 0,
+                // Gecersiz/hatali deger cezasi
+                invalidEntryCount: 0,
+                invalidValuePenalty: 0,
                 completion: 0,
                 score: 0,
                 level: getScoreLevel(0),
@@ -979,7 +1256,7 @@
         const body = document.getElementById('operatorTableBody');
         if (!body) return;
         if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="23">Secili aralikta operator verisi yok.</td></tr>';
+            body.innerHTML = '<tr><td colspan="29">Secili aralikta operator verisi yok.</td></tr>';
             return;
         }
 
@@ -1005,6 +1282,12 @@
             `<td>${formatInteger(row.repeatedValueWarnings)}</td>`,
             `<td>${formatNumber(row.shiftCloseWarnings)}</td>`,
             `<td>${formatNumber(row.extraWorkCount)}</td>`,
+            `<td>${formatSignedNumber(row.nightShiftAdjustment)}</td>`,
+            `<td>${formatSignedNumber(row.correctionAdjustment)}</td>`,
+            `<td>${formatSignedNumber(row.alarmResponseAdjustment)}</td>`,
+            `<td>${formatSignedNumber(row.consecutiveMissingPenalty)}</td>`,
+            `<td>${formatInteger(row.invalidEntryCount)}</td>`,
+            `<td>${formatSignedNumber(row.invalidValuePenalty)}</td>`,
             `<td>%${formatNumber(row.completion)}</td>`,
             `<td class="score-cell">${formatInteger(row.score)}</td>`,
             `<td><span class="level-pill ${row.level.className}">${escapeHtml(row.level.label)}</span></td>`,
@@ -1081,6 +1364,8 @@
         if (!target) return;
         const best = rows[0];
         const riskCount = rows.filter(row => row.score < 60).length;
+        const totalInvalidEntries = rows.reduce((sum, row) => sum + (row.invalidEntryCount || 0), 0);
+        const invalidOperatorCount = rows.filter(row => (row.invalidEntryCount || 0) > 0).length;
         const missingRate = quality.expectedCount > 0 ? (quality.missingCount / quality.expectedCount) * 100 : 0;
         const fieldQuality = quality.fieldCheckTotal > 0
             ? (quality.fieldCheckPassed / quality.fieldCheckTotal) * 100
@@ -1125,6 +1410,13 @@
                 text: `${formatInteger(riskCount)} operator 60 puanin altinda.`
             },
             {
+                level: totalInvalidEntries > 0 ? 'warn' : 'ok',
+                title: 'Gecersiz/hatali deger',
+                text: totalInvalidEntries > 0
+                    ? `${formatInteger(totalInvalidEntries)} gecersiz alan tespit edildi (${formatInteger(invalidOperatorCount)} operator). Sifir, negatif veya fiziksel sinir disi degerler puan dusurdu.`
+                    : 'Gecersiz deger tespit edilmedi.'
+            },
+            {
                 level: motorAggregate.total.efficiency > 70 ? 'ok' : 'warn',
                 title: 'Motor ortalama yuk',
                 text: motorAggregate.total.efficiency > 0
@@ -1142,6 +1434,160 @@
             '  </div>',
             '</div>'
         ].join('')).join('');
+    }
+
+    // ─── 6. TREND GÖSTERİMİ ─────────────────────────────────────────────────────
+    // Secili araliktan geriye dogru 3 haftalik (W-2, W-1, Bu Hafta) puan ozeti hesaplanir.
+    // Mevcut records havuzundan hesaplanir; ekstra API cagrisi gerekmez.
+
+    function calculateTrendWeeks(currentRange) {
+        const todayIso = toIsoDate(getTodayDateOnly());
+        // Secili aralik kac gun? Trend dilimlerini ayni boyutta tut (max 7 gun)
+        const rangeLen = Math.min(7, listDates(currentRange.startDate, currentRange.endDate).length);
+
+        const weeks = [];
+        for (let offset = 2; offset >= 0; offset -= 1) {
+            const endDate = shiftIsoDate(currentRange.endDate, -offset * 7);
+            const startDate = shiftIsoDate(endDate, -(rangeLen - 1));
+            // Gelecek gunleri hesaba katma
+            const clampedEnd = minIso(endDate, todayIso);
+            if (clampedEnd < startDate) {
+                weeks.push({ label: weekLabel(offset, currentRange), avgScore: null, manualCount: 0, missingRate: null, startDate, endDate: clampedEnd });
+                continue;
+            }
+
+            const weekRange = { startDate, endDate: clampedEnd, valid: true };
+            const rangeRecords = state.records.filter(record => isInRange(record.dateIso, weekRange));
+            const filteredRecords = rangeRecords.filter(record => moduleMatches(record.module));
+            const ownerMap = buildShiftOwnerMap(rangeRecords);
+            const expectedEvents = buildExpectedEvents(weekRange);
+            const quality = calculateQuality(filteredRecords, expectedEvents, ownerMap);
+            const operatorRows = calculateOperatorRows(filteredRecords, expectedEvents, quality.missingEvents, ownerMap, weekRange, rangeRecords);
+
+            const avgScore = operatorRows.length
+                ? operatorRows.reduce((sum, row) => sum + row.score, 0) / operatorRows.length
+                : null;
+            const missingRate = quality.expectedCount > 0
+                ? (quality.missingCount / quality.expectedCount) * 100
+                : null;
+
+            weeks.push({
+                label: weekLabel(offset, currentRange),
+                startDate,
+                endDate: clampedEnd,
+                avgScore: avgScore !== null ? round(avgScore) : null,
+                manualCount: quality.manualCount,
+                missingRate: missingRate !== null ? round(missingRate) : null,
+                operatorSnapshots: operatorRows.map(row => ({ key: row.key, name: row.name, score: row.score }))
+            });
+        }
+
+        state.trendWeeks = weeks;
+        return weeks;
+    }
+
+    function weekLabel(offsetFromCurrent, currentRange) {
+        if (offsetFromCurrent === 0) return 'Bu Donem';
+        if (offsetFromCurrent === 1) return '1 Hafta Once';
+        return '2 Hafta Once';
+    }
+
+    function shiftIsoDate(isoDate, days) {
+        const d = parseIsoDate(isoDate);
+        d.setDate(d.getDate() + days);
+        return toIsoDate(d);
+    }
+
+    function renderTrend(currentRange) {
+        const target = document.getElementById('trendPanel');
+        if (!target) return;
+
+        if (!currentRange) {
+            target.innerHTML = '<div class="empty-line">Trend icin tarih araligi secin.</div>';
+            return;
+        }
+
+        const weeks = calculateTrendWeeks(currentRange);
+        const hasData = weeks.some(w => w.avgScore !== null);
+        if (!hasData) {
+            target.innerHTML = '<div class="empty-line">Trend hesaplamak icin yeterli veri yok.</div>';
+            return;
+        }
+
+        // Maksimum puan baz alarak bar genisligi hesapla
+        const maxScore = Math.max.apply(null, weeks.map(w => w.avgScore || 0).concat([1]));
+
+        const bars = weeks.map((week, idx) => {
+            const score = week.avgScore;
+            const barWidth = score !== null ? clamp((score / 100) * 100, 2, 100) : 0;
+            const scoreClass = score === null ? '' : (score >= 90 ? 'good' : score >= 75 ? 'watch' : score >= 60 ? 'warn' : 'risk');
+            const trend = idx > 0 && weeks[idx - 1].avgScore !== null && score !== null
+                ? score - weeks[idx - 1].avgScore
+                : null;
+            const trendArrow = trend === null ? '' : trend > 1 ? ' ↑' : trend < -1 ? ' ↓' : ' →';
+            const trendClass = trend === null ? '' : trend > 1 ? 'trend-up' : trend < -1 ? 'trend-down' : 'trend-flat';
+
+            return [
+                '<div class="trend-row">',
+                '  <div class="trend-meta">',
+                `    <span class="trend-label">${escapeHtml(week.label)}</span>`,
+                `    <span class="trend-date">${isoToTrDate(week.startDate)} – ${isoToTrDate(week.endDate)}</span>`,
+                '  </div>',
+                '  <div class="trend-bar-wrap">',
+                `    <div class="trend-bar ${scoreClass}" style="width:${barWidth}%"></div>`,
+                '  </div>',
+                '  <div class="trend-stats">',
+                score !== null
+                    ? `    <span class="trend-score ${scoreClass}">${formatNumber(score)}<span class="${trendClass}">${escapeHtml(trendArrow)}</span></span>`
+                    : '    <span class="trend-score muted">--</span>',
+                `    <span class="trend-sub">${formatInteger(week.manualCount)} manuel`,
+                week.missingRate !== null ? ` / %${formatNumber(week.missingRate)} eksik` : '',
+                '    </span>',
+                '  </div>',
+                '</div>'
+            ].join('');
+        });
+
+        // Operator bazli trend: son 3 donemde de veri olan operatorler icin yön oku
+        const opTrend = buildOperatorTrendSummary(weeks);
+
+        target.innerHTML = [
+            '<div class="trend-bars">',
+            bars.join(''),
+            '</div>',
+            opTrend.length ? '<div class="trend-op-section"><strong>Operator Degisim</strong>' + opTrend.join('') + '</div>' : ''
+        ].join('');
+    }
+
+    function buildOperatorTrendSummary(weeks) {
+        // 3 donemde de puan varsa operatoru listele, yonu goster
+        const first = (weeks[0] && weeks[0].operatorSnapshots) || [];
+        const last = (weeks[weeks.length - 1] && weeks[weeks.length - 1].operatorSnapshots) || [];
+        if (!first.length || !last.length) return [];
+
+        const firstMap = new Map(first.map(op => [op.key, op.score]));
+        return last
+            .filter(op => firstMap.has(op.key))
+            .map(op => {
+                const diff = op.score - firstMap.get(op.key);
+                const arrow = diff > 2 ? '↑' : diff < -2 ? '↓' : '→';
+                const cls = diff > 2 ? 'trend-up' : diff < -2 ? 'trend-down' : 'trend-flat';
+                return [
+                    `<div class="trend-op-row">`,
+                    `  <span class="trend-op-name">${escapeHtml(op.name)}</span>`,
+                    `  <span class="trend-op-score">${formatInteger(firstMap.get(op.key))} → ${formatInteger(op.score)}</span>`,
+                    `  <span class="trend-op-arrow ${cls}">${arrow}</span>`,
+                    `</div>`
+                ].join('');
+            })
+            .sort((a, b) => {
+                // iyilesme one, kotu arkaya
+                const getScore = html => {
+                    const m = html.match(/\u2192 (\d+)/);
+                    return m ? parseInt(m[1], 10) : 0;
+                };
+                return getScore(b) - getScore(a);
+            });
     }
 
     function renderNotices(quality) {
@@ -1177,7 +1623,7 @@
         }
 
         const rows = [
-            ['Operator', 'Saatlik', 'Motor', 'Enerji', 'Gunluk', 'Buhar', 'Vardiya', 'Manuel Toplam', 'Sorumlu Slot', 'Eksik/Oto', 'Veri Tamligi %', 'Farksiz', 'Farkli', 'Fark Puani', 'Motor Guc Puani', 'Kontrol Edilen Motor', 'Zaman Puani', 'Gec Kayit', 'Tekrar Uyarisi', 'Kapanis Uyarisi', 'Ekstra Is', 'Tamamlanma %', 'Puan', 'Seviye']
+            ['Operator', 'Saatlik', 'Motor', 'Enerji', 'Gunluk', 'Buhar', 'Vardiya', 'Manuel Toplam', 'Sorumlu Slot', 'Eksik/Oto', 'Veri Tamligi %', 'Farksiz', 'Farkli', 'Fark Puani', 'Motor Guc Puani', 'Kontrol Edilen Motor', 'Zaman Puani', 'Gec Kayit', 'Tekrar Uyarisi', 'Kapanis Uyarisi', 'Ekstra Is', 'Gece Bonus', 'Duzeltme Bonus', 'Alarm Mudahale Bonus', 'Ardisik Eksik Ceza', 'Gecersiz Deger Sayisi', 'Gecersiz Deger Ceza', 'Tamamlanma %', 'Puan', 'Seviye']
         ].concat(state.operatorRows.map(row => [
             row.name,
             row.moduleCounts.hourly,
@@ -1200,6 +1646,12 @@
             formatCsvNumber(row.repeatedValueWarnings),
             formatCsvNumber(row.shiftCloseWarnings),
             formatCsvNumber(row.extraWorkCount),
+            formatCsvNumber(row.nightShiftAdjustment),
+            formatCsvNumber(row.correctionAdjustment),
+            formatCsvNumber(row.alarmResponseAdjustment),
+            formatCsvNumber(row.consecutiveMissingPenalty),
+            formatCsvNumber(row.invalidEntryCount),
+            formatCsvNumber(row.invalidValuePenalty),
             formatCsvNumber(row.completion),
             row.score,
             row.level.label
