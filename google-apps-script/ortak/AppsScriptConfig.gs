@@ -12,7 +12,7 @@ var APPS_SCRIPT_URLS = {
   enerji: 'https://script.google.com/macros/s/AKfycbyiULDEaklYKRnO9QSm16z_maXlhSJAPb6qPKqIgMjJXWHemjYNCMkBjO4lttwOreVi/exec',
   enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbxi4qHxf-EdltRpWAfEnM2qVQln66VPuuU-hnNk9g8T6_wosCrRakDEjSzeTNFqS3tQ/exec',
   yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxTOJuZuGXKTy2JoICtsgXMXjntSmkkWJAaUsiZg8pIwRWeDLjl027KzBTRTMYpsn8r/exec',
-  buhar: 'https://script.google.com/macros/s/AKfycbymvcpSQuKs7XZ4mGQlWZR1cluRLWjKs5HNRW6PMeUjQz4KTTzrRw7pSe7y1eEh_Lh_/exec',
+  buhar: 'https://script.google.com/macros/s/AKfycbwSBDT_7rnYmIDgCORUUZxULHewlSc-1QqVoUgOPAoYC5429zckWxVcgFE4vTTRigtd/exec',
   gunluk: 'https://script.google.com/macros/s/AKfycbwObrja3MBernSzq6Q8PGlik0btKgA6DXCswp3atilbuU0Sd-hEc3M6KtWaDU4hhloN/exec',
   bakim: 'https://script.google.com/macros/s/AKfycby2EIEvRXvSuoYMEBqKDBAvHlgADT43hCMb7vM-1Nas8jgqi5JfJldI8EwkPNfpneF5/exec',
   vardiya: 'https://script.google.com/macros/s/AKfycbxZE7LNlZRCbjI0PehXQN8-jhTyj5t735inYQ5b2ti6xN_ZNG23EASAbvf2SQUNCjat/exec',

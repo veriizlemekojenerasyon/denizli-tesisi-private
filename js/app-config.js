@@ -7,7 +7,7 @@
         enerji: 'https://script.google.com/macros/s/AKfycbz1UCYZDqq5QsMZyIKXdLux_snA3NFusReBhYxjAhBNPMAmxH6Rw2o4ZZ09yT4WRmIb/exec',
         enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbwSno62Ijw1RgvUdZTOCoBXV9NY3H-5bg1Po4WRG-sSuWM_nyZzP307scsyRvwZT1Ux/exec',
         yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxY0_SxJyIWp0TaDABKdhnPFmHmw7pRMUp33AQ7AujZN26mESmpTNr4Bqu81SY5u0F_/exec',
-        buhar: 'https://script.google.com/macros/s/AKfycbymvcpSQuKs7XZ4mGQlWZR1cluRLWjKs5HNRW6PMeUjQz4KTTzrRw7pSe7y1eEh_Lh_/exec',
+        buhar: 'https://script.google.com/macros/s/AKfycbwSBDT_7rnYmIDgCORUUZxULHewlSc-1QqVoUgOPAoYC5429zckWxVcgFE4vTTRigtd/exec',
         gunluk: 'https://script.google.com/macros/s/AKfycbyrRVJCrgQ1N_-C-kqBW-OA6FIhwshUOgDGGs-YPyliz0CI7JXcakYnk-tEj0pwZMYT/exec',
         bakim: 'https://script.google.com/macros/s/AKfycbyPVtza6spDtgNUkDlPMvX-wlDTAw_1qDu0Ms78wUfeb2WC3zjqgzDoxe3hDYfKjxes/exec',
         vardiya: 'https://script.google.com/macros/s/AKfycbzfcNufcJ8GB16pRxjOyLzGhMl_O2JLXasb8ONoTAjORjA_yvi3lDEfNwKiu8IP8iOt/exec',
@@ -16,7 +16,7 @@
         stok: 'https://script.google.com/macros/s/AKfycbwdgKAxZ9J4NdxKFvlTUPnr-pCGD7UfHXqM8q3VWR4OHgKXs0eCjVAy9LHU-EkcHVKv/exec',
         motorTakip: 'https://script.google.com/macros/s/AKfycbyxfk2wUCJVDzHETdYWf4-zTxeMMwwd4wJ1uPkgVSFy1x6Ujy-lkWAkqPRMQlt3ZyPx/exec',
         elzMainpage: 'https://script.google.com/macros/s/AKfycbza7E5qh7K1FCiCpotWe8M95Uzfb5sutcZTkpRkG4pzhjpmhBuvvXdaW16DmqKNlSpR/exec',
-        kojenMaliyetRapor: 'https://script.google.com/macros/s/AKfycbysr-rbVD0zXbTu_ZEUdn3nEh07VvKiwJDfz10pI5oOn493NjuZFI_meMPmESTvNgbS/exec'
+        kojenMaliyetRapor: 'https://script.google.com/macros/s/AKfycbysr-rbVD0zXbTu_ZEUdn3nEh07VvKiwJDfz10pI5oOn493NjuZFI_meMPmESTvNgbS/exec/exec'
     };
 
     function getScriptUrl(key) {

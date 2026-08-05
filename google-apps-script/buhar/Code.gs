@@ -62,11 +62,22 @@ function handleRequest(e) {
 
     if (lock) lock.releaseLock();
 
+    var callback = params.callback || '';
+    if (callback) {
+      return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     if (lock) lock.releaseLock();
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+    var callback2 = (e && e.parameter && e.parameter.callback) ? e.parameter.callback : '';
+    var errJson = JSON.stringify({ success: false, error: error.toString() });
+    if (callback2) {
+      return ContentService.createTextOutput(callback2 + '(' + errJson + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return ContentService.createTextOutput(errJson)
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -608,12 +619,12 @@ function installHourlyMissingRecordTrigger() {
   ScriptApp.newTrigger('checkHourlyMissingRecords')
     .timeBased()
     .everyDays(1)
-    .atHour(1)          // 01:00 — gece yarısından 1 saat sonra, tarih kesinleşmiş olur
+    .atHour(8)
     .nearMinute(0)
     .inTimezone(Session.getScriptTimeZone())
     .create();
 
-  return { success: true, message: 'Buhar günlük eksik kayit tetikleyicisi kuruldu (her gün 01:00)' };
+  return { success: true, message: 'Buhar günlük eksik kayit tetikleyicisi kuruldu (her gün 08:00)' };
 }
 
 function getTriggerHealth() {

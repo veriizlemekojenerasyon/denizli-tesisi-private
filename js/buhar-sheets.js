@@ -40,8 +40,7 @@ const BuharApp = {
         this.checkExistingRecord();
         this.loadLastRecords();
         
-        // g��� OTOMATİK KAYIT KONTROLÜ BA�?LAT
-        this.startAutoRecordCheck();
+        // NOT: Otomatik kayıt GAS sunucu trigger'ı ile yapılıyor (startAutoRecordCheck devre dışı)
         
         console.log('BuharApp baslatildi');
     },
@@ -68,16 +67,21 @@ const BuharApp = {
     // Varsayilan tarih ayarla
     setDefaultDate: function() {
         const tarihInput = document.getElementById('buharTarih');
+        const tarihDisplay = document.getElementById('buharTarihDisplay');
         if (tarihInput) {
-            // Bir gün önceki tarihi ayarla
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            tarihInput.value = yesterday.toISOString().split('T')[0];
-            
-            // Tarih degistiginde kontrol et
-            tarihInput.addEventListener('change', () => {
-                this.checkExistingRecord();
-            });
+            // Bir gün önceki tarihi ayarla — yerel saat kullan, UTC değil
+            const now = new Date();
+            const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            const yyyy = yesterday.getFullYear();
+            const mm   = String(yesterday.getMonth() + 1).padStart(2, '0');
+            const dd   = String(yesterday.getDate()).padStart(2, '0');
+            const isoDate = yyyy + '-' + mm + '-' + dd;
+            tarihInput.value = isoDate;
+
+            // Görünür alana TR formatında yaz
+            if (tarihDisplay) {
+                tarihDisplay.value = dd + '.' + mm + '.' + yyyy;
+            }
         }
     },
     
@@ -148,51 +152,81 @@ const BuharApp = {
         }
     },
     
+    // JSONP yardımcı — file:// ve CORS sorunlarını aşar
+    _jsonp: function(url, params) {
+        return new Promise(function(resolve, reject) {
+            var cbName = 'buharCb' + Date.now();
+            var timer = setTimeout(function() {
+                var s = document.getElementById(cbName);
+                if (s && s.parentNode) s.parentNode.removeChild(s);
+                try { delete window[cbName]; } catch(e) {}
+                reject(new Error('Zaman aşımı'));
+            }, 20000);
+
+            window[cbName] = function(json) {
+                clearTimeout(timer);
+                var s = document.getElementById(cbName);
+                if (s && s.parentNode) s.parentNode.removeChild(s);
+                try { delete window[cbName]; } catch(e) {}
+                resolve(json);
+            };
+
+            var fullUrl = url + '?' + params + '&callback=' + encodeURIComponent(cbName) + '&_t=' + Date.now();
+            var script = document.createElement('script');
+            script.id = cbName;
+            script.src = fullUrl;
+            script.onerror = function() {
+                clearTimeout(timer);
+                if (script.parentNode) script.parentNode.removeChild(script);
+                try { delete window[cbName]; } catch(e) {}
+                reject(new Error('GAS\'a bağlanılamadı'));
+            };
+            document.body.appendChild(script);
+        });
+    },
+
+    _buildParams: function(obj) {
+        return Object.keys(obj).map(function(k) {
+            return encodeURIComponent(k) + '=' + encodeURIComponent(obj[k]);
+        }).join('&');
+    },
+
     // Kayit ekle (Google Sheets'e)
     addRecord: async function(data) {
         try {
-            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
-            url.searchParams.append('action', 'addRecord');
-            url.searchParams.append('tarih', data.tarih);
-            url.searchParams.append('buharMiktari', data.buharMiktari);
-            url.searchParams.append('kaydeden', data.kaydeden);
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                mode: 'cors'
-            });
-            
-            return await response.json();
-            
+            const result = await this._jsonp(
+                BUHAR_CONFIG.APPS_SCRIPT_URL,
+                this._buildParams({
+                    action: 'addRecord',
+                    tarih: data.tarih,
+                    buharMiktari: data.buharMiktari,
+                    kaydeden: data.kaydeden
+                })
+            );
+            return result;
         } catch (error) {
             console.error('Kayit hatasi:', error);
             return { success: false, error: 'Baglanti hatasi: ' + error.message };
         }
     },
-    
+
     // Son kayitlari yükle
     loadLastRecords: async function() {
         const tableBody = document.getElementById('recordsTableBody');
         if (!tableBody) return;
-        
+
         try {
-            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
-            url.searchParams.append('action', 'getLastRecords');
-            url.searchParams.append('count', '32');
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                mode: 'cors'
-            });
-            
-            const result = await response.json();
-            
+            const result = await this._jsonp(
+                BUHAR_CONFIG.APPS_SCRIPT_URL,
+                this._buildParams({ action: 'getLastRecords', count: '32' })
+            );
+
             if (result.success) {
                 this.renderTable(result.data);
             } else {
                 console.error('Kayitlar yüklenemedi:', result.error);
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Kayıtlar yüklenemedi.</td></tr>';
             }
-            
         } catch (error) {
             console.error('Kayit yükleme hatasi:', error);
             tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Kayitlar yüklenemedi!</td></tr>';
@@ -278,45 +312,43 @@ const BuharApp = {
         return currentUser.name || currentUser.username || BUHAR_CONFIG.DEFAULT_USER;
     },
     
+    // ISO tarih string'ini TR formatına çevir: "2026-03-27" → "27.03.2026"
+    isoToTR: function(isoStr) {
+        if (!isoStr) return '';
+        const parts = isoStr.split('-');
+        if (parts.length !== 3) return isoStr;
+        return parts[2] + '.' + parts[1] + '.' + parts[0];
+    },
+
     // Tarih kontrolü - ayni tarihte kayit varsa inputlari kilitle
     checkExistingRecord: async function() {
         const tarihInput = document.getElementById('buharTarih');
-        const buharInput = document.getElementById('buharMiktari');
-        const submitBtn = document.querySelector('#buharForm button[type="submit"]');
-        
         if (!tarihInput || !tarihInput.value) return;
-        
-        const currentDate = tarihInput.value;
-        
+
+        const currentDateTR = this.isoToTR(tarihInput.value);
+
         try {
-            // Tüm kayitlari çek ve kontrol et
-            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
-            url.searchParams.append('action', 'getRecords');
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                mode: 'cors'
-            });
-            
-            const result = await response.json();
-            
-            if (result.success && result.data) {
-                // Ayni tarihte kayit var mi kontrol et
-                const existingRecord = result.data.find(record => record.tarih === currentDate);
-                
+            const result = await this._jsonp(
+                BUHAR_CONFIG.APPS_SCRIPT_URL,
+                this._buildParams({ action: 'getRecords' })
+            );
+
+            if (result.success && Array.isArray(result.data)) {
+                const existingRecord = result.data.find(function(record) {
+                    return String(record.tarih || '').trim() === currentDateTR;
+                });
+
                 if (existingRecord) {
-                    // Kayit varsa inputlari kilitle
                     this.lockInputs(true);
-                    this.showNotification('warning', 'Kayit Mevcut!', 
-                        `${this.formatDate(currentDate)} tarihinde zaten bir kayit bulunuyor. Yeni kayit yapilamaz.`);
+                    this.showNotification('warning', 'Kayit Mevcut!',
+                        currentDateTR + ' tarihinde zaten bir kayit bulunuyor. Yeni kayit yapilamaz.');
                 } else {
-                    // Kayit yoksa inputlari aç
                     this.lockInputs(false);
                 }
             }
-            
         } catch (error) {
             console.error('Tarih kontrol hatasi:', error);
+            this.lockInputs(false);
         }
     },
     
@@ -355,16 +387,16 @@ const BuharApp = {
         }
         
         try {
-            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
-            url.searchParams.append('action', 'sendEmail');
-            url.searchParams.append('to', BUHAR_CONFIG.EMAIL_TO);
-            url.searchParams.append('subject', subject || BUHAR_CONFIG.EMAIL_SUBJECT);
-            url.searchParams.append('body', body);
-            
-            const response = await fetch(url, { method: 'GET', mode: 'cors' });
-            const result = await response.json();
-            
-            console.log('g��� Mail sonucu:', result);
+            const result = await this._jsonp(
+                BUHAR_CONFIG.APPS_SCRIPT_URL,
+                this._buildParams({
+                    action: 'sendEmail',
+                    to: BUHAR_CONFIG.EMAIL_TO,
+                    subject: subject || BUHAR_CONFIG.EMAIL_SUBJECT,
+                    body: body
+                })
+            );
+            console.log('Mail sonucu:', result);
             return result;
         } catch (error) {
             console.error('Mail gönderme hatası:', error);
@@ -372,91 +404,36 @@ const BuharApp = {
         }
     },
     
-    // g��� OTOMATİK KAYIT KONTROLÜ
+    // OTOMATİK KAYIT KONTROLÜ (sadece bildirim — gerçek kayıt GAS trigger ile yapılır)
     startAutoRecordCheck: function() {
-        console.log('g��� Otomatik buhar kayıt kontrolü başlatılıyor...');
-        
-        // Her 5 dakikada bir kontrol et (günlük kontrol için)
-        setInterval(() => {
-            this.checkAndAutoRecord();
-        }, 300000); // 5 dakika
-        
-        // Sayfa yüklendiğinde de kontrol et
-        setTimeout(() => {
-            this.checkAndAutoRecord();
-        }, 10000); // 10 saniye
+        console.log('Buhar otomatik kontrol başlatılıyor (yalnızca bildirim modu)...');
+        // NOT: Otomatik kayıt sunucu tarafında GAS time-based trigger ile yapılır.
+        // Clientside bu fonksiyon yalnızca kullanıcıya uyarı gösterir, kayıt göndermez.
+        // Bu sayede tarayıcı saat kaymasından kaynaklanan çift kayıt / yanlış saat sorunu önlenir.
     },
     
-    // g��� OTOMATİK KAYIT KONTROLÜ VE GÖNDERİM
+    // OTOMATİK KAYIT KONTROLÜ VE GÖNDERİM (devre dışı — GAS trigger kullanılıyor)
     checkAndAutoRecord: async function() {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        
-        console.log(`g��� Buhar kontrolü: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
-        
-        // Her gün 23:59'da kontrol et (günün sonu kontrolü)
-        if (currentHour !== 23 || currentMinute !== 59) {
-            return;
-        }
-        
-        console.log('g��� 23:59 kontrolü yapılıyor...');
-        
-        // Dünün tarihini al
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const year = yesterday.getFullYear();
-        const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-        const day = String(yesterday.getDate()).padStart(2, '0');
-        const yesterdayStr = `${year}-${month}-${day}`;
-        
-        // Dünün kaydı var mı kontrol et
-        const hasRecord = await this.isExistingRecord(yesterdayStr);
-        
-        if (!hasRecord) {
-            console.log('g��� Dün için buhar kaydı bulunamadı! Otomatik kayıt gönderiliyor...');
-            
-            // Otomatik kayıt verileri
-            const autoData = {
-                tarih: yesterdayStr,
-                buharMiktari: '0',
-                kaydeden: 'OTOMATİK SİSTEM'
-            };
-            
-            // Kaydı gönder
-            const result = await this.addRecord(autoData);
-            
-            if (result.success) {
-                console.log('✅ Otomatik dün kaydı başarıyla gönderildi!');
-                this.showNotification('warning', 'Otomatik Kayıt', 'Dün için buhar verisi otomatik olarak kaydedildi (Değer girilmedi)');
-                this.loadLastRecords();
-                
-                // g��� Mail gönder
-                const mailBody = `Buhar Verisi Uyarısı\n\nTarih: ${yesterdayStr}\n\n${yesterdayStr} için buhar verisi girilmedi. Otomatik olarak boş kayıt yapıldı.\n\nLütfen ilgili personeli bilgilendirin.`;
-                await this.sendEmailAlert(`Buhar Verisi Uyarısı - ${yesterdayStr} Değer Girilmedi`, mailBody);
-                
-            } else {
-                console.error('❌ Otomatik kayıt başarısız:', result.error);
-            }
-        } else {
-            console.log('✅ Dün kaydı mevcut, otomatik kayıt gerekmiyor');
-        }
+        // Bu fonksiyon artık çağrılmıyor.
+        // Sunucu tarafı GAS trigger (installHourlyMissingRecordTrigger) tarayıcıdan bağımsız çalışır.
+        console.log('checkAndAutoRecord: GAS trigger tarafından yönetiliyor, istemci tarafı devre dışı.');
     },
     
-    // Kayıt var mı kontrol et
+    // Kayıt var mı kontrol et (tarih ISO veya TR formatında gelebilir)
     isExistingRecord: async function(tarih) {
         try {
-            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
-            url.searchParams.append('action', 'getRecords');
-            
-            const response = await fetch(url, { method: 'GET', mode: 'cors' });
-            const result = await response.json();
-            
-            if (result.success && result.data) {
-                const existingRecord = result.data.find(record => record.tarih === tarih);
-                return !!existingRecord;
+            const tarihTR = this.isoToTR(tarih);
+
+            const result = await this._jsonp(
+                BUHAR_CONFIG.APPS_SCRIPT_URL,
+                this._buildParams({ action: 'getRecords' })
+            );
+
+            if (result.success && Array.isArray(result.data)) {
+                return result.data.some(function(record) {
+                    return String(record.tarih || '').trim() === tarihTR;
+                });
             }
-            
             return false;
         } catch (error) {
             console.error('Kayıt kontrolü hatası:', error);

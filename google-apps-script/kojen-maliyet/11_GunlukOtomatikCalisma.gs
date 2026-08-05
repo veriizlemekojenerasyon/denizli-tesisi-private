@@ -721,33 +721,67 @@ function getRaporData(params) {
     var ss  = cfgSsAc();
     var maliyet = maliyetBedeliOku(ay, yil) || {};
 
-    var fdSheet = ss.getSheetByName(CFG_PREF_FATURA      + yil + '_' + cfgPad2(ay));
-    var dmSheet = ss.getSheetByName(CFG_PREF_DENGESIZLIK + yil + '_' + cfgPad2(ay));
+    var fdSheet = ss.getSheetByName(CFG_PREF_FATURA        + yil + '_' + cfgPad2(ay));
+    var dmSheet = ss.getSheetByName(CFG_PREF_DENGESIZLIK   + yil + '_' + cfgPad2(ay));
     var kcSheet = ss.getSheetByName(CFG_PREF_KOJEN_CALISMA + yil + '_' + cfgPad2(ay));
 
     var gunSayisi = new Date(yil, ay, 0).getDate();
+
+    // ── Batch okuma: her sayfa için tek getValues() çağrısı ──────────────────
+    // fdSheet: satır 2'den günSayisi satır, sütun K(11) başlayarak 7 sütun  → K,L,M,N,O,P,Q
+    var fdGunBatch = null;
+    if (fdSheet && fdSheet.getLastRow() >= 2) {
+      var fdLastRow = fdSheet.getLastRow();
+      var fdOkuSatir = Math.min(gunSayisi, fdLastRow - 1);
+      if (fdOkuSatir > 0) fdGunBatch = fdSheet.getRange(2, 11, fdOkuSatir, 7).getValues();
+    }
+
+    // dmSheet: satır 3'ten günSayisi satır, sütun P(16) başlayarak 3 sütun → P,Q,R
+    var dmGunBatch = null;
+    if (dmSheet && dmSheet.getLastRow() >= 3) {
+      var dmLastRow = dmSheet.getLastRow();
+      var dmOkuSatir = Math.min(gunSayisi, dmLastRow - 2);
+      if (dmOkuSatir > 0) dmGunBatch = dmSheet.getRange(3, 16, dmOkuSatir, 3).getValues();
+    }
+
+    // kcSheet: satır 3'ten günSayisi satır, sütun I(9) — tek sütun
+    var kcGunBatch = null;
+    if (kcSheet && kcSheet.getLastRow() >= 3) {
+      var kcLastRow = kcSheet.getLastRow();
+      var kcOkuSatir = Math.min(gunSayisi, kcLastRow - 2);
+      if (kcOkuSatir > 0) kcGunBatch = kcSheet.getRange(3, 9, kcOkuSatir, 1).getValues();
+    }
+
+    // fdSheet saatlik: satır 2'den 24 satır, sütun A(1) başlayarak 8 sütun
+    var fdSaatBatch = null;
+    if (fdSheet && fdSheet.getLastRow() >= 25) {
+      fdSaatBatch = fdSheet.getRange(2, 1, 24, 8).getValues();
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     var aylikGunler = [], topAvantaj = 0, topSebekeMal = 0, topKojenUretim = 0, topKojenMal = 0;
     var topEpias = 0, topTeias = 0, dengesizlikAylik = [];
 
     for (var g = 1; g <= gunSayisi; g++) {
-      var fdSatir = g + 1, dmSatir = g + 2, kcSatir = g + 2;
-      var toplamMal = 0, sebeke = 0, birimMal = 0, kojenUretim = 0, kojenMal = 0, epias = 0, teias = 0, avantaj = 0;
+      var idx   = g - 1;  // 0-tabanlı dizi indeksi
+      var toplamMal = 0, sebeke = 0, birimMal = 0, kojenUretim = 0, kojenMal = 0;
+      var epias = 0, teias = 0, avantaj = 0;
 
-      if (fdSheet && fdSheet.getLastRow() >= fdSatir) {
-        var fdRow = fdSheet.getRange(fdSatir, 11, 1, 7).getValues()[0];
+      if (fdGunBatch && idx < fdGunBatch.length) {
+        var fdRow   = fdGunBatch[idx];
         toplamMal   = parseFloat(fdRow[0]) || 0;
         sebeke      = parseFloat(fdRow[1]) || 0;
         birimMal    = parseFloat(fdRow[2]) || 0;
         kojenUretim = parseFloat(fdRow[5]) || 0;
         kojenMal    = parseFloat(fdRow[6]) || 0;
       }
-      if (dmSheet && dmSheet.getLastRow() >= dmSatir) {
-        var dmRow = dmSheet.getRange(dmSatir, 16, 1, 3).getValues()[0];
+      if (dmGunBatch && idx < dmGunBatch.length) {
+        var dmRow = dmGunBatch[idx];
         epias = parseFloat(dmRow[0]) || 0;
         teias = parseFloat(dmRow[1]) || 0;
       }
-      if (kcSheet && kcSheet.getLastRow() >= kcSatir) {
-        avantaj = parseFloat(kcSheet.getRange(kcSatir, 9).getValue()) || 0;
+      if (kcGunBatch && idx < kcGunBatch.length) {
+        avantaj = parseFloat(kcGunBatch[idx][0]) || 0;
       }
 
       if (toplamMal || kojenUretim || epias || avantaj || sebeke) {
@@ -765,39 +799,40 @@ function getRaporData(params) {
     }
 
     var faturasSaatlik = [], faturasToplam = 0, faturasSebeke = 0;
-    if (fdSheet && fdSheet.getLastRow() >= 26) {
+    if (fdSaatBatch) {
       for (var h = 0; h < 24; h++) {
-        var fRow = fdSheet.getRange(h + 2, 1, 1, 8).getValues()[0];
+        var fRow = fdSaatBatch[h];
         faturasSaatlik.push({
-          saat: String(fRow[0]).trim() || cfgPad2(h) + ':00:00',
-          dengesizlik: parseFloat(fRow[1]) || 0, epias: parseFloat(fRow[2]) || 0,
-          dagitim    : parseFloat(fRow[3]) || 0, koruma: parseFloat(fRow[4]) || 0,
-          vtc        : parseFloat(fRow[5]) || 0, tahmin: parseFloat(fRow[6]) || 0,
-          gercek     : parseFloat(fRow[7]) || 0
+          saat        : String(fRow[0]).trim() || cfgPad2(h) + ':00:00',
+          dengesizlik : parseFloat(fRow[1]) || 0,
+          epias       : parseFloat(fRow[2]) || 0,
+          dagitim     : parseFloat(fRow[3]) || 0,
+          koruma      : parseFloat(fRow[4]) || 0,
+          vtc         : parseFloat(fRow[5]) || 0,
+          tahmin      : parseFloat(fRow[6]) || 0,
+          gercek      : parseFloat(fRow[7]) || 0
         });
         faturasToplam += (parseFloat(fRow[2])||0) + (parseFloat(fRow[3])||0) + Math.max(0, parseFloat(fRow[4])||0);
         faturasSebeke += parseFloat(fRow[7]) || 0;
       }
     }
 
-    // Aylık şebeke ve kojen üretim toplamları — günlük verilerden hesapla
     var toplamUretim = 0, toplamSebeke = 0;
     for (var sg = 0; sg < aylikGunler.length; sg++) {
       toplamSebeke += (aylikGunler[sg].sebeke      || 0);
       toplamUretim += (aylikGunler[sg].kojenUretim || 0);
     }
-    var karsilama = toplamSebeke > 0 ? toplamUretim / toplamSebeke * 100 : 0;
 
     return {
       success: true,
       data: {
-        maliyet: { kojenMaliyet: maliyet.kojenMaliyet||0, yekdem: maliyet.yekdem||0, dagitim: maliyet.dagitim||0, vtcGider: maliyet.vtcGider||0, birimMaliyet: maliyet.kojenMaliyet||0, net: maliyet.kojenMaliyet||0 },
-        avantaj: { toplam: topAvantaj, gunSayisi: aylikGunler.length, gunluk: aylikGunler.map(function(g) { return { tarih: g.tarih, avantaj: g.avantaj }; }) },
+        maliyet    : { kojenMaliyet: maliyet.kojenMaliyet||0, yekdem: maliyet.yekdem||0, dagitim: maliyet.dagitim||0, vtcGider: maliyet.vtcGider||0, birimMaliyet: maliyet.kojenMaliyet||0, net: maliyet.kojenMaliyet||0 },
+        avantaj    : { toplam: topAvantaj, gunSayisi: aylikGunler.length, gunluk: aylikGunler.map(function(g) { return { tarih: g.tarih, avantaj: g.avantaj }; }) },
         dengesizlik: { epiasToplam: topEpias, teiasToplam: topTeias, aylik: dengesizlikAylik },
-        fatura: { toplam: topSebekeMal, sebekeMwh: toplamSebeke, saatlik: faturasSaatlik },
-        baglanti: { toplamUretim: toplamUretim, toplamSebeke: toplamSebeke, karsilama: toplamSebeke > 0 ? toplamUretim / toplamSebeke * 100 : 0 },
-        motorlar: { gm1: {}, gm2: {}, gm3: {} },
-        aylikOzet: { gunluk: aylikGunler }
+        fatura     : { toplam: topSebekeMal, sebekeMwh: toplamSebeke, saatlik: faturasSaatlik },
+        baglanti   : { toplamUretim: toplamUretim, toplamSebeke: toplamSebeke, karsilama: toplamSebeke > 0 ? toplamUretim / toplamSebeke * 100 : 0 },
+        motorlar   : { gm1: {}, gm2: {}, gm3: {} },
+        aylikOzet  : { gunluk: aylikGunler }
       }
     };
   } catch(e) {
@@ -811,11 +846,19 @@ function getBaglantiNoktalari(params) {
     var ss    = cfgSsAc();
     var sheet = ss.getSheetByName(CFG_SAYFA_BAGLANTI);
     if (!sheet || sheet.getLastRow() < 25) return { success: true, data: [] };
-    var rows = [];
-    for (var i = 0; i < 24; i++) {
-      var r = sheet.getRange(i + 2, 1, 1, 7).getValues()[0];
-      rows.push({ saat: String(r[0]).trim(), tuketim: parseFloat(r[1])||0, gm1: parseFloat(r[2])||0, gm2: parseFloat(r[3])||0, gm3: parseFloat(r[4])||0, kojenTop: parseFloat(r[5])||0, sebeke: parseFloat(r[6])||0 });
-    }
+    // Tek getValues() ile 24 satırı birden oku
+    var batch = sheet.getRange(2, 1, 24, 7).getValues();
+    var rows  = batch.map(function(r) {
+      return {
+        saat    : String(r[0]).trim(),
+        tuketim : parseFloat(r[1]) || 0,
+        gm1     : parseFloat(r[2]) || 0,
+        gm2     : parseFloat(r[3]) || 0,
+        gm3     : parseFloat(r[4]) || 0,
+        kojenTop: parseFloat(r[5]) || 0,
+        sebeke  : parseFloat(r[6]) || 0
+      };
+    });
     return { success: true, data: rows };
   } catch(e) {
     return { success: false, error: e.toString() };
@@ -899,3 +942,7 @@ function _mbSimdi() {
 function _jsonCevap(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
+
+// ─── VSENSOR VERİ ÇEK — AYRI PROJE ──────────────────────────────────────────
+// Bu fonksiyon artık google-apps-script/vsensor-izleme/Code.gs dosyasında.
+// 11_GunlukOtomatikCalisma.gs'e eklenmez.

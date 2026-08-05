@@ -178,8 +178,8 @@ function fetchReportData(filter) {
       var s = document.getElementById(cbName);
       if (s && s.parentNode) s.parentNode.removeChild(s);
       try { delete window[cbName]; } catch(e) { window[cbName] = undefined; }
-      reject(new Error('Zaman aşımı: Sunucu 30 saniye içinde yanıt vermedi.'));
-    }, 30000);
+      reject(new Error('Zaman aşımı: Sunucu 90 saniye içinde yanıt vermedi.'));
+    }, 90000);
 
     var script = document.createElement('script');
     script.id  = cbName;
