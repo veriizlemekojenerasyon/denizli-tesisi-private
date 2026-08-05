@@ -12,7 +12,7 @@
         bakim: 'https://script.google.com/macros/s/AKfycbyPVtza6spDtgNUkDlPMvX-wlDTAw_1qDu0Ms78wUfeb2WC3zjqgzDoxe3hDYfKjxes/exec',
         vardiya: 'https://script.google.com/macros/s/AKfycbzfcNufcJ8GB16pRxjOyLzGhMl_O2JLXasb8ONoTAjORjA_yvi3lDEfNwKiu8IP8iOt/exec',
         bildirim: 'https://script.google.com/macros/s/AKfycbwxfc2103ITgtvplA9zPVF4C1sZfZtRoi2hyvL25jHK0SZhO0tSKFfybenzLHkzhQ71/exec',
-        kullanici: 'https://script.google.com/macros/s/AKfycbzTBptAv4FoxIh1PTgoR207hxrV2EPuUTUyxUZluW1iPxDpV06I8HGRo7Jp0-9cPsnA/exec',
+        kullanici: 'https://script.google.com/macros/s/AKfycbx0cj7AcYyf3SiVmLdJVrutOR_VA6P_1XhvyAmINXs5JUMfIr0NnPHtRfC_p7TJKhzD/exec',
         stok: 'https://script.google.com/macros/s/AKfycbwdgKAxZ9J4NdxKFvlTUPnr-pCGD7UfHXqM8q3VWR4OHgKXs0eCjVAy9LHU-EkcHVKv/exec',
         motorTakip: 'https://script.google.com/macros/s/AKfycbyxfk2wUCJVDzHETdYWf4-zTxeMMwwd4wJ1uPkgVSFy1x6Ujy-lkWAkqPRMQlt3ZyPx/exec',
         elzMainpage: 'https://script.google.com/macros/s/AKfycbza7E5qh7K1FCiCpotWe8M95Uzfb5sutcZTkpRkG4pzhjpmhBuvvXdaW16DmqKNlSpR/exec',
