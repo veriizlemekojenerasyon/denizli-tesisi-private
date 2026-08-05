@@ -196,6 +196,13 @@ function renderKpis(data) {
   var kojenMaliyet = num(m.kojenMaliyet || m.net || 0);
   var toplamMaliyet = num(m.kojenMaliyet||0) + num(m.yekdem||0) + num(m.dagitim||0) + num(m.vtcGider||0) + num(m.gucBedeli||0);
 
+  // Aylık kojen üretim toplamı — aylikOzet.gunluk içindeki kojenUretim değerlerini topla
+  var aylikKojenUretim = 0;
+  var gunlukOzet = (data.aylikOzet && data.aylikOzet.gunluk) ? data.aylikOzet.gunluk : [];
+  for (var gi = 0; gi < gunlukOzet.length; gi++) {
+    aylikKojenUretim += num(gunlukOzet[gi].kojenUretim || 0);
+  }
+
   setEl('kpiBirimMaliyet',    kojenMaliyet.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}));
   setEl('kpiBirimMaliyetSub', 'YEKDEM+Dağıtım+VTC: ' + (toplamMaliyet - kojenMaliyet).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' TL/MWh');
   setEl('kpiKojenAvantaj',    fmtTL(a.toplam || 0));
@@ -204,8 +211,8 @@ function renderKpis(data) {
   setEl('kpiDengesizlikSub', 'EPİAŞ: ' + fmtTL(d.epiasToplam||0) + ' · TEİAŞ: ' + fmtTL(d.teiasToplam||0));
   setEl('kpiFatura',    fmtTL(f.toplam||0));
   setEl('kpiFaturaSub', 'Şebeke: ' + fmtMwh(f.sebekeMwh||0));
-  setEl('kpiKojenUretim',    fmtKwh(b.toplamUretim||0));
-  setEl('kpiKojenUretimSub', 'GM1+GM2+GM3');
+  setEl('kpiKojenUretim',    fmtMwh(aylikKojenUretim));
+  setEl('kpiKojenUretimSub', 'GM1+GM2+GM3 aylık toplam');
   setEl('kpiSebeke',    fmtMwh(b.toplamSebeke||0));
   setEl('kpiSebekeSub', 'Karşılama: ' + fmtPct(b.karsilama||0));
 }
