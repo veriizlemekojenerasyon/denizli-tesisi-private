@@ -348,9 +348,9 @@ function gunlukVerileriCek(isoTarih, gun, ay, yil) {
         fdSheet.getRange(fdSatir, 16).setValue(uretim)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.000')
           .setNote('Kojen Üretim\nTarih: ' + gun + '.' + ayKisa);
-        fdSheet.getRange(fdSatir, 17).setValue(uretim * 1300)
+        fdSheet.getRange(fdSatir, 17).setValue(uretim * 4400)
           .setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"')
-          .setNote('P × 1300\nTarih: ' + gun + '.' + ayKisa);
+          .setNote('P × 4400\nTarih: ' + gun + '.' + ayKisa);
         SpreadsheetApp.flush();
         Logger.log('  FD : OK D28=' + d28Val.toFixed(2) + ' Şebeke=' + sebeke.toFixed(3) + ' Üretim=' + uretim);
       } else {
