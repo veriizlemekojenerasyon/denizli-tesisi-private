@@ -269,7 +269,7 @@ function _fdAylikTablolariYaz(sheet, ay, yil, hesaplananGun) {
       pHucre.setValue(uretimMwh).setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.000');
       SpreadsheetApp.flush();
       var pVal = parseFloat(sheet.getRange(satirNo, 16).getValue()) || 0;
-      qHucre.setValue(pVal * 1300).setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
+      qHucre.setValue(pVal * 4400).setBackground('#EBF8EE').setFontWeight('bold').setNumberFormat('#,##0.00 "₺"');
     } else {
       pHucre.setValue('').setBackground(bg).setNumberFormat('#,##0.000');
       qHucre.setValue('').setBackground(bg).setNumberFormat('#,##0.00 "₺"');
