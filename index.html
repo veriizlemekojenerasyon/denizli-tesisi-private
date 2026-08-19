@@ -2,7 +2,6 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=anasayfa.html">
     <title>Yönlendiriliyor...</title>
     <style>
         body {
@@ -39,8 +38,16 @@
         <p>Yönlendiriliyor...</p>
     </div>
     <script>
-        // JavaScript ile de yönlendir (fallback)
-        window.location.href = 'anasayfa.html';
+        // Kullanıcı giriş yapmış mı kontrol et
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        
+        if (loggedInUser) {
+            // Giriş yapılmışsa anasayfaya yönlendir
+            window.location.href = 'anasayfa.html';
+        } else {
+            // Giriş yapılmamışsa giriş sayfasına yönlendir
+            window.location.href = 'docs/index.html';
+        }
     </script>
 </body>
 </html>

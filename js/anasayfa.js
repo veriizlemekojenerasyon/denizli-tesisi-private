@@ -1095,8 +1095,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleLogout() {
         if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+            localStorage.removeItem('loggedInUser');
             localStorage.removeItem('rememberedEmail');
-            window.location.href = 'index.html';
+            window.location.href = 'docs/index.html';
         }
     }
 
@@ -2175,7 +2176,7 @@ document.head.appendChild(style);
 function checkAuth() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     if (!loggedInUser) {
-        window.location.href = 'index.html';
+        window.location.href = 'docs/index.html';
         return;
     }
     
