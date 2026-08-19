@@ -1,13 +1,22 @@
 :root {
-    --bg: #f4f7fb;
+    --bg: #f8fafc;
     --panel: #ffffff;
-    --text: #172033;
+    --text: #1e293b;
     --muted: #64748b;
-    --line: #d9e2ef;
-    --blue: #2563eb;
-    --green: #16a34a;
-    --red: #dc2626;
-    --amber: #d97706;
+    --line: #e2e8f0;
+    --blue: #3b82f6;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --purple: #8b5cf6;
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 * {
@@ -17,15 +26,58 @@
 body {
     margin: 0;
     min-height: 100vh;
-    font-family: Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg);
     color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dashboard Container ve Sidebar için temel stiller */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+    overflow-x: hidden;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
 }
 
 .admin-shell {
     width: min(1400px, calc(100% - 32px));
     margin: 0 auto;
-    padding: 24px 0 40px;
+    padding: 32px 0 48px;
+    position: relative;
+}
+
+/* Mobile menu toggle positioning for admin page */
+.admin-shell .mobile-menu-toggle {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 1400;
+    background: white;
+    border: 2px solid var(--line);
+    box-shadow: var(--shadow-md);
+}
+
+.admin-shell .mobile-menu-toggle:hover {
+    background: var(--gradient-primary);
+    border-color: transparent;
+}
+
+.admin-shell .mobile-menu-toggle span {
+    background: var(--text);
+}
+
+.admin-shell .mobile-menu-toggle:hover span {
+    background: white;
 }
 
 .admin-header,
@@ -33,17 +85,65 @@ body {
 .status-card {
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 8px;
-    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    transition: all 0.3s ease;
+}
+
+.admin-header:hover,
+.panel:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-2px);
 }
 
 .admin-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 18px;
-    padding: 22px;
-    margin-bottom: 18px;
+    gap: 24px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+}
+
+.admin-header .eyebrow {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.admin-header h1 {
+    color: white;
+    margin-bottom: 8px;
+}
+
+.admin-header p {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Mobile adjustments for admin header */
+@media (max-width: 1024px) {
+    .admin-header {
+        padding-left: 70px;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-header {
+        padding-left: 60px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .admin-header .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .admin-header .header-actions > * {
+        width: 100%;
+    }
 }
 
 .eyebrow {
@@ -88,34 +188,53 @@ h2 {
 .btn,
 .quick-links a {
     border: 0;
-    border-radius: 7px;
-    padding: 10px 14px;
-    font-weight: 700;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-weight: 600;
     text-decoration: none;
     cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 .btn.secondary {
-    background: var(--blue);
-    color: #ffffff;
+    background: white;
+    color: var(--blue);
+    border: 2px solid white;
+}
+
+.btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.9);
 }
 
 .btn.ghost {
-    background: #eef4ff;
-    color: var(--blue);
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn.ghost:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .btn.danger {
-    background: #fee2e2;
-    color: var(--red);
+    background: var(--gradient-danger);
+    color: white;
 }
 
 .current-user {
-    padding: 9px 12px;
-    border-radius: 7px;
-    background: #f1f5f9;
-    color: #334155;
-    font-weight: 700;
+    padding: 12px 20px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-weight: 600;
+    border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .backup-format {
@@ -136,8 +255,9 @@ h2 {
 }
 
 .status-card {
-    padding: 16px;
-    border-left: 5px solid var(--blue);
+    padding: 20px;
+    border-left: 6px solid var(--blue);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .status-card.ok {
@@ -181,7 +301,8 @@ h2 {
 }
 
 .panel {
-    padding: 18px;
+    padding: 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .check-list {
@@ -193,11 +314,18 @@ h2 {
 .check-item {
     display: grid;
     grid-template-columns: 16px minmax(0, 1fr) auto;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
-    padding: 12px;
+    padding: 16px;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: 12px;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.check-item:hover {
+    background: #f8fafc;
+    transform: translateX(4px);
 }
 
 .check-dot {
@@ -226,9 +354,18 @@ h2 {
 }
 
 .quick-links a {
-    background: #f8fafc;
+    background: white;
     color: var(--text);
     border: 1px solid var(--line);
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.quick-links a:hover {
+    background: var(--gradient-primary);
+    color: white;
+    border-color: transparent;
+    transform: translateX(4px);
 }
 
 .health-grid,
@@ -251,9 +388,17 @@ h2 {
 .backup-result,
 .test-result {
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 12px;
-    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.health-card:hover,
+.quality-item:hover,
+.activity-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .health-card {
@@ -554,30 +699,52 @@ h2 {
 .badge {
     display: inline-block;
     border-radius: 999px;
-    padding: 4px 9px;
+    padding: 6px 12px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     background: #e2e8f0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .badge.ok {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--gradient-success);
+    color: white;
 }
 
 .badge.warn {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--gradient-warning);
+    color: white;
 }
 
 .badge.danger {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--gradient-danger);
+    color: white;
+}
+
+.panel-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--line);
+}
+
+.panel-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.panel-header p {
+    color: var(--muted);
+    font-size: 14px;
 }
 
 .empty {
     color: var(--muted);
-    padding: 18px 0;
+    padding: 32px 0;
+    text-align: center;
+    font-style: italic;
 }
 
 @media (max-width: 980px) {
@@ -597,13 +764,23 @@ h2 {
     .admin-header {
         align-items: flex-start;
         flex-direction: column;
+        padding: 24px;
+    }
+    
+    .admin-header .header-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .admin-header .header-actions > * {
+        width: 100%;
     }
 }
 
 @media (max-width: 640px) {
     .admin-shell {
         width: min(100% - 18px, 1400px);
-        padding-top: 10px;
+        padding-top: 20px;
     }
 
     .status-grid,
@@ -633,4 +810,122 @@ h2 {
         width: 100%;
         text-align: center;
     }
+    
+    .admin-header {
+        padding: 20px;
+    }
+    
+    .panel {
+        padding: 20px;
+    }
+}
+
+/* Add smooth animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.panel, .status-card {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Add loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Improve focus states for accessibility */
+.btn:focus,
+.quick-links a:focus,
+.backup-format:focus {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+}
+
+/* Add subtle hover effects to cards */
+.panel-grid > .panel:nth-child(1):hover {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.panel-grid > .panel:nth-child(2):hover {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* Add icon animations */
+.quick-links a:hover {
+    padding-left: 24px;
+}
+
+/* Improve button hover states */
+.btn.secondary:hover {
+    background: var(--gradient-primary);
+    color: white;
+    border-color: transparent;
+}
+
+.btn.ghost:hover {
+    background: white;
+    color: var(--gradient-primary);
+    border-color: var(--gradient-primary);
+}
+
+/* Add status card improvements */
+.status-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+    opacity: 0.8;
+}
+
+.status-card.ok::before {
+    background: var(--gradient-success);
+}
+
+.status-card.warn::before {
+    background: var(--gradient-warning);
+}
+
+.status-card.danger::before {
+    background: var(--gradient-danger);
+}
+
+/* Add panel hover glow effect */
+.panel {
+    position: relative;
+}
+
+.panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 16px;
+    pointer-events: none;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    transition: box-shadow 0.3s ease;
+}
+
+.panel:hover::after {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }

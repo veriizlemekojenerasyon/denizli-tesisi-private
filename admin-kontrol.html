@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Merkezi Kontrol - Kojenerasyon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/anasayfa.css">
     <link rel="stylesheet" href="css/admin-kontrol.css">
     <link rel="stylesheet" href="css/mobile-system.css">
 </head>
@@ -29,23 +33,28 @@
         <!-- Ana İçerik -->
         <div class="main-content">
         <div class="admin-shell">
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menüyü aç/kapa">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         <header class="admin-header">
             <div>
-                <p class="eyebrow">Admin Paneli</p>
+                <p class="eyebrow">🚀 Admin Paneli</p>
                 <h1>Merkezi Kontrol</h1>
                 <p>Eksik kayıtlar, aktif vardiya, duyurular ve sistem logları tek ekranda.</p>
             </div>
             <div class="header-actions">
-                <button type="button" class="btn secondary" id="refreshDashboardBtn">Yenile</button>
-                <a href="anasayfa.html" class="btn ghost">Ana Sayfa</a>
-                <span class="current-user" id="adminUserName">Admin</span>
+                <button type="button" class="btn secondary" id="refreshDashboardBtn">🔄 Yenile</button>
+                <a href="anasayfa.html" class="btn ghost">🏠 Ana Sayfa</a>
+                <span class="current-user" id="adminUserName">👤 Admin</span>
             </div>
         </header>
 
         <main>
             <section class="status-grid" id="statusGrid">
                 <article class="status-card loading">
-                    <span class="card-label">Saatlik Veri</span>
+                    <span class="card-label">⏰ Saatlik Veri</span>
                     <strong>Kontrol ediliyor</strong>
                     <p>Son kayıtlar okunuyor.</p>
                 </article>
@@ -55,7 +64,7 @@
                 <article class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Eksik Kayıt Kontrolü</h2>
+                            <h2>📋 Eksik Kayıt Kontrolü</h2>
                             <p>Bugünün kritik kayıt durumları.</p>
                         </div>
                     </div>
@@ -65,21 +74,21 @@
                 <article class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Hızlı Geçiş</h2>
+                            <h2>⚡ Hızlı Geçiş</h2>
                             <p>Adminin en sık açacağı ekranlar.</p>
                         </div>
                     </div>
                     <div class="quick-links">
-                        <a href="admin-bildirim.html">Bildirim Yönetimi</a>
-                        <a href="vardiya.html">Vardiya Takip</a>
-                        <a href="saatlik-veri-giris.html">Saatlik Veri</a>
-                        <a href="kojen-motor-veri.html">Kojen Motor</a>
-                        <a href="kojen-enerji-veri.html">Kojen Enerji</a>
-                        <a href="enerji-rapor.html">Enerji Raporlari</a>
-                        <a href="kojen-maliyet-rapor.html">Kojen Maliyet Raporu</a>
-                        <a href="veri-disa-aktarim.html">Veri Disa Aktarim</a>
-                        <a href="bakim-takibi.html">Bakım Takip</a>
-                        <a href="kullanici-yonetimi.html">Kullanıcı Yönetimi</a>
+                        <a href="admin-bildirim.html">📢 Bildirim Yönetimi</a>
+                        <a href="vardiya.html">🕐 Vardiya Takip</a>
+                        <a href="saatlik-veri-giris.html">⏰ Saatlik Veri</a>
+                        <a href="kojen-motor-veri.html">🔧 Kojen Motor</a>
+                        <a href="kojen-enerji-veri.html">⚡ Kojen Enerji</a>
+                        <a href="enerji-rapor.html">📊 Enerji Raporlari</a>
+                        <a href="kojen-maliyet-rapor.html">💰 Kojen Maliyet Raporu</a>
+                        <a href="veri-disa-aktarim.html">📤 Veri Disa Aktarim</a>
+                        <a href="bakim-takibi.html">🔨 Bakım Takip</a>
+                        <a href="kullanici-yonetimi.html">👥 Kullanıcı Yönetimi</a>
                     </div>
                 </article>
             </section>
@@ -88,10 +97,10 @@
                 <article class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Tetikleyici Sağlığı</h2>
+                            <h2>🔧 Tetikleyici Sağlığı</h2>
                             <p>Otomatik eksik kayıt kontrollerinin kurulu olup olmadığını gösterir.</p>
                         </div>
-                        <button type="button" class="btn ghost" id="installTriggersBtn">Tetikleyicileri Kur</button>
+                        <button type="button" class="btn ghost" id="installTriggersBtn">⚙️ Tetikleyicileri Kur</button>
                     </div>
                     <div class="health-grid" id="triggerHealthList"></div>
                 </article>
@@ -99,16 +108,16 @@
                 <article class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Admin Testleri</h2>
+                            <h2>🧪 Admin Testleri</h2>
                             <p>Eksik kayıt kontrolünü ve mail akışını manuel dene.</p>
                         </div>
                     </div>
                     <div class="test-actions">
-                        <button type="button" class="btn secondary" data-test-module="saatlik">Saatlik Test</button>
-                        <button type="button" class="btn secondary" data-test-module="motor">Motor Test</button>
-                        <button type="button" class="btn secondary" data-test-module="enerji">Enerji Test</button>
-                        <button type="button" class="btn secondary" data-test-module="bakim">Bakım Test</button>
-                        <button type="button" class="btn ghost" id="testMailBtn">Test Maili</button>
+                        <button type="button" class="btn secondary" data-test-module="saatlik">⏰ Saatlik Test</button>
+                        <button type="button" class="btn secondary" data-test-module="motor">🔧 Motor Test</button>
+                        <button type="button" class="btn secondary" data-test-module="enerji">⚡ Enerji Test</button>
+                        <button type="button" class="btn secondary" data-test-module="bakim">🔨 Bakım Test</button>
+                        <button type="button" class="btn ghost" id="testMailBtn">📧 Test Maili</button>
                     </div>
                     <div class="test-result" id="testResultBox">Test sonucu burada görünecek.</div>
                 </article>
@@ -118,7 +127,7 @@
                 <article class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Vardiya Kapanış Ön Kontrolü</h2>
+                            <h2>🕐 Vardiya Kapanış Ön Kontrolü</h2>
                             <p>Vardiya bitmeden önce eksik kayıt ve kritik duyuru durumunu özetler.</p>
                         </div>
                     </div>
@@ -128,7 +137,7 @@
                 <article class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Mobil Operatör Özeti</h2>
+                            <h2>📱 Mobil Operatör Özeti</h2>
                             <p>Telefon/tablet ekranı için hızlı aksiyon listesi.</p>
                         </div>
                     </div>
@@ -139,12 +148,12 @@
             <section class="panel alarm-panel">
                 <div class="panel-header">
                     <div>
-                        <h2>Alarm Merkezi</h2>
+                        <h2>🚨 Alarm Merkezi</h2>
                         <p>Kritik hatalar, eksik kayitlar, kalite uyarilari ve gunluk rapor durumu.</p>
                     </div>
                     <div class="alarm-actions">
-                        <button type="button" class="btn ghost" id="previewDailyReportBtn">Rapor Onizle</button>
-                        <button type="button" class="btn secondary" id="sendDailyReportBtn">Gunluk Raporu Gonder</button>
+                        <button type="button" class="btn ghost" id="previewDailyReportBtn">👁️ Rapor Onizle</button>
+                        <button type="button" class="btn secondary" id="sendDailyReportBtn">📧 Gunluk Raporu Gonder</button>
                     </div>
                 </div>
                 <div class="alarm-summary" id="alarmSummary"></div>
@@ -156,7 +165,7 @@
                 <article class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Detaylı Kalite Kontrolü</h2>
+                            <h2>🔍 Detaylı Kalite Kontrolü</h2>
                             <p>Limit dışı, tekrar eden veya mantıksız kayıtları ayrıntılı listeler.</p>
                         </div>
                     </div>
@@ -166,7 +175,7 @@
                 <article class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Kullanıcı İşlem Özeti</h2>
+                            <h2>👤 Kullanıcı İşlem Özeti</h2>
                             <p>Bu tarayıcıda tutulan son işlem geçmişi.</p>
                         </div>
                     </div>
@@ -177,7 +186,7 @@
             <section class="panel">
                 <div class="panel-header">
                     <div>
-                        <h2>Veri Yedeği</h2>
+                        <h2>💾 Veri Yedeği</h2>
                         <p>Saatlik, motor, enerji, vardiya ve bildirim kayıtlarını JSON, Excel veya PDF olarak alır.</p>
                     </div>
                     <div class="backup-actions">
@@ -186,16 +195,16 @@
                             <option value="excel">Excel</option>
                             <option value="pdf">PDF</option>
                         </select>
-                        <button type="button" class="btn secondary" id="backupAllBtn">Tüm Yedeği Al</button>
+                        <button type="button" class="btn secondary" id="backupAllBtn">📦 Tüm Yedeği Al</button>
                     </div>
                 </div>
                 <div class="backup-grid">
-                    <button type="button" class="btn ghost" data-backup-module="saatlik">Saatlik</button>
-                    <button type="button" class="btn ghost" data-backup-module="motor">Motor</button>
-                    <button type="button" class="btn ghost" data-backup-module="enerji">Enerji</button>
-                    <button type="button" class="btn ghost" data-backup-module="vardiya">Vardiya</button>
-                    <button type="button" class="btn ghost" data-backup-module="bildirim">Bildirim</button>
-                    <button type="button" class="btn ghost" data-backup-module="loglar">Loglar</button>
+                    <button type="button" class="btn ghost" data-backup-module="saatlik">⏰ Saatlik</button>
+                    <button type="button" class="btn ghost" data-backup-module="motor">🔧 Motor</button>
+                    <button type="button" class="btn ghost" data-backup-module="enerji">⚡ Enerji</button>
+                    <button type="button" class="btn ghost" data-backup-module="vardiya">🕐 Vardiya</button>
+                    <button type="button" class="btn ghost" data-backup-module="bildirim">📢 Bildirim</button>
+                    <button type="button" class="btn ghost" data-backup-module="loglar">📊 Loglar</button>
                 </div>
                 <div class="backup-result" id="backupResultBox">Yedek sonucu burada görünecek.</div>
             </section>
@@ -203,10 +212,10 @@
             <section class="panel">
                 <div class="panel-header">
                     <div>
-                        <h2>Sistem Logları</h2>
+                        <h2>📊 Sistem Logları</h2>
                         <p>Admin işlemleri ve kontrol ekranı sonuçları bu tarayıcıda tutulur.</p>
                     </div>
-                    <button type="button" class="btn danger" id="clearLogsBtn">Logları Temizle</button>
+                    <button type="button" class="btn danger" id="clearLogsBtn">🗑️ Logları Temizle</button>
                 </div>
                 <div class="log-table-wrap">
                     <table class="log-table">

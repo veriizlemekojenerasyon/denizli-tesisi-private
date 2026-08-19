@@ -34,6 +34,11 @@
             <!-- Üst Header -->
             <header class="header">
                 <div class="header-top">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menüyü aç/kapa">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
                     <div class="company-info">
                         <h1>KORUMA KLOR ALKALİ ŞİRKETLER GRUBU</h1>
                         <h2>KOJENERASYON BÖLÜMÜ</h2>
@@ -343,6 +348,8 @@
         'operator-verimlilik.html', 'veri-disa-aktarim.html', 'motor-takip.html',
         'bakim-takibi.html', 'stok-takip.html'
     ];
+    
+    // Admin sayfalarına geçişte token kontrolü
     document.addEventListener('click', function(e) {
         var link = e.target.closest('a[href]');
         if (!link) return;

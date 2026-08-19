@@ -107,6 +107,43 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('testMailBtn')?.addEventListener('click', runTestMail);
         document.getElementById('backupAllBtn')?.addEventListener('click', runFullBackup);
         document.getElementById('previewDailyReportBtn')?.addEventListener('click', previewDailyReport);
+        
+        // Mobile menu toggle için event listener
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const body = document.body;
+                const sidebar = document.querySelector('.sidebar');
+                
+                if (body.classList.contains('sidebar-mobile-open')) {
+                    body.classList.remove('sidebar-mobile-open');
+                    if (sidebar) sidebar.classList.remove('is-expanded');
+                    const backdrop = document.querySelector('.sidebar-mobile-backdrop');
+                    if (backdrop) backdrop.hidden = true;
+                } else {
+                    body.classList.add('sidebar-mobile-open');
+                    if (sidebar) sidebar.classList.add('is-expanded');
+                    
+                    // Backdrop oluştur veya göster
+                    let backdrop = document.querySelector('.sidebar-mobile-backdrop');
+                    if (!backdrop) {
+                        backdrop = document.createElement('div');
+                        backdrop.className = 'sidebar-mobile-backdrop';
+                        backdrop.addEventListener('click', function() {
+                            body.classList.remove('sidebar-mobile-open');
+                            if (sidebar) sidebar.classList.remove('is-expanded');
+                            backdrop.hidden = true;
+                        });
+                        document.body.appendChild(backdrop);
+                    }
+                    backdrop.hidden = false;
+                }
+            });
+        }
+        
         document.getElementById('sendDailyReportBtn')?.addEventListener('click', sendDailyReportNow);
         document.querySelectorAll('[data-backup-module]').forEach(button => {
             button.addEventListener('click', () => runModuleBackup(button.dataset.backupModule));
@@ -114,6 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('[data-test-module]').forEach(button => {
             button.addEventListener('click', () => runModuleTest(button.dataset.testModule));
         });
+        
         loadDashboard();
     }
 });

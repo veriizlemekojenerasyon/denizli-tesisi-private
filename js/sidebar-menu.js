@@ -263,6 +263,21 @@
             sidebar.addEventListener('click', handleCollapsedMobileClick, true);
         }
 
+        // Mobile menu toggle button
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                if (document.body.classList.contains('sidebar-mobile-open')) {
+                    closeMobileSidebar();
+                } else {
+                    openMobileSidebar();
+                }
+            });
+        }
+
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape' && document.body.classList.contains('sidebar-mobile-open')) {
                 closeMobileSidebar();

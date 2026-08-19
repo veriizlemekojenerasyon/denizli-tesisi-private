@@ -76,6 +76,7 @@ function showLockScreen(type) {
 
 function setupEvents() {
     document.getElementById('btnLogout')?.addEventListener('click', logout);
+    document.getElementById('btnAnaSayfa')?.addEventListener('click', goToAnaSayfa);
     document.getElementById('btnAddUser')?.addEventListener('click', openAddModal);
     document.getElementById('btnCloseModal')?.addEventListener('click', closeModal);
     document.getElementById('btnCancel')?.addEventListener('click', closeModal);
@@ -103,8 +104,15 @@ function logout() {
     } else {
         localStorage.removeItem('loggedInUser');
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('sessionToken');
     }
     window.location.href = 'index.html';
+}
+
+// Ana sayfaya güvenli geçiş
+function goToAnaSayfa() {
+    // Token ve kullanıcı bilgisi korunduğu için doğrudan yönlendir
+    window.location.href = 'anasayfa.html';
 }
 
 async function loadUsers() {
