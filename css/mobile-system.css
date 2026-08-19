@@ -520,6 +520,55 @@ body.sidebar-hover-ready .sidebar.is-expanded .menu-icon {
     display: none;
 }
 
+/* Hamburger menü butonu - sadece mobilde görünür */
+.mobile-menu-toggle {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1400;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #e94560, #0f3460);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
+    transition: all 0.2s ease;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-menu-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(233, 69, 96, 0.4);
+}
+
+.mobile-menu-toggle:active {
+    transform: scale(0.95);
+}
+
+.mobile-menu-toggle svg {
+    display: block;
+}
+
+body.sidebar-mobile-compact .mobile-menu-toggle {
+    display: flex;
+}
+
+body.sidebar-mobile-compact.sidebar-mobile-open .mobile-menu-toggle {
+    left: 296px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+body.sidebar-mobile-compact.sidebar-mobile-open .mobile-menu-toggle svg {
+    transform: rotate(90deg);
+    transition: transform 0.3s ease;
+}
+
 body.sidebar-mobile-compact .dashboard-container {
     flex-direction: row !important;
     min-height: 100vh;
@@ -537,8 +586,13 @@ body.sidebar-mobile-compact .sidebar {
     z-index: 1300;
     overflow-y: auto;
     overflow-x: hidden;
-    transform: none !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s ease, width 0.25s ease;
     box-shadow: 8px 0 24px rgba(15, 23, 42, 0.24);
+}
+
+body.sidebar-mobile-compact.sidebar-mobile-open .sidebar {
+    transform: translateX(0) !important;
 }
 
 body.sidebar-mobile-compact .sidebar:hover,
@@ -556,9 +610,10 @@ body.sidebar-mobile-compact .admin-shell {
 }
 
 body.sidebar-mobile-compact .main-content {
-    width: calc(100% - 88px);
-    margin-left: 88px !important;
+    width: 100%;
+    margin-left: 0 !important;
     margin-bottom: 0 !important;
+    padding-top: 80px !important; /* Hamburger butonu için boşluk */
 }
 
 body.sidebar-mobile-compact .sidebar-menu {
