@@ -1,4 +1,4 @@
-﻿
+
 // Bakim Takip Sistemi - Google Apps Script V2
 // Ortak kayit modeli + tur/motor bazli Sheets yapisi.
 

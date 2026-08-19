@@ -1095,7 +1095,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleLogout() {
         if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-            localStorage.removeItem('loggedInUser');
             localStorage.removeItem('rememberedEmail');
             window.location.href = 'index.html';
         }

@@ -152,38 +152,37 @@ const BuharApp = {
         }
     },
     
-    // Modern fetch API - CORS uyumlu + Timeout destekli
-    _jsonp: async function(url, params, timeoutMs = 15000) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        
-        try {
-            const fullUrl = url + '?' + params + '&_t=' + Date.now();
-            const response = await fetch(fullUrl, {
-                method: 'GET',
-                mode: 'cors',
-                cache: 'no-cache',
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-            
-            return await response.json();
-        } catch (error) {
-            clearTimeout(timeoutId);
-            
-            if (error.name === 'AbortError') {
-                console.error('İstek zaman aşımına uğradı');
-                throw new Error('Bağlantı zaman aşımına uğradı. Lütfen tekrar deneyin.');
-            }
-            
-            console.error('Fetch hatası:', error);
-            throw new Error('GAS\'a bağlanılamadı: ' + error.message);
-        }
+    // JSONP yardımcı — file:// ve CORS sorunlarını aşar
+    _jsonp: function(url, params) {
+        return new Promise(function(resolve, reject) {
+            var cbName = 'buharCb' + Date.now();
+            var timer = setTimeout(function() {
+                var s = document.getElementById(cbName);
+                if (s && s.parentNode) s.parentNode.removeChild(s);
+                try { delete window[cbName]; } catch(e) {}
+                reject(new Error('Zaman aşımı'));
+            }, 20000);
+
+            window[cbName] = function(json) {
+                clearTimeout(timer);
+                var s = document.getElementById(cbName);
+                if (s && s.parentNode) s.parentNode.removeChild(s);
+                try { delete window[cbName]; } catch(e) {}
+                resolve(json);
+            };
+
+            var fullUrl = url + '?' + params + '&callback=' + encodeURIComponent(cbName) + '&_t=' + Date.now();
+            var script = document.createElement('script');
+            script.id = cbName;
+            script.src = fullUrl;
+            script.onerror = function() {
+                clearTimeout(timer);
+                if (script.parentNode) script.parentNode.removeChild(script);
+                try { delete window[cbName]; } catch(e) {}
+                reject(new Error('GAS\'a bağlanılamadı'));
+            };
+            document.body.appendChild(script);
+        });
     },
 
     _buildParams: function(obj) {
@@ -202,8 +201,7 @@ const BuharApp = {
                     tarih: data.tarih,
                     buharMiktari: data.buharMiktari,
                     kaydeden: data.kaydeden
-                }),
-                20000 // 20 saniye timeout
+                })
             );
             return result;
         } catch (error) {
@@ -217,26 +215,21 @@ const BuharApp = {
         const tableBody = document.getElementById('recordsTableBody');
         if (!tableBody) return;
 
-        // Yükleniyor göstergesi
-        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Yükleniyor...</td></tr>';
-
         try {
             const result = await this._jsonp(
                 BUHAR_CONFIG.APPS_SCRIPT_URL,
-                this._buildParams({ action: 'getLastRecords', count: '32' }),
-                20000 // 20 saniye timeout
+                this._buildParams({ action: 'getLastRecords', count: '32' })
             );
 
-            if (result && result.success) {
+            if (result.success) {
                 this.renderTable(result.data);
             } else {
-                console.error('Kayitlar yüklenemedi:', result ? result.error : 'Yanıt alınamadı');
+                console.error('Kayitlar yüklenemedi:', result.error);
                 tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Kayıtlar yüklenemedi.</td></tr>';
             }
         } catch (error) {
             console.error('Kayit yükleme hatasi:', error);
-            const errorMsg = error.message || 'Bilinmeyen hata';
-            tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Hata: ${errorMsg}</td></tr>`;
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Kayitlar yüklenemedi!</td></tr>';
         }
     },
     
@@ -337,11 +330,10 @@ const BuharApp = {
         try {
             const result = await this._jsonp(
                 BUHAR_CONFIG.APPS_SCRIPT_URL,
-                this._buildParams({ action: 'getRecords' }),
-                15000 // 15 saniye timeout
+                this._buildParams({ action: 'getRecords' })
             );
 
-            if (result && result.success && Array.isArray(result.data)) {
+            if (result.success && Array.isArray(result.data)) {
                 const existingRecord = result.data.find(function(record) {
                     return String(record.tarih || '').trim() === currentDateTR;
                 });
@@ -353,13 +345,9 @@ const BuharApp = {
                 } else {
                     this.lockInputs(false);
                 }
-            } else {
-                // Veri yoksa veya başarısızsa, kilidi açık bırak
-                this.lockInputs(false);
             }
         } catch (error) {
             console.error('Tarih kontrol hatasi:', error);
-            // Hata durumunda kilidi açık bırak ki kullanıcı kayıt yapabilsin
             this.lockInputs(false);
         }
     },
@@ -406,8 +394,7 @@ const BuharApp = {
                     to: BUHAR_CONFIG.EMAIL_TO,
                     subject: subject || BUHAR_CONFIG.EMAIL_SUBJECT,
                     body: body
-                }),
-                10000 // 10 saniye timeout
+                })
             );
             console.log('Mail sonucu:', result);
             return result;
@@ -439,11 +426,10 @@ const BuharApp = {
 
             const result = await this._jsonp(
                 BUHAR_CONFIG.APPS_SCRIPT_URL,
-                this._buildParams({ action: 'getRecords' }),
-                15000 // 15 saniye timeout
+                this._buildParams({ action: 'getRecords' })
             );
 
-            if (result && result.success && Array.isArray(result.data)) {
+            if (result.success && Array.isArray(result.data)) {
                 return result.data.some(function(record) {
                     return String(record.tarih || '').trim() === tarihTR;
                 });

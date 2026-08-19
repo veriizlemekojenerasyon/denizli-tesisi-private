@@ -218,29 +218,6 @@
             sidebarBackdrop.addEventListener('click', closeMobileSidebar);
             document.body.appendChild(sidebarBackdrop);
         }
-
-        // Hamburger menü butonu oluştur (sadece mobilde görünür)
-        let hamburgerBtn = document.getElementById('mobile-menu-toggle');
-        if (!hamburgerBtn) {
-            hamburgerBtn = document.createElement('button');
-            hamburgerBtn.id = 'mobile-menu-toggle';
-            hamburgerBtn.className = 'mobile-menu-toggle';
-            hamburgerBtn.setAttribute('aria-label', 'Menüyü aç/kapat');
-            hamburgerBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
-                    <path d="M3 12h18M3 6h18M3 18h18"/>
-                </svg>
-            `;
-            hamburgerBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (document.body.classList.contains('sidebar-mobile-open')) {
-                    closeMobileSidebar();
-                } else {
-                    openMobileSidebar();
-                }
-            });
-            document.body.appendChild(hamburgerBtn);
-        }
     }
 
     function handleCollapsedMobileClick(event) {
