@@ -177,6 +177,9 @@ function requireAdmin() {
 
     const nameNode = document.getElementById('adminUserName');
     if (nameNode) nameNode.textContent = getUserName(user);
+    
+    const sidebarNameNode = document.getElementById('sidebarUserNameDisplay');
+    if (sidebarNameNode) sidebarNameNode.textContent = getUserName(user);
 
     // İçeriği gizle — validateAdminSession doğrulayana kadar gösterme
     const main = document.querySelector('main');
@@ -1251,7 +1254,10 @@ function getCurrentUser() {
 }
 
 function getUserName(user) {
-    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Admin';
+    const firstName = user.firstName || user.ad || user['Ad'] || user.name || '';
+    const lastName = user.lastName || user.soyad || user['Soyad'] || user.surname || '';
+    const fullName = (firstName + ' ' + lastName).trim() || user.email || 'Admin';
+    return fullName;
 }
 
 function escapeHtml(value) {
