@@ -2008,7 +2008,7 @@ function installHourlyMissingRecordTrigger() {
   ScriptApp.newTrigger('checkHourlyMissingRecords')
     .timeBased()
     .everyHours(1)
-    .atMinute(5) // Her saat 05. dakikada çalış (08:05, 09:05, 10:05...)
+    .nearMinute(5) // Her saat 05. dakikada çalış (08:05, 09:05, 10:05...)
     .create();
 
   return { success: true, message: 'Motor saatlik eksik kayit tetikleyicisi kuruldu (05. dakika). Kontrol saatte bir calisir; mail gunluk rapora ertelendi.' };
