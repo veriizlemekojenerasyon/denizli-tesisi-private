@@ -9,7 +9,7 @@
 var APPS_SCRIPT_URLS = {
   saatlik: 'https://script.google.com/macros/s/AKfycbz8tCK7XmV3I-wnCiM2iv8UwbUOkmBwj6s3IXEBeU5AZ0cwXF2Le4sejT8j7oXOz-QR/exec',
   motor: 'https://script.google.com/macros/s/AKfycbyrSjQAH5k8bDIQXf7g1hJ59xo2Kv7rLN_mstZxDZxK3wiXV5Fo2mkGzPyiMx9DoBmq/exec',
-  enerji: 'https://script.google.com/macros/s/AKfycbzo65rO1ogFwYSu0kpSKBRX-E4hOIlXHMjoYo3_SpvRc4_U1PTZMq65NbXo88RpXAKV/exec',
+  enerji: 'https://script.google.com/macros/s/AKfycbwX9FSvBeBN5vpe3fX_encGid-5JZ0LrrQ_5bHn2wS7lzzU7NlDn95FTLnhWTn_FGsl/exec',
   enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbxi4qHxf-EdltRpWAfEnM2qVQln66VPuuU-hnNk9g8T6_wosCrRakDEjSzeTNFqS3tQ/exec',
   yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxTOJuZuGXKTy2JoICtsgXMXjntSmkkWJAaUsiZg8pIwRWeDLjl027KzBTRTMYpsn8r/exec',
   buhar: 'https://script.google.com/macros/s/AKfycby4NTxk40SXCt4_kdks390El9eHvQHsXjmAh1fQ9veOpBPewy9VWOfyQFwqZtDlp6ug/exec',
