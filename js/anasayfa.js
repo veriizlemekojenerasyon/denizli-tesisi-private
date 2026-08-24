@@ -2734,3 +2734,82 @@ setInterval(checkPreviousDaySteamData, 30 * 60 * 1000); // Her 30 dakikada bir k
         if (hours < 100) return 'warning';
         return 'normal';
     }
+
+// Hava Durumu Entegrasyonu
+(function initWeatherWidget() {
+    const HAVA_DURUMU_URL = 'https://script.google.com/macros/s/AKfycbzGjEspVluGscAerQ8aYhoovucwUrdiaKx5gK2Cp07DZoR-Tzt3XBT9kwRQQBkUGVT_yA/exec';
+    const WEATHER_CACHE_KEY = 'dashboardWeatherData';
+    const WEATHER_CACHE_DURATION = 30 * 60 * 1000; // 30 dakika
+
+    function getCachedWeather() {
+        try {
+            const cached = localStorage.getItem(WEATHER_CACHE_KEY);
+            if (!cached) return null;
+            const data = JSON.parse(cached);
+            if (Date.now() - data.timestamp > WEATHER_CACHE_DURATION) {
+                localStorage.removeItem(WEATHER_CACHE_KEY);
+                return null;
+            }
+            return data.weather;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function setCachedWeather(weatherData) {
+        try {
+            localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({
+                weather: weatherData,
+                timestamp: Date.now()
+            }));
+        } catch (e) {
+            console.error('Cache yazma hatası:', e);
+        }
+    }
+
+    async function loadWeatherData() {
+        try {
+            const cached = getCachedWeather();
+            if (cached) {
+                updateWeatherCard(cached);
+                return;
+            }
+
+            const response = await fetch(HAVA_DURUMU_URL + '?action=guncel');
+            const data = await response.json();
+
+            if (data.hata) {
+                console.warn('Hava durumu hatası:', data.mesaj);
+                return;
+            }
+
+            setCachedWeather(data);
+            updateWeatherCard(data);
+
+        } catch (error) {
+            console.error('Hava durumu yükleme hatası:', error);
+        }
+    }
+
+    function updateWeatherCard(data) {
+        const weatherValue = document.getElementById('weather-value');
+        if (!weatherValue) return;
+
+        weatherValue.textContent = `${data.sicaklik}°C`;
+        weatherValue.title = `${data.durum} • Nem: %${data.nem}`;
+    }
+
+    // Hava durumu kartına tıklama
+    const weatherCard = document.querySelector('.summary-card.weather');
+    if (weatherCard) {
+        weatherCard.addEventListener('click', function() {
+            window.location.href = 'hava-durumu.html';
+        });
+    }
+
+    // İlk yükleme
+    setTimeout(loadWeatherData, 500);
+
+    // Her 30 dakikada bir yenile
+    setInterval(loadWeatherData, WEATHER_CACHE_DURATION);
+})();

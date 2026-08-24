@@ -20,11 +20,13 @@
         bell: '<path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/>',
         users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
         download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
-        maliyet: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'
+        maliyet: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+        weather: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>'
     };
 
     const standardMenu = [
         { id: 'anasayfa', icon: 'home', text: 'Ana Sayfa', href: 'anasayfa.html' },
+        { id: 'hava-durumu', icon: 'weather', text: 'Hava Durumu', href: 'hava-durumu.html' },
         { id: 'saatlik', icon: 'clock', text: 'Saatlik Veri Girişi', href: 'saatlik-veri-giris.html' },
         { id: 'gunluk', icon: 'calendar', text: 'Günlük Veri Girişi', href: 'gunluk-veri-giris.html' },
         { id: 'buhar', icon: 'steam', text: 'Buhar Verisi', href: 'buhar-verisi.html' },
@@ -46,6 +48,7 @@
 
     const pageByFile = {
         'anasayfa.html': 'anasayfa',
+        'hava-durumu.html': 'hava-durumu',
         'saatlik-veri-giris.html': 'saatlik',
         'gunluk-veri-giris.html': 'gunluk',
         'buhar-verisi.html': 'buhar',

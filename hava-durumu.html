@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hava Durumu - Honaz</title>
+    <link rel="stylesheet" href="css/anasayfa.css">
+    <link rel="stylesheet" href="css/hava-durumu.css">
+    <link rel="stylesheet" href="css/mobile-system.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sol Navigasyon Menüsü -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu"></ul>
+            <div class="sidebar-footer">
+                <div class="user-info" id="sidebarUserInfo" style="padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
+                    <span id="sidebarUserNameDisplay" style="color: white; font-size: 13px; font-weight: 500;">Yükleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout">Çıkış Yap</button>
+            </div>
+        </nav>
+
+        <!-- Ana İçerik -->
+        <div class="main-content">
+            <!-- Üst Header -->
+            <header class="header">
+                <div class="header-top">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menüyü aç/kapa">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <div class="company-info">
+                        <h1>KORUMA KLOR ALKALİ ŞİRKETLER GRUBU</h1>
+                        <h2>KOJENERASYON BÖLÜMÜ</h2>
+                    </div>
+                    <div class="user-info">
+                        <span class="welcome-text">Hoşgeldin, <span id="userNameDisplay">Yükleniyor...</span></span>
+                        <button class="logout-btn" id="headerLogout">Çıkış Yap</button>
+                    </div>
+                </div>
+                <div class="header-bottom">
+                    <h3>Hava Durumu - Honaz</h3>
+                </div>
+            </header>
+
+            <!-- Hava Durumu İçeriği -->
+            <main class="dashboard-content">
+                <div class="weather-container">
+                    <div class="weather-card">
+            <div class="weather-header">
+                <h2>🌤️ Honaz Hava Durumu</h2>
+                <button onclick="refreshWeather()" class="refresh-btn">🔄 Yenile</button>
+            </div>
+            
+            <div id="currentWeather" class="current-weather">
+                <div class="loading">Yükleniyor...</div>
+            </div>
+            
+            <div id="forecast" class="forecast">
+                <!-- 5 günlük tahmin buraya gelecek -->
+            </div>
+            
+            <div class="last-update">
+                Son Güncelleme: <span id="lastUpdate">-</span>
+            </div>
+        </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Script Dosyaları -->
+    <script src="js/app-config.js?v=2"></script>
+    <script src="js/session-auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/sidebar-menu.js"></script>
+    <script src="js/logout-system.js"></script>
+    
+    <script>
+        // Kullanıcı adını göster
+        (function displayUserName() {
+            const logged = localStorage.getItem('loggedInUser');
+            const display = document.getElementById('userNameDisplay');
+            const sidebarDisplay = document.getElementById('sidebarUserNameDisplay');
+            
+            if (logged) {
+                try {
+                    const user = JSON.parse(logged);
+                    const firstName = user.firstName || user.ad || user['Ad'] || user.name || '';
+                    const lastName = user.lastName || user.soyad || user['Soyad'] || user.surname || '';
+                    const fullName = (firstName + ' ' + lastName).trim() || user.email || 'Kullanıcı';
+                    if (display) display.textContent = fullName;
+                    if (sidebarDisplay) sidebarDisplay.textContent = fullName;
+                } catch (e) {
+                    if (display) display.textContent = 'Kullanıcı';
+                    if (sidebarDisplay) sidebarDisplay.textContent = 'Kullanıcı';
+                }
+            } else {
+                if (display) display.textContent = 'Misafir';
+                if (sidebarDisplay) sidebarDisplay.textContent = 'Misafir';
+            }
+        })();
+    </script>
+
+    <script>
+        // ⚙️ Google Apps Script URL'ini buraya yapıştırın
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzGjEspVluGscAerQ8aYhoovucwUrdiaKx5gK2Cp07DZoR-Tzt3XBT9kwRQQBkUGVT_yA/exec';
+
+        // Sayfa yüklendiğinde hava durumunu çek
+        window.addEventListener('DOMContentLoaded', () => {
+            loadWeather();
+            // Her 30 dakikada bir otomatik yenile
+            setInterval(loadWeather, 30 * 60 * 1000);
+        });
+
+        async function loadWeather() {
+            try {
+                // Güncel hava durumu
+                const response = await fetch(`${GAS_URL}?action=guncel`);
+                const data = await response.json();
+                
+                if (data.hata) {
+                    showError(data.mesaj);
+                    return;
+                }
+                
+                displayCurrentWeather(data);
+                
+                // 5 günlük tahmin
+                const forecastResponse = await fetch(`${GAS_URL}?action=tahmin`);
+                const forecastData = await forecastResponse.json();
+                displayForecast(forecastData);
+                
+            } catch (error) {
+                showError('Hava durumu yüklenemedi: ' + error.message);
+            }
+        }
+
+        function displayCurrentWeather(data) {
+            const weatherDiv = document.getElementById('currentWeather');
+            
+            const iconUrl = `https://openweathermap.org/img/wn/${data.icon}@4x.png`;
+            
+            weatherDiv.innerHTML = `
+                <div class="main-info">
+                    <img src="${iconUrl}" alt="${data.durum}" class="weather-icon">
+                    <div class="temperature">
+                        <span class="temp-value">${data.sicaklik}</span>
+                        <span class="temp-unit">°C</span>
+                    </div>
+                </div>
+                <div class="weather-description">${data.durum.toUpperCase()}</div>
+                <div class="weather-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Hissedilen</span>
+                        <span class="detail-value">${data.hissedilen}°C</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Nem</span>
+                        <span class="detail-value">%${data.nem}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Rüzgar</span>
+                        <span class="detail-value">${data.ruzgar} km/h</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Basınç</span>
+                        <span class="detail-value">${data.basinc} hPa</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('lastUpdate').textContent = data.guncellemeSaati;
+        }
+
+        function displayForecast(forecastData) {
+            const forecastDiv = document.getElementById('forecast');
+            
+            if (!forecastData || forecastData.length === 0) {
+                forecastDiv.innerHTML = '';
+                return;
+            }
+            
+            let html = '<h3>5 Günlük Tahmin</h3><div class="forecast-grid">';
+            
+            forecastData.forEach(day => {
+                const iconUrl = `https://openweathermap.org/img/wn/${day.icon}@2x.png`;
+                html += `
+                    <div class="forecast-item">
+                        <div class="forecast-date">${day.tarih}</div>
+                        <img src="${iconUrl}" alt="${day.durum}" class="forecast-icon">
+                        <div class="forecast-temp">${day.sicaklik}°C</div>
+                        <div class="forecast-desc">${day.durum}</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            forecastDiv.innerHTML = html;
+        }
+
+        function showError(message) {
+            const weatherDiv = document.getElementById('currentWeather');
+            weatherDiv.innerHTML = `
+                <div class="error">
+                    ⚠️ ${message}
+                </div>
+            `;
+        }
+
+        function refreshWeather() {
+            document.getElementById('currentWeather').innerHTML = '<div class="loading">Yenileniyor...</div>';
+            loadWeather();
+        }
+    </script>
+</body>
+</html>

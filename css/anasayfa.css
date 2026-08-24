@@ -658,6 +658,20 @@ body {
 }
 
 /* Kart Renkleri */
+.summary-card.weather .card-icon {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.summary-card.weather {
+    cursor: pointer;
+}
+
+.summary-card.weather:focus-visible {
+    outline: 3px solid #667eea;
+    outline-offset: 4px;
+}
+
 .summary-card.production .card-icon {
     background: linear-gradient(135deg, #2ecc71, #27ae60);
     box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
