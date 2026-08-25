@@ -172,75 +172,6 @@
                     </div>
                 </section>
 
-                <!-- Bakım Kartları (Sadece Admin) -->
-                <section class="maintenance-status-section admin-only-section" style="display: none;">
-                    <h2 class="section-title">Bakım Durumu</h2>
-                    <div class="maintenance-cards">
-                        <div class="maintenance-card maintenance-card-clickable" data-motor="gm1">
-                            <div class="maintenance-header">
-                                <h3>GM-1 Bakım</h3>
-                                <span class="maintenance-badge">🔧</span>
-                            </div>
-                            <div class="maintenance-info">
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Periyodik Bakıma Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm1-bakim-kalan">-- saat</span>
-                                </div>
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Greslemeye Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm1-gresleme-kalan">-- saat</span>
-                                </div>
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Numuneye Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm1-numune-kalan">-- saat</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="maintenance-card maintenance-card-clickable" data-motor="gm2">
-                            <div class="maintenance-header">
-                                <h3>GM-2 Bakım</h3>
-                                <span class="maintenance-badge">🔧</span>
-                            </div>
-                            <div class="maintenance-info">
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Periyodik Bakıma Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm2-bakim-kalan">-- saat</span>
-                                </div>
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Greslemeye Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm2-gresleme-kalan">-- saat</span>
-                                </div>
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Numuneye Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm2-numune-kalan">-- saat</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="maintenance-card maintenance-card-clickable" data-motor="gm3">
-                            <div class="maintenance-header">
-                                <h3>GM-3 Bakım</h3>
-                                <span class="maintenance-badge">🔧</span>
-                            </div>
-                            <div class="maintenance-info">
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Periyodik Bakıma Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm3-bakim-kalan">-- saat</span>
-                                </div>
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Greslemeye Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm3-gresleme-kalan">-- saat</span>
-                                </div>
-                                <div class="maintenance-item">
-                                    <span class="maintenance-label">Numuneye Kalan Saat:</span>
-                                    <span class="maintenance-value" id="gm3-numune-kalan">-- saat</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 <!-- Elektroliz Ana Sayfa Bölümü -->
                 <section class="elz-mainpage-section" aria-labelledby="elzMainpageTitle">
                     <div class="elz-section-header">
@@ -275,14 +206,6 @@
                 <section class="daily-summary-section">
                     <h2 class="section-title">Günlük Özet</h2>
                     <div class="summary-cards">
-                        <div class="summary-card weather" data-target="hava-durumu" role="button" tabindex="0" aria-label="Hava durumunu goruntule">
-                            <div class="card-icon">🌤️</div>
-                            <div class="card-content">
-                                <h3>HAVA DURUMU</h3>
-                                <p class="card-value" id="weather-value">-- °C</p>
-                            </div>
-                        </div>
-
                         <div class="summary-card production" data-target="monthly-energy-report" role="button" tabindex="0" aria-label="Aylik enerji motor raporunu ac">
                             <div class="card-icon">⚡</div>
                             <div class="card-content">
@@ -373,23 +296,6 @@
         </div>
     </div>
 
-    <!-- Motor Bakım Detay Modal -->
-    <div class="motor-detail-modal" id="motorDetailModal" aria-hidden="true">
-        <div class="motor-detail-modal__backdrop" data-close-motor-detail></div>
-        <div class="motor-detail-modal__panel" role="dialog" aria-modal="true" aria-labelledby="motorDetailModalTitle">
-            <div class="motor-detail-modal__header">
-                <div>
-                    <h2 id="motorDetailModalTitle">Motor Bakım Detayları</h2>
-                    <p id="motorDetailModalSubtitle">Güncel çalışma saati ve bakım bilgileri</p>
-                </div>
-                <button type="button" class="motor-detail-modal__close" data-close-motor-detail aria-label="Kapat">×</button>
-            </div>
-            <div class="motor-detail-modal__body" id="motorDetailModalBody">
-                <div class="motor-detail-loading">Yükleniyor...</div>
-            </div>
-        </div>
-    </div>
-
 <script src="js/app-config.js?v=2"></script>
 <script src="js/session-auth.js"></script>
 <script src="js/utils.js"></script>
@@ -402,7 +308,6 @@
             const display = document.getElementById('userNameDisplay');
             const sidebarDisplay = document.getElementById('sidebarUserNameDisplay');
             const adminMenuItems = document.querySelectorAll('.admin-menu-item');
-            const adminSections = document.querySelectorAll('.admin-only-section');
             let isAdmin = false;
             if (logged) {
                 try {
@@ -421,19 +326,8 @@
                 if (display) display.textContent = 'Misafir';
                 if (sidebarDisplay) sidebarDisplay.textContent = 'Misafir';
             }
-            // Admin menü öğelerini göster/gizle
             adminMenuItems.forEach(item => {
                 item.style.display = isAdmin ? '' : 'none';
-            });
-            // Admin bölümlerini göster/gizle
-            adminSections.forEach(section => {
-                if (isAdmin) {
-                    section.classList.add('show-admin');
-                    section.style.display = 'block';
-                } else {
-                    section.classList.remove('show-admin');
-                    section.style.display = 'none';
-                }
             });
         })();
     </script>
