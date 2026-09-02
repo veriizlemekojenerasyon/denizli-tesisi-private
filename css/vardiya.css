@@ -472,6 +472,20 @@ body {
     box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
 }
 
+.submit-btn:disabled {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+    box-shadow: 0 2px 8px rgba(149, 165, 166, 0.3);
+}
+
+.submit-btn:disabled:hover {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    transform: none;
+    box-shadow: 0 2px 8px rgba(149, 165, 166, 0.3);
+}
+
 /* Mevcut Vardiya Bilgisi */
 .mevcut-vardiya {
     background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
