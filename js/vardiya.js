@@ -67,6 +67,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Önce kimlik doğrulama kontrolü
     checkAuth();
     
+    // 🔍 Debug: localStorage'daki vardiya kontrolü
+    const debugVardiya = localStorage.getItem('mevcutVardiya');
+    if (debugVardiya) {
+        console.log('✅ Sayfa yüklendiğinde aktif vardiya var:', JSON.parse(debugVardiya));
+    } else {
+        console.log('ℹ️ Sayfa yüklendiğinde aktif vardiya YOK');
+    }
+    
     // ⏰ Otomatik yönlendirme kontrolünü başlat (her dakika kontrol et)
     checkAutoRedirect();
     setInterval(checkAutoRedirect, 60000); // Her 60 saniyede bir kontrol et
@@ -669,13 +677,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Vardiya başlat - Google Sheets
     kaydetBtn.addEventListener('click', async function() {
+        console.log('🔍 Vardiya başlat butonuna tıklandı');
+        
         // Önce mevcut aktif vardiya kontrolü yap
         const mevcutVardiya = localStorage.getItem('mevcutVardiya');
         if (mevcutVardiya) {
             const vardiya = JSON.parse(mevcutVardiya);
+            console.log('❌ Çift kayıt engellendi! Mevcut vardiya:', vardiya);
             alert(`Zaten aktif bir vardiya var!\n\nVardiya: ${vardiya.vardiyaAdi}\nOperatör: ${vardiya.personelAdSoyad}\nBaşlangıç: ${vardiya.baslangicZamani}\n\nYeni vardiya başlatmak için önce mevcut vardiyayı bitirmelisiniz.`);
             return;
         }
+        
+        console.log('✅ Mevcut vardiya yok, yeni vardiya başlatılabilir');
         
         const selectedPersonelId = personelSelect.value;
         const selectedVardiya = vardiyaSelect.value;
@@ -1319,9 +1332,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Mevcut vardiya bilgisi (localStorage'dan)
     function mevcutVardiyaBilgisi() {
+        console.log('🔍 mevcutVardiyaBilgisi() çağrıldı');
         const mevcutVardiya = localStorage.getItem('mevcutVardiya');
         if (mevcutVardiya) {
             const vardiya = JSON.parse(mevcutVardiya);
+            console.log('✅ Mevcut vardiya bulundu, form kilitleniyor:', vardiya);
             const mevcutVardiyaDiv = document.getElementById('mevcutVardiya');
             
             document.getElementById('mevcutVardiyaAdi').textContent = vardiya.vardiyaAdi;
@@ -1369,15 +1384,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 kaydetBtn.textContent = 'VARDİYA ZATEN AKTİF';
                 kaydetBtn.style.opacity = '0.5';
                 kaydetBtn.style.cursor = 'not-allowed';
+                console.log('🔒 Vardiya başlat butonu devre dışı bırakıldı');
             }
             
             // Temizle butonunu gizle - aktif vardiya varken temizleme yapılmamalı
             if (temizleBtn) {
                 temizleBtn.style.display = 'none';
+                console.log('🔒 Temizle butonu gizlendi');
             }
             
             return true;
         }
+        console.log('ℹ️ Mevcut vardiya bulunamadı');
         return false;
     }
 
