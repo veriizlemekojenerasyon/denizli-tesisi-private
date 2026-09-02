@@ -262,6 +262,42 @@ document.addEventListener('DOMContentLoaded', function() {
         if (temizlikChecklist) {
             temizlikChecklist.style.display = 'none';
         }
+        
+        // Form alanlarını yeniden etkinleştir
+        if (personelSelect) {
+            personelSelect.disabled = false;
+            personelSelect.value = '';
+        }
+        if (yardimciOperatorVar) {
+            yardimciOperatorVar.disabled = false;
+            yardimciOperatorVar.checked = false;
+        }
+        if (yardimciOperator) {
+            yardimciOperator.disabled = false;
+            yardimciOperator.value = '';
+        }
+        if (yardimciOperatorListesi) {
+            yardimciOperatorListesi.style.display = 'none';
+        }
+        
+        // Vardiya başlat butonunu yeniden etkinleştir
+        if (kaydetBtn) {
+            kaydetBtn.disabled = false;
+            kaydetBtn.textContent = 'VARDİYA BAŞLAT';
+            kaydetBtn.style.opacity = '1';
+            kaydetBtn.style.cursor = 'pointer';
+        }
+        
+        // Temizle butonunu göster
+        if (temizleBtn) {
+            temizleBtn.style.display = 'inline-block';
+        }
+        
+        // Tarih ve vardiya otomatik ayarlanmalı
+        tarihInput.value = formatDateTR(new Date());
+        tarihInput.readOnly = true;
+        vardiyaSelect.disabled = false;
+        setVardiyaByHour();
     }
 
     function escapeHtml(value) {
@@ -594,10 +630,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Temizle butonu - formu sıfırla, tarih ve vardiyayı yeniden otomatik ata ve kilitle
     temizleBtn.addEventListener('click', function() {
+        // Mevcut vardiya varsa temizlemeye izin verme
+        const mevcutVardiya = localStorage.getItem('mevcutVardiya');
+        if (mevcutVardiya) {
+            const vardiya = JSON.parse(mevcutVardiya);
+            alert(`Aktif vardiya varken form temizlenemez!\n\nVardiya: ${vardiya.vardiyaAdi}\nOperatör: ${vardiya.personelAdSoyad}\n\nYeni vardiya başlatmak için önce mevcut vardiyayı bitirmelisiniz.`);
+            return;
+        }
+        
         personelSelect.value = '';
+        personelSelect.disabled = false;
         yardimciOperatorVar.checked = false;
+        yardimciOperatorVar.disabled = false;
         yardimciOperatorListesi.style.display = 'none';
         yardimciOperator.value = '';
+        yardimciOperator.disabled = false;
         operatorStatus.textContent = 'Yetki kontrol ediliyor...';
         operatorStatus.style.color = '';
 
@@ -610,10 +657,26 @@ document.addEventListener('DOMContentLoaded', function() {
         // Vardiya: saate göre yeniden seç ve kilitle
         vardiyaSelect.disabled = false; // önce aç, değer ata, sonra kilitle
         setVardiyaByHour();             // değer atama + disabled = true içeriyor
+        
+        // Butonları yeniden etkinleştir
+        if (kaydetBtn) {
+            kaydetBtn.disabled = false;
+            kaydetBtn.textContent = 'VARDİYA BAŞLAT';
+            kaydetBtn.style.opacity = '1';
+            kaydetBtn.style.cursor = 'pointer';
+        }
     });
 
     // Vardiya başlat - Google Sheets
     kaydetBtn.addEventListener('click', async function() {
+        // Önce mevcut aktif vardiya kontrolü yap
+        const mevcutVardiya = localStorage.getItem('mevcutVardiya');
+        if (mevcutVardiya) {
+            const vardiya = JSON.parse(mevcutVardiya);
+            alert(`Zaten aktif bir vardiya var!\n\nVardiya: ${vardiya.vardiyaAdi}\nOperatör: ${vardiya.personelAdSoyad}\nBaşlangıç: ${vardiya.baslangicZamani}\n\nYeni vardiya başlatmak için önce mevcut vardiyayı bitirmelisiniz.`);
+            return;
+        }
+        
         const selectedPersonelId = personelSelect.value;
         const selectedVardiya = vardiyaSelect.value;
         const selectedTarih = tarihInput.value;
@@ -1287,6 +1350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             vardiyaSelect.value = vardiya.vardiya;
             vardiyaSelect.disabled = true;
             personelSelect.value = vardiya.personelId;
+            personelSelect.disabled = true; // Personel değişikliğini engelle
             
             // Yardımcı operatör bilgisi
             if (vardiya.yardimciOperator) {
@@ -1294,8 +1358,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 yardimciOperatorListesi.style.display = 'block';
                 yardimciOperator.value = vardiya.yardimciOperator.id;
             }
+            yardimciOperatorVar.disabled = true; // Yardımcı operatör değişikliğini engelle
+            yardimciOperator.disabled = true;
             
             operatorYetkisiKontrolu();
+            
+            // Vardiya başlat butonunu gizle/devre dışı bırak - çift kayıt önleme
+            if (kaydetBtn) {
+                kaydetBtn.disabled = true;
+                kaydetBtn.textContent = 'VARDİYA ZATEN AKTİF';
+                kaydetBtn.style.opacity = '0.5';
+                kaydetBtn.style.cursor = 'not-allowed';
+            }
+            
+            // Temizle butonunu gizle - aktif vardiya varken temizleme yapılmamalı
+            if (temizleBtn) {
+                temizleBtn.style.display = 'none';
+            }
             
             return true;
         }
