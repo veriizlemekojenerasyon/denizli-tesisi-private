@@ -63,6 +63,11 @@ function handleRequest(e) {
       case 'getSystemLogs':
         result = getSystemLogs(parseInt(params.count, 10) || 100);
         break;
+      case '':
+      case 'health':
+      case 'status':
+        result = getSystemHealth();
+        break;
       default:
         result = { success: false, error: 'Geçersiz action: ' + action };
     }
@@ -81,7 +86,7 @@ function handleRequest(e) {
 }
 
 function isWriteAction(action) {
-  return ['addRecord', 'updateRecord', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1;
+  return ['addRecord', 'updateRecord', 'sendEmail', 'checkHourlyMissingRecords', 'installHourlyMissingRecordTrigger'].indexOf(action) !== -1 && action !== '';
 }
 
 function getGunlukSheet(createIfMissing) {
@@ -747,5 +752,37 @@ function sendEmailAlert(data) {
     return { success: true, message: 'Mail basariyla gonderildi!' };
   } catch (error) {
     return { success: false, error: error.toString() };
+  }
+}
+
+function getSystemHealth() {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = getGunlukSheet(false);
+    var triggerHealth = getTriggerHealth();
+    var logs = getSystemLogs(1);
+    
+    var sheetStatus = sheet ? 'AKTIF' : 'OLUSTURULMADI';
+    var recordCount = sheet ? (sheet.getLastRow() > 1 ? sheet.getLastRow() - 1 : 0) : 0;
+    
+    return {
+      success: true,
+      status: 'AKTIF',
+      timestamp: formatDateTimeTR(new Date()),
+      spreadsheet: spreadsheet.getName(),
+      sheetStatus: sheetStatus,
+      recordCount: recordCount,
+      triggerInstalled: triggerHealth.installed,
+      triggerCount: triggerHealth.triggerCount,
+      lastLog: logs.success && logs.data.length > 0 ? logs.data[0] : null,
+      message: 'Günlük Veri Sistemi çalışıyor durumda'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      status: 'HATA',
+      error: error.toString(),
+      timestamp: formatDateTimeTR(new Date())
+    };
   }
 }

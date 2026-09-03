@@ -3,6 +3,8 @@
  * Bu dosya gunluk-veri-giris.html için Google Sheets bağlantısını sağlar
  */
 
+console.log('🔄 gunluk-veri-sheets.js yükleniyor - v20260903144800');
+
 // ============================================
 // YAPILANDIRMA - BU ALANI DOLDURUN
 // ============================================
@@ -22,6 +24,8 @@ const GUNLUK_CONFIG = {
     EMAIL_SUBJECT: 'Günlük Veri Girişi Uyarısı - Kayıt Girilmedi',
     AUTO_CHECK_INTERVAL_MS: 300000
 };
+
+console.log('🔗 GUNLUK_CONFIG.APPS_SCRIPT_URL:', GUNLUK_CONFIG.APPS_SCRIPT_URL);
 
 // ============================================
 // GUNLUK VERI SAYFASI ANA NESNESİ
@@ -249,8 +253,16 @@ const GunlukApp = {
             const url = new URL(GUNLUK_CONFIG.APPS_SCRIPT_URL);
             url.searchParams.append('action', 'getRecords');
             
-            const response = await fetch(url, { method: 'GET', mode: 'cors' });
+            console.log('checkExistingRecord URL:', url.toString());
+            
+            const response = await fetch(url.toString());
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const result = await response.json();
+            console.log('checkExistingRecord result:', result);
             
             if (result.success && result.data) {
                 const existingRecord = result.data.find(record => 
@@ -476,9 +488,13 @@ const GunlukApp = {
             
             console.log('loadLastRecords URL:', url.toString());
             
-            const response = await fetch(url, { method: 'GET', mode: 'cors' });
-            const result = await response.json();
+            const response = await fetch(url.toString());
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
             console.log('loadLastRecords response:', result);
             
             if (result.success) {

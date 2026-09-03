@@ -1,6 +1,8 @@
 ﻿(function (root) {
     'use strict';
 
+    console.log('🔄 app-config.js yükleniyor - v20260903144800');
+
     const SCRIPT_URLS = {
         saatlik: 'https://script.google.com/macros/s/AKfycbxLg9svHtuKZ5jXP0fzFc1opOFwmzwjkHB9PZS61oG_wgH14dGerwnP1CaBMFEQFiMz/exec',
         motor: 'https://script.google.com/macros/s/AKfycbyrSjQAH5k8bDIQXf7g1hJ59xo2Kv7rLN_mstZxDZxK3wiXV5Fo2mkGzPyiMx9DoBmq/exec',
@@ -8,7 +10,7 @@
         enerjiGunSonu: 'https://script.google.com/macros/s/AKfycbwSno62Ijw1RgvUdZTOCoBXV9NY3H-5bg1Po4WRG-sSuWM_nyZzP307scsyRvwZT1Ux/exec',
         yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxY0_SxJyIWp0TaDABKdhnPFmHmw7pRMUp33AQ7AujZN26mESmpTNr4Bqu81SY5u0F_/exec',
         buhar: 'https://script.google.com/macros/s/AKfycby4NTxk40SXCt4_kdks390El9eHvQHsXjmAh1fQ9veOpBPewy9VWOfyQFwqZtDlp6ug/exec',
-        gunluk: 'https://script.google.com/macros/s/AKfycbyi6i-Zg8aGL3tLjxh4Y_g9kDuwzWQC71zJclRzHdEM7kgI_NCLpJu2b-k3rtXEVwQG/exec',
+        gunluk: 'https://script.google.com/macros/s/AKfycbxsz-JYET2T_J9qzZqYvunHErwr8qu0868wEwErP3h_Vo6iH8u1RlbcAWWcrzdUEBlR/exec',
         bakim: 'https://script.google.com/macros/s/AKfycbyrBtgc3spsh4jCpVtojfiFac5La8WKzh0Hlazndj0w-O-GCpMzYwCNevUJReXUI_zV/exec',
         vardiya: 'https://script.google.com/macros/s/AKfycbzfcNufcJ8GB16pRxjOyLzGhMl_O2JLXasb8ONoTAjORjA_yvi3lDEfNwKiu8IP8iOt/exec',
         bildirim: 'https://script.google.com/macros/s/AKfycbx6kbSNPQV0hIj8aOeW1QamYe3R995vXg-3uSw4Qw5N0M8-RARL262cce3RdQFIbso/exec',
