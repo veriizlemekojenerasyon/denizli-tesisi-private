@@ -194,15 +194,17 @@ const BuharApp = {
     // Kayit ekle (Google Sheets'e)
     addRecord: async function(data) {
         try {
-            const result = await this._jsonp(
-                BUHAR_CONFIG.APPS_SCRIPT_URL,
-                this._buildParams({
-                    action: 'addRecord',
-                    tarih: data.tarih,
-                    buharMiktari: data.buharMiktari,
-                    kaydeden: data.kaydeden
-                })
-            );
+            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'addRecord');
+            url.searchParams.append('tarih', data.tarih);
+            url.searchParams.append('buharMiktari', data.buharMiktari);
+            url.searchParams.append('kaydeden', data.kaydeden);
+
+            const response = await fetch(url.toString());
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
             return result;
         } catch (error) {
             console.error('Kayit hatasi:', error);
@@ -216,10 +218,20 @@ const BuharApp = {
         if (!tableBody) return;
 
         try {
-            const result = await this._jsonp(
-                BUHAR_CONFIG.APPS_SCRIPT_URL,
-                this._buildParams({ action: 'getLastRecords', count: '32' })
-            );
+            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getLastRecords');
+            url.searchParams.append('count', '32');
+
+            console.log('Buhar loadLastRecords URL:', url.toString());
+
+            const response = await fetch(url.toString());
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('Buhar loadLastRecords result:', result);
 
             if (result.success) {
                 this.renderTable(result.data);
@@ -328,10 +340,14 @@ const BuharApp = {
         const currentDateTR = this.isoToTR(tarihInput.value);
 
         try {
-            const result = await this._jsonp(
-                BUHAR_CONFIG.APPS_SCRIPT_URL,
-                this._buildParams({ action: 'getRecords' })
-            );
+            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getRecords');
+
+            const response = await fetch(url.toString());
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
 
             if (result.success && Array.isArray(result.data)) {
                 const existingRecord = result.data.find(function(record) {
@@ -379,23 +395,25 @@ const BuharApp = {
         }
     },
     
-    // g��� Mail gönderme fonksiyonu
+    // Mail gönderme fonksiyonu
     sendEmailAlert: async function(subject, body) {
         if (!BUHAR_CONFIG.EMAIL_ENABLED) {
-            console.log('g��� Mail gönderme kapalı');
+            console.log('Mail gönderme kapalı');
             return { success: true, message: 'Mail gönderme kapalı' };
         }
-        
+
         try {
-            const result = await this._jsonp(
-                BUHAR_CONFIG.APPS_SCRIPT_URL,
-                this._buildParams({
-                    action: 'sendEmail',
-                    to: BUHAR_CONFIG.EMAIL_TO,
-                    subject: subject || BUHAR_CONFIG.EMAIL_SUBJECT,
-                    body: body
-                })
-            );
+            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'sendEmail');
+            url.searchParams.append('to', BUHAR_CONFIG.EMAIL_TO);
+            url.searchParams.append('subject', subject || BUHAR_CONFIG.EMAIL_SUBJECT);
+            url.searchParams.append('body', body);
+
+            const response = await fetch(url.toString());
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
             console.log('Mail sonucu:', result);
             return result;
         } catch (error) {
@@ -424,10 +442,14 @@ const BuharApp = {
         try {
             const tarihTR = this.isoToTR(tarih);
 
-            const result = await this._jsonp(
-                BUHAR_CONFIG.APPS_SCRIPT_URL,
-                this._buildParams({ action: 'getRecords' })
-            );
+            const url = new URL(BUHAR_CONFIG.APPS_SCRIPT_URL);
+            url.searchParams.append('action', 'getRecords');
+
+            const response = await fetch(url.toString());
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
 
             if (result.success && Array.isArray(result.data)) {
                 return result.data.some(function(record) {
