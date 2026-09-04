@@ -121,16 +121,33 @@
             const endIso   = toIsoDate(range.endDate);
 
             const promises = MOTORS.map(motor =>
-                fetchJson(url, { action:'getMotorRecords', motor, startDate: startIso, endDate: endIso })
-                    .then(r => r.data || [])
-                    .catch(() => [])
+                fetchJson(url, { 
+                    action: 'getMotorRecords',
+                    motor: motor,
+                    startDate: startIso,
+                    endDate: endIso
+                })
+                    .then(r => {
+                        console.log(`🔍 Motor ${motor} API yanıtı:`, r);
+                        const records = r.data || [];
+                        console.log(`🔍 Motor ${motor} için ${records.length} kayıt geldi`);
+                        return records;
+                    })
+                    .catch(err => {
+                        console.error(`❌ Motor ${motor} API hatası:`, err);
+                        return [];
+                    })
             );
 
             const results = await Promise.all(promises);
+            console.log('📦 Toplam API yanıtı sayısı:', results.length);
+            console.log('📦 Her motor için kayıt sayısı:', results.map(r => Array.isArray(r) ? r.length : 0));
+
             state.records = results.flat().map(normalizeRecord).filter(Boolean);
-            window._dbgRecords = state.records; // geçici debug
-            console.log('state.records.length:', state.records.length);
-            if (state.records.length > 0) console.log('İlk kayıt:', JSON.stringify(state.records[0]));
+            console.log('✅ Toplam kayıt yüklendi:', state.records.length);
+            if (state.records.length > 0) {
+                console.log('✅ İlk kayıt örneği:', state.records[0]);
+            }
             applyFiltersAndRender();
         } catch (err) {
             showNotice(err.message || String(err));
@@ -144,19 +161,27 @@
         const url = new URL(scriptUrl);
         Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
         url.searchParams.set('_', Date.now().toString());
+        console.log('🌐 API çağrısı:', url.toString());
         try {
-            const resp = await fetch(url.toString());
+            const resp = await fetch(url.toString(), {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache'
+            });
             if (!resp.ok) {
                 const text = await resp.text();
                 throw new Error(`HTTP ${resp.status}: ${text.slice(0, 180)}`);
             }
             const text = await resp.text();
+            console.log('📄 API yanıt text (ilk 500 karakter):', text.slice(0, 500));
             let result;
             try { result = JSON.parse(text); }
             catch { throw new Error('JSON okunamadi: ' + text.slice(0, 120)); }
+            console.log('📄 API yanıt JSON:', result);
             if (result && result.success === false) throw new Error(result.error || 'API hatasi');
             return result || {};
         } catch (error) {
+            console.error('❌ fetchJson hatası:', error);
             throw error;
         }
     }
@@ -164,35 +189,36 @@
     // ─── Normalize ───────────────────────────────────────────────────────────────
 
     function normalizeRecord(row) {
-        const date  = normalizeDateValue(row.tarih || '');
-        const hour  = normalizeHour(row.saat || '');
-        const motor = normalizeMotorName(row.motor || '');
+        // Hem büyük harfli hem de camelCase alan adlarını destekle
+        const date  = normalizeDateValue(row.tarih || row.Tarih || '');
+        const hour  = normalizeHour(row.saat || row.Saat || '');
+        const motor = normalizeMotorName(row.motor || row.Motor || '');
         if (!date || !motor) return null;
 
-        const winding1 = parseNum(row.sargiSicaklik1);
-        const winding2 = parseNum(row.sargiSicaklik2);
-        const winding3 = parseNum(row.sargiSicaklik3);
+        const winding1 = parseNum(row.sargiSicaklik1 || row.SargiSicaklik1);
+        const winding2 = parseNum(row.sargiSicaklik2 || row.SargiSicaklik2);
+        const winding3 = parseNum(row.sargiSicaklik3 || row.SargiSicaklik3);
         const windings = [winding1, winding2, winding3].filter(v => v > 0);
         const windingAvg    = windings.length ? average(windings) : 0;
         const windingMax    = windings.length ? Math.max(...windings) : 0;
         const windingMin    = windings.length ? Math.min(...windings) : 0;
         const windingSpread = windings.length ? windingMax - windingMin : 0;
 
-        const chargeTemp      = parseNum(row.sarjSicaklik);
-        const chargePressure  = parseNum(row.sarjBasinc);
-        const oilTemp         = parseNum(row.yagSicaklik);
-        const oilPressure     = parseNum(row.yagBasinc);
-        const coolingTemp     = parseNum(row.sogutmaSuyuSicaklik);
-        const coolingPressure = parseNum(row.sogutmaSuyuBasinc);
-        const crankPressure   = parseNum(row.karterBasinc);
-        const roomTemp        = parseNum(row.makineDairesiSicaklik);
-        const bearingDE       = parseNum(row.jenYatakSicaklikDE);
-        const bearingNDE      = parseNum(row.jenYatakSicaklikNDE);
-        const gasReg          = parseNum(row.gazRegulatoru);
-        const chamberPressure = parseNum(row.onKamaraFarkBasinc);
+        const chargeTemp      = parseNum(row.sarjSicaklik || row.SarjSicaklik);
+        const chargePressure  = parseNum(row.sarjBasinc || row.SarjBasinc);
+        const oilTemp         = parseNum(row.yagSicaklik || row.YagSicaklik);
+        const oilPressure     = parseNum(row.yagBasinc || row.YagBasinc);
+        const coolingTemp     = parseNum(row.sogutmaSuyuSicaklik || row.SogutmaSuyuSicaklik);
+        const coolingPressure = parseNum(row.sogutmaSuyuBasinc || row.SogutmaSuyuBasinc);
+        const crankPressure   = parseNum(row.karterBasinc || row.KarterBasinc);
+        const roomTemp        = parseNum(row.makineDairesiSicaklik || row.MakineDairesiSicaklik);
+        const bearingDE       = parseNum(row.jenYatakSicaklikDE || row.JenYatakSicaklikDE);
+        const bearingNDE      = parseNum(row.jenYatakSicaklikNDE || row.JenYatakSicaklikNDE);
+        const gasReg          = parseNum(row.gazRegulatoru || row.GazRegulatoru);
+        const chamberPressure = parseNum(row.onKamaraFarkBasinc || row.OnKamaraFarkBasinc);
 
         // Durum tespiti: hem metin hem de tüm değerlerin sıfır olması
-        const isStopped = isStoppedStatus(row.durum || '') || isAllZero({
+        const isStopped = isStoppedStatus(row.durum || row.Durum || '') || isAllZero({
             winding1, winding2, winding3, coolingTemp, oilTemp, chargeTemp
         });
 
@@ -210,9 +236,9 @@
             key: buildKey(date, hour, motor),
             date, hour, motor,
             timestamp: parseDateTime(date, hour).getTime(),
-            shift:   row.vardiya    || '',
-            durum:   row.durum      || 'NORMAL',
-            savedBy: row.kaydeden   || '',
+            shift:   row.vardiya || row.Vardiya || '',
+            durum:   row.durum || row.Durum || 'NORMAL',
+            savedBy: row.kaydeden || row.Kaydeden || '',
             isStopped,
             winding1, winding2, winding3,
             windingAvg, windingMax, windingMin, windingSpread,

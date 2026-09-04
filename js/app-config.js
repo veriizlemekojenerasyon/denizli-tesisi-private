@@ -1,7 +1,7 @@
 ﻿(function (root) {
     'use strict';
 
-    console.log('🔄 app-config.js yükleniyor - v20260903144800');
+    console.log('🔄 app-config.js yükleniyor - v20260904150000');
 
     const SCRIPT_URLS = {
         saatlik: 'https://script.google.com/macros/s/AKfycbw7gTKX-mN5YJtOseDUr6R3qAYme9rEM5Lb0hYYm3RCKHD1Q2A6GZqlXihYCYtsPgBcXA/exec',
@@ -20,8 +20,8 @@
         elzMainpage: 'https://script.google.com/macros/s/AKfycbza7E5qh7K1FCiCpotWe8M95Uzfb5sutcZTkpRkG4pzhjpmhBuvvXdaW16DmqKNlSpR/exec',
         kojenMaliyetRapor: 'https://script.google.com/macros/s/AKfycbysr-rbVD0zXbTu_ZEUdn3nEh07VvKiwJDfz10pI5oOn493NjuZFI_meMPmESTvNgbS/exec',
         // Mirror Reader — motor ve enerji mirror verileri aynı web app'ten, farklı action ile çekilir
-        motorMirror:  'https://script.google.com/macros/s/AKfycbyBm2T2Ax5ltP-yfEDbR0kbTc7qI4CE5dXJpaxrjf5erv1m99ONHPx_xNb7N3SDiQ4/exec',
-        enerjiMirror: 'https://script.google.com/macros/s/AKfycbyBm2T2Ax5ltP-yfEDbR0kbTc7qI4CE5dXJpaxrjf5erv1m99ONHPx_xNb7N3SDiQ4/exec'
+        motorMirror:  'https://script.google.com/macros/s/AKfycbwrr41mFgxOkxu-XGgEg-f_dUuZyMc0G9V02p4Z7Aji0WiG2_PdFL9K8PJKUUfIGtQ3/exec',
+        enerjiMirror: 'https://script.google.com/macros/s/AKfycbwrr41mFgxOkxu-XGgEg-f_dUuZyMc0G9V02p4Z7Aji0WiG2_PdFL9K8PJKUUfIGtQ3/exec'
     };
 
     function getScriptUrl(key) {
