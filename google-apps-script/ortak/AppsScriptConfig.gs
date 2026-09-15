@@ -14,7 +14,7 @@ var APPS_SCRIPT_URLS = {
   yillikEnerjiRapor: 'https://script.google.com/macros/s/AKfycbxTOJuZuGXKTy2JoICtsgXMXjntSmkkWJAaUsiZg8pIwRWeDLjl027KzBTRTMYpsn8r/exec',
   buhar: 'https://script.google.com/macros/s/AKfycbxRCMHqXKVq-qHx8IxWxQgEqZtnU5RByCVHu6pxUFgIPq-8g-0NPTiJgnPM3glZd-UDvw/exec',
   gunluk: 'https://script.google.com/macros/s/AKfycbygWsxTYiiu78JjYzEP4_Erk9qpK4ceXQ3JSWZrkCvX908Qtt920ReBMn-jBgqrAbSwlw/exec',
-  bakim: 'https://script.google.com/macros/s/AKfycbyrBtgc3spsh4jCpVtojfiFac5La8WKzh0Hlazndj0w-O-GCpMzYwCNevUJReXUI_zV/exec',
+  bakim: 'https://script.google.com/macros/s/AKfycbyHVF7oRudz9IGXmbBnIhxPSsD-6xrpOTGoTMlSz24ks6LK2injaCRDmQZXOkrDq0d_MQ/exec',
   vardiya: 'https://script.google.com/macros/s/AKfycbxZE7LNlZRCbjI0PehXQN8-jhTyj5t735inYQ5b2ti6xN_ZNG23EASAbvf2SQUNCjat/exec',
   bildirim: 'https://script.google.com/macros/s/AKfycbx6kbSNPQV0hIj8aOeW1QamYe3R995vXg-3uSw4Qw5N0M8-RARL262cce3RdQFIbso/exec',
   kullanici: 'https://script.google.com/macros/s/AKfycbx0cj7AcYyf3SiVmLdJVrutOR_VA6P_1XhvyAmINXs5JUMfIr0NnPHtRfC_p7TJKhzD/exec',
