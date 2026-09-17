@@ -120,23 +120,28 @@
             const startIso = toIsoDate(range.startDate);
             const endIso   = toIsoDate(range.endDate);
 
-            const promises = MOTORS.map(motor =>
-                fetchJson(url, { 
-                    action: 'getMotorRecords',
-                    motor: motor,
-                    startDate: startIso,
-                    endDate: endIso
-                })
-                    .then(r => {
-                        console.log(`🔍 Motor ${motor} API yanıtı:`, r);
-                        const records = r.data || [];
-                        console.log(`🔍 Motor ${motor} için ${records.length} kayıt geldi`);
-                        return records;
+            // İstekleri kısa aralıklarla at — aynı anda üç paralel istek Google'ın
+            // rate-limit mekanizmasını tetikleyebilir (ortadaki istek 404 dönebilir).
+            const STAGGER_MS = 300;
+            const promises = MOTORS.map((motor, idx) =>
+                new Promise(res => setTimeout(res, idx * STAGGER_MS)).then(() =>
+                    fetchJson(url, { 
+                        action: 'getMotorRecords',
+                        motor: motor,
+                        startDate: startIso,
+                        endDate: endIso
                     })
-                    .catch(err => {
-                        console.error(`❌ Motor ${motor} API hatası:`, err);
-                        return [];
-                    })
+                        .then(r => {
+                            console.log(`🔍 Motor ${motor} API yanıtı:`, r);
+                            const records = r.data || [];
+                            console.log(`🔍 Motor ${motor} için ${records.length} kayıt geldi`);
+                            return records;
+                        })
+                        .catch(err => {
+                            console.error(`❌ Motor ${motor} API hatası (tüm retry'lar tükendi):`, err);
+                            return [];
+                        })
+                )
             );
 
             const results = await Promise.all(promises);
@@ -157,11 +162,14 @@
         }
     }
 
-    async function fetchJson(scriptUrl, params) {
+    async function fetchJson(scriptUrl, params, retryCount = 0) {
+        const MAX_RETRIES = 3;
+        const RETRY_DELAY_MS = 1500;
+
         const url = new URL(scriptUrl);
         Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
         url.searchParams.set('_', Date.now().toString());
-        console.log('🌐 API çağrısı:', url.toString());
+        console.log(`🌐 API çağrısı (deneme ${retryCount + 1}/${MAX_RETRIES + 1}):`, url.toString());
         try {
             const resp = await fetch(url.toString(), {
                 method: 'GET',
@@ -170,7 +178,14 @@
             });
             if (!resp.ok) {
                 const text = await resp.text();
-                throw new Error(`HTTP ${resp.status}: ${text.slice(0, 180)}`);
+                const err = new Error(`HTTP ${resp.status}: ${text.slice(0, 180)}`);
+                // 404/429/5xx hatalarında retry yap
+                if (retryCount < MAX_RETRIES) {
+                    console.warn(`⚠️ fetchJson HTTP ${resp.status} hatası, ${RETRY_DELAY_MS}ms sonra tekrar deneniyor... (${retryCount + 1}/${MAX_RETRIES})`);
+                    await new Promise(res => setTimeout(res, RETRY_DELAY_MS * (retryCount + 1)));
+                    return fetchJson(scriptUrl, params, retryCount + 1);
+                }
+                throw err;
             }
             const text = await resp.text();
             console.log('📄 API yanıt text (ilk 500 karakter):', text.slice(0, 500));
@@ -181,7 +196,12 @@
             if (result && result.success === false) throw new Error(result.error || 'API hatasi');
             return result || {};
         } catch (error) {
-            console.error('❌ fetchJson hatası:', error);
+            if (retryCount < MAX_RETRIES && error.message && !error.message.startsWith('JSON')) {
+                console.warn(`⚠️ fetchJson ağ hatası, ${RETRY_DELAY_MS}ms sonra tekrar deneniyor... (${retryCount + 1}/${MAX_RETRIES})`, error.message);
+                await new Promise(res => setTimeout(res, RETRY_DELAY_MS * (retryCount + 1)));
+                return fetchJson(scriptUrl, params, retryCount + 1);
+            }
+            console.error('❌ fetchJson hatası (tüm denemeler tükendi):', error);
             throw error;
         }
     }
