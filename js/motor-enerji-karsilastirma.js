@@ -162,7 +162,14 @@
         }
     }
 
-    async function fetchJson(scriptUrl, params, retryCount = 0) {
+    /**
+     * Google Apps Script web app'lere istek atar.
+     * 
+     * fetch() ile yapılan istekler Google'ın script.google.com → script.googleusercontent.com
+     * redirect'ini CORS nedeniyle takip edemeyip 404 döndürebilir.
+     * XMLHttpRequest bu redirect'i sorunsuz takip eder.
+     */
+    function fetchJson(scriptUrl, params, retryCount = 0) {
         const MAX_RETRIES = 3;
         const RETRY_DELAY_MS = 1500;
 
@@ -170,40 +177,57 @@
         Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
         url.searchParams.set('_', Date.now().toString());
         console.log(`🌐 API çağrısı (deneme ${retryCount + 1}/${MAX_RETRIES + 1}):`, url.toString());
-        try {
-            const resp = await fetch(url.toString(), {
-                method: 'GET',
-                mode: 'cors',
-                cache: 'no-cache'
-            });
-            if (!resp.ok) {
-                const text = await resp.text();
-                const err = new Error(`HTTP ${resp.status}: ${text.slice(0, 180)}`);
-                // 404/429/5xx hatalarında retry yap
-                if (retryCount < MAX_RETRIES) {
-                    console.warn(`⚠️ fetchJson HTTP ${resp.status} hatası, ${RETRY_DELAY_MS}ms sonra tekrar deneniyor... (${retryCount + 1}/${MAX_RETRIES})`);
-                    await new Promise(res => setTimeout(res, RETRY_DELAY_MS * (retryCount + 1)));
-                    return fetchJson(scriptUrl, params, retryCount + 1);
+
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', url.toString(), true);
+            xhr.timeout = 30000;
+
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    const text = xhr.responseText;
+                    console.log('📄 API yanıt text (ilk 500 karakter):', text.slice(0, 500));
+                    let result;
+                    try { result = JSON.parse(text); }
+                    catch { reject(new Error('JSON okunamadi: ' + text.slice(0, 120))); return; }
+                    console.log('📄 API yanıt JSON:', result);
+                    if (result && result.success === false) { reject(new Error(result.error || 'API hatasi')); return; }
+                    resolve(result || {});
+                } else {
+                    const err = new Error(`HTTP ${xhr.status}: ${xhr.responseText.slice(0, 180)}`);
+                    if (retryCount < MAX_RETRIES) {
+                        console.warn(`⚠️ HTTP ${xhr.status} hatası, ${RETRY_DELAY_MS * (retryCount + 1)}ms sonra tekrar deneniyor...`);
+                        setTimeout(() => fetchJson(scriptUrl, params, retryCount + 1).then(resolve, reject), RETRY_DELAY_MS * (retryCount + 1));
+                    } else {
+                        console.error('❌ fetchJson hatası (tüm denemeler tükendi):', err);
+                        reject(err);
+                    }
                 }
-                throw err;
-            }
-            const text = await resp.text();
-            console.log('📄 API yanıt text (ilk 500 karakter):', text.slice(0, 500));
-            let result;
-            try { result = JSON.parse(text); }
-            catch { throw new Error('JSON okunamadi: ' + text.slice(0, 120)); }
-            console.log('📄 API yanıt JSON:', result);
-            if (result && result.success === false) throw new Error(result.error || 'API hatasi');
-            return result || {};
-        } catch (error) {
-            if (retryCount < MAX_RETRIES && error.message && !error.message.startsWith('JSON')) {
-                console.warn(`⚠️ fetchJson ağ hatası, ${RETRY_DELAY_MS}ms sonra tekrar deneniyor... (${retryCount + 1}/${MAX_RETRIES})`, error.message);
-                await new Promise(res => setTimeout(res, RETRY_DELAY_MS * (retryCount + 1)));
-                return fetchJson(scriptUrl, params, retryCount + 1);
-            }
-            console.error('❌ fetchJson hatası (tüm denemeler tükendi):', error);
-            throw error;
-        }
+            };
+
+            xhr.onerror = function () {
+                const err = new Error('Ağ hatası (XHR)');
+                if (retryCount < MAX_RETRIES) {
+                    console.warn(`⚠️ Ağ hatası, ${RETRY_DELAY_MS * (retryCount + 1)}ms sonra tekrar deneniyor...`);
+                    setTimeout(() => fetchJson(scriptUrl, params, retryCount + 1).then(resolve, reject), RETRY_DELAY_MS * (retryCount + 1));
+                } else {
+                    console.error('❌ fetchJson ağ hatası (tüm denemeler tükendi):', err);
+                    reject(err);
+                }
+            };
+
+            xhr.ontimeout = function () {
+                const err = new Error('İstek zaman aşımı (30s)');
+                if (retryCount < MAX_RETRIES) {
+                    console.warn(`⚠️ Timeout, ${RETRY_DELAY_MS * (retryCount + 1)}ms sonra tekrar deneniyor...`);
+                    setTimeout(() => fetchJson(scriptUrl, params, retryCount + 1).then(resolve, reject), RETRY_DELAY_MS * (retryCount + 1));
+                } else {
+                    reject(err);
+                }
+            };
+
+            xhr.send();
+        });
     }
 
     // ─── Normalize ───────────────────────────────────────────────────────────────
