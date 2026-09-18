@@ -18,7 +18,7 @@
         stok: 'https://script.google.com/macros/s/AKfycbz_z8IbFwlLpqMjnfmMksV_KWYoeZIedoMUUBc5b96TR5AyvXtRuqHQBcDghf8fmiburQ/exec',
         motorTakip: 'https://script.google.com/macros/s/AKfycbyxfk2wUCJVDzHETdYWf4-zTxeMMwwd4wJ1uPkgVSFy1x6Ujy-lkWAkqPRMQlt3ZyPx/exec',
         elzMainpage: 'https://script.google.com/macros/s/AKfycbza7E5qh7K1FCiCpotWe8M95Uzfb5sutcZTkpRkG4pzhjpmhBuvvXdaW16DmqKNlSpR/exec',
-        kojenMaliyetRapor: 'https://script.google.com/macros/s/AKfycbxd2XgOjlQPCHFsaFG1ikVhFhkHewzYI1RfqMIW_YLCQi811eOZNvQxu9MvxaQQK8q8/exec',
+        kojenMaliyetRapor: 'https://script.google.com/macros/s/AKfycbzxRas7mVO5Oh6MSYPAghm6KDcicBvP43emg8vzqMcatUiJd9D0eF4ftmXtG8b4Fin4/exec',
         // Mirror Reader — motor ve enerji mirror verileri aynı web app'ten, farklı action ile çekilir
         motorMirror:  'https://script.google.com/macros/s/AKfycbwrr41mFgxOkxu-XGgEg-f_dUuZyMc0G9V02p4Z7Aji0WiG2_PdFL9K8PJKUUfIGtQ3/exec',
         enerjiMirror: 'https://script.google.com/macros/s/AKfycbwrr41mFgxOkxu-XGgEg-f_dUuZyMc0G9V02p4Z7Aji0WiG2_PdFL9K8PJKUUfIGtQ3/exec'
