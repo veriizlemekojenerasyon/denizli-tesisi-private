@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 11_GunlukOtomatikCalisma.gs
  * ─────────────────────────────────────────────────────────────────────────────
  * Ana orkestratör — tüm günlük veri çekme ve hesaplama akışını yönetir.
