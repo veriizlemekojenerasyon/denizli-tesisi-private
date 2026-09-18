@@ -6,10 +6,10 @@
 
 // Maliyet kayıt + Rapor verisi GAS Web App URL
 var KMR_URL = (window.AppConfig && window.AppConfig.getScriptUrl('kojenMaliyetRapor'))
-  || 'https://script.google.com/macros/s/AKfycbysr-rbVD0zXbTu_ZEUdn3nEh07VvKiwJDfz10pI5oOn493NjuZFI_meMPmESTvNgbS/exec';
+  || 'https://script.google.com/macros/s/AKfycbzxRas7mVO5Oh6MSYPAghm6KDcicBvP43emg8vzqMcatUiJd9D0eF4ftmXtG8b4Fin4/exec';
 
 // Excel dışa aktarım — ayrı GAS projesi
-var EXCEL_URL = 'https://script.google.com/macros/s/AKfycbxFBU3VMIQ_mf7FWnMERiW7huCEw-tToRcVAx9QH0o_3ximbwBw5z_5ZdVBWAlbC9ir/exec';
+var EXCEL_URL = 'https://script.google.com/macros/s/AKfycbxuQ7k931sjFoMLIQLeVGtmFSipdQLyn_wBsh0upZ1cVh-S39ym4VJgiPTHeJ5E2MF3/exec';
 
 var State = {
   user         : null,
