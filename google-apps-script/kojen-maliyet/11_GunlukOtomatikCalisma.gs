@@ -10,7 +10,7 @@
  *   4. Saatlik Hesaplama   → _gocSaatlikHesapla()            (bu dosya)
  *   5. Aylık Tablolara Yaz → KojenCalisma / Dengesizlik / Faturalasma sayfaları
  *
- * Trigger:   gunlukTriggerKur()          → her gün 12:45
+ * Trigger:   gunlukTriggerKur()          → her gün 10:45
  * Toplu:     tumVerileriCek()            → başlangıç tarihinden dünkü tarihe
  *            tumVerileriCekTarihAralik() → belirli tarih aralığı
  * Tek gün:   gunlukVerileriCek()         → tek bir gün işle
@@ -28,7 +28,7 @@ var GOC_BASLANGIC_TARIHI = '2026-07-01';
 // ─── TRIGGER ─────────────────────────────────────────────────────────────────
 
 /**
- * Her gün 12:45'te çalışacak trigger kurar.
+ * Her gün 10:45'te çalışacak trigger kurar.
  * Bir kez çalıştırmanız yeterli.
  */
 function gunlukTriggerKur() {
@@ -36,9 +36,9 @@ function gunlukTriggerKur() {
     if (t.getHandlerFunction() === 'gunlukOtomatikCalis') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('gunlukOtomatikCalis')
-    .timeBased().everyDays(1).atHour(12).nearMinute(45)
+    .timeBased().everyDays(1).atHour(10).nearMinute(45)
     .inTimezone(Session.getScriptTimeZone()).create();
-  Logger.log('✅ Günlük trigger kuruldu — her gün 12:45.');
+  Logger.log('✅ Günlük trigger kuruldu — her gün 10:45.');
   return { success: true };
 }
 
