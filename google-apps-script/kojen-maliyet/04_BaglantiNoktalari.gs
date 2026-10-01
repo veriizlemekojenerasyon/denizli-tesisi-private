@@ -11,7 +11,7 @@
  *
  * Bağımlılıklar: 00_VGenAuth.gs, 01_VGenConfig.gs
  *
- * Trigger:  baglantiTriggerKur()              → her gün 12:00
+ * Trigger:  baglantiTriggerKur()              → her gün 10:00
  * Manuel:   baglantiDunVerisiniCek()          → dün için
  *           baglantiTarihCek('YYYY-MM-DD')    → belirli tarih
  */
@@ -23,9 +23,9 @@ function baglantiTriggerKur() {
     if (t.getHandlerFunction() === 'baglantiDunVerisiniCek') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('baglantiDunVerisiniCek')
-    .timeBased().everyDays(1).atHour(12).nearMinute(0)
+    .timeBased().everyDays(1).atHour(10).nearMinute(0)
     .inTimezone(Session.getScriptTimeZone()).create();
-  Logger.log('✅ Bağlantı Noktaları trigger kuruldu — her gün 12:00.');
+  Logger.log('✅ Bağlantı Noktaları trigger kuruldu — her gün 10:00.');
   return { success: true };
 }
 
