@@ -1,1 +1,155 @@
 
+/**
+ * 12_GunlukYedekleme.gs
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Her gün 09:55'te PiyasaFiyatlari, BaglantiNoktalari ve AMR_Saatlik
+ * sayfalarını Excel (.xlsx) olarak Google Drive'daki yedek klasörüne kaydeder.
+ *
+ * Klasör: https://drive.google.com/drive/folders/1uSVoia3w5BqQi3U6FDZY7WeAM-Z2GIg7
+ *
+ * Dosya adı örneği:
+ *   PiyasaFiyatlari_2026-09-30.xlsx
+ *   BaglantiNoktalari_2026-09-30.xlsx
+ *   AMR_Saatlik_2026-09-30.xlsx
+ *
+ * Trigger:  yedekTriggerKur()   → her gün 11:55
+ * Manuel:   gunlukYedekAl()     → hemen yedek al
+ *
+ * Bağımlılıklar: 01_VGenConfig.gs (CFG_SS_ID)
+ */
+
+// ─── SABİTLER ─────────────────────────────────────────────────────────────────
+
+var YEDEK_KLASOR_ID = '1uSVoia3w5BqQi3U6FDZY7WeAM-Z2GIg7';
+var YEDEK_SS_ID     = '1kind4MK2iLG2b7ATgyR8pVacUh4jCI4F9oXuUdxs_UQ';
+
+var YEDEK_SAYFALAR  = [
+  'PiyasaFiyatlari',
+  'BaglantiNoktalari',
+  'AMR_Saatlik'
+];
+
+// ─── TRIGGER ─────────────────────────────────────────────────────────────────
+
+/**
+ * Her gün 09:55'te yedek alacak trigger kurar.
+ * Bir kez çalıştırmanız yeterli.
+ */
+function yedekTriggerKur() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'gunlukYedekAl') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('gunlukYedekAl')
+    .timeBased().everyDays(1).atHour(11).nearMinute(55)
+    .inTimezone(Session.getScriptTimeZone()).create();
+  Logger.log('✅ Yedek trigger kuruldu — her gün 11:55.');
+  return { success: true };
+}
+
+// ─── ANA FONKSİYON ───────────────────────────────────────────────────────────
+
+/**
+ * YEDEK_SAYFALAR listesindeki sayfaları Excel olarak Drive klasörüne kaydeder.
+ * Her sayfa için ayrı .xlsx dosyası oluşturulur.
+ */
+function gunlukYedekAl() {
+  var bugun  = new Date();
+  var isoTarih = _yedekIsoDate(bugun);
+  var klasor = DriveApp.getFolderById(YEDEK_KLASOR_ID);
+
+  Logger.log('=== Günlük yedekleme başladı: ' + isoTarih + ' ===');
+
+  var basarili = 0, hatali = 0;
+
+  YEDEK_SAYFALAR.forEach(function(sayfaAdi) {
+    try {
+      _sayfayiExcelKaydet(sayfaAdi, isoTarih, klasor);
+      basarili++;
+      Logger.log('✅ ' + sayfaAdi + ' yedeklendi.');
+    } catch(e) {
+      hatali++;
+      Logger.log('❌ ' + sayfaAdi + ' hata: ' + e.toString());
+    }
+  });
+
+  Logger.log('=== Yedekleme tamamlandı. Başarılı: ' + basarili + ' | Hatalı: ' + hatali + ' ===');
+  return { basarili: basarili, hatali: hatali, tarih: isoTarih };
+}
+
+// ─── YEDEKLEME ÇEKIRDEĞI ─────────────────────────────────────────────────────
+
+/**
+ * Belirtilen sayfayı Excel olarak Drive klasörüne kaydeder.
+ * Aynı tarihe ait eski dosya varsa siler, yenisini yazar.
+ */
+function _sayfayiExcelKaydet(sayfaAdi, isoTarih, klasor) {
+  var ss    = SpreadsheetApp.openById(YEDEK_SS_ID);
+  var sheet = ss.getSheetByName(sayfaAdi);
+
+  if (!sheet) {
+    throw new Error(sayfaAdi + ' sayfası bulunamadı.');
+  }
+
+  // Geçici olarak sadece bu sayfayı içeren yeni bir Sheets dosyası oluştur
+  var geciciAd  = sayfaAdi + '_GECICI_' + isoTarih;
+  var geciciSS  = SpreadsheetApp.create(geciciAd);
+  var geciciId  = geciciSS.getId();
+
+  try {
+    // Sayfayı geçici dosyaya kopyala
+    sheet.copyTo(geciciSS).setName(sayfaAdi);
+    // Boş sayfa sil
+    var bos = geciciSS.getSheets()[0];
+    if (geciciSS.getSheets().length > 1) geciciSS.deleteSheet(bos);
+
+    SpreadsheetApp.flush();
+
+    // Excel formatında dışa aktar
+    var dosyaAdi  = sayfaAdi + '_' + isoTarih + '.xlsx';
+    var exportUrl = 'https://docs.google.com/spreadsheets/d/' + geciciId +
+                    '/export?format=xlsx&id=' + geciciId;
+
+    var token = ScriptApp.getOAuthToken();
+    var resp  = UrlFetchApp.fetch(exportUrl, {
+      headers           : { 'Authorization': 'Bearer ' + token },
+      muteHttpExceptions: true
+    });
+
+    if (resp.getResponseCode() !== 200) {
+      throw new Error('Export HTTP ' + resp.getResponseCode());
+    }
+
+    // Aynı isimde eski dosyayı sil
+    var eskiDosyalar = klasor.getFilesByName(dosyaAdi);
+    while (eskiDosyalar.hasNext()) {
+      eskiDosyalar.next().setTrashed(true);
+    }
+
+    // Yeni dosyayı kaydet
+    klasor.createFile(resp.getBlob().setName(dosyaAdi));
+    Logger.log('  📁 ' + dosyaAdi + ' → Drive klasörüne kaydedildi.');
+
+  } finally {
+    // Geçici dosyayı her durumda sil
+    try { DriveApp.getFileById(geciciId).setTrashed(true); } catch(e) {}
+  }
+}
+
+// ─── YARDIMCILAR ─────────────────────────────────────────────────────────────
+
+function _yedekIsoDate(d) {
+  var ay  = d.getMonth() + 1;
+  var gun = d.getDate();
+  return d.getFullYear() + '-' +
+         (ay  < 10 ? '0' + ay  : ay)  + '-' +
+         (gun < 10 ? '0' + gun : gun);
+}
+
+// ─── TEST ─────────────────────────────────────────────────────────────────────
+
+/** Hemen yedek alır — test amaçlı */
+function yedekTest() {
+  var sonuc = gunlukYedekAl();
+  Logger.log(JSON.stringify(sonuc, null, 2));
+  return sonuc;
+}
