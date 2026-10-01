@@ -13,7 +13,7 @@
  *
  * Bağımlılıklar: 00_VGenAuth.gs, 01_VGenConfig.gs
  *
- * Trigger:  amrTriggerKur()             → her gün 12:15
+ * Trigger:  amrTriggerKur()             → her gün 10:15
  * Manuel:   amrDunVerisiniCek()         → dün saatlik
  *           amrTarihCek('YYYY-MM-DD')   → belirli tarih saatlik
  *           amrAylikCek(7, 2026)        → aylık günlük özet
@@ -26,9 +26,9 @@ function amrTriggerKur() {
     if (t.getHandlerFunction() === 'amrDunVerisiniCek') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('amrDunVerisiniCek')
-    .timeBased().everyDays(1).atHour(12).nearMinute(15)
+    .timeBased().everyDays(1).atHour(10).nearMinute(15)
     .inTimezone(Session.getScriptTimeZone()).create();
-  Logger.log('✅ AMR trigger kuruldu — her gün 12:15.');
+  Logger.log('✅ AMR trigger kuruldu — her gün 10:15.');
   return { success: true };
 }
 
