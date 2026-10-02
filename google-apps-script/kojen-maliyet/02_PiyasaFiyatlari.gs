@@ -68,10 +68,15 @@ function _ptfIsoDate(d) {
 /**
  * EPİAŞ kullanıcı adı ve şifresini Script Properties'e kaydeder.
  * Apps Script editöründe bir kez çalıştırmanız yeterli.
+ * Çalıştırdıktan sonra KULLANICI ve SIFRE değerlerini silebilirsiniz.
  */
 function epiasPtfKurulum() {
-  var KULLANICI = 'mrtcsk0320@gmail.com';  // ← EPİAŞ e-postanız
-  var SIFRE     = 'Mrt145300..';           // ← EPİAŞ şifreniz
+  var KULLANICI = '';  // ← çalıştırıldı, temizlendi
+  var SIFRE     = '';  // ← çalıştırıldı, temizlendi
+  if (!KULLANICI || !SIFRE) {
+    Logger.log('ℹ️ Kimlik bilgileri zaten Script Properties\'e kaydedildi.');
+    return { success: true, mesaj: 'Kurulum daha önce yapıldı.' };
+  }
   return _epiasPtfKimlikKaydet(KULLANICI, SIFRE);
 }
 
@@ -165,7 +170,9 @@ function _epiasTgtYenile(props) {
   var password = props.getProperty(_EPIAS_PROP_PASSWORD);
 
   if (!username || !password) {
-    throw new Error('EPİAŞ kimlik bilgisi eksik. Önce epiasPtfKurulum() çalıştırın.');
+    var msg = 'EPİAŞ kimlik bilgisi eksik. Önce epiasPtfKurulum() çalıştırın.';
+    _ptfHataMailAt('EPİAŞ Kimlik Bilgisi Eksik', msg);
+    throw new Error(msg);
   }
 
   // CAS login — form-encoded
@@ -180,6 +187,10 @@ function _epiasTgtYenile(props) {
   var code = resp.getResponseCode();
   // CAS başarılı girişte 201 Created döner, Location header'ında TGT URL'si gelir
   if (code !== 201 && code !== 200) {
+    var msg = 'EPİAŞ şifre hatası veya şifre değişmiş olabilir. HTTP ' + code +
+              '\nKullanıcı: ' + username +
+              '\n\nepiasPtfKurulum() fonksiyonunda şifreyi güncelleyip tekrar çalıştırın.';
+    _ptfHataMailAt('EPİAŞ Giriş Başarısız — Şifre Güncellenmeli', msg);
     throw new Error('EPİAŞ TGT alınamadı. HTTP ' + code + ': ' +
                     resp.getContentText().substring(0, 300));
   }
@@ -188,11 +199,9 @@ function _epiasTgtYenile(props) {
   var location = resp.getHeaders()['Location'] || resp.getHeaders()['location'] || '';
   var tgt = '';
   if (location) {
-    // Location: https://giris.epias.com.tr/cas/v1/tickets/TGT-xxxxx
     tgt = location.split('/').pop();
   }
   if (!tgt) {
-    // Fallback: body içinde TGT aranır
     var body = resp.getContentText();
     var match = body.match(/TGT-[A-Za-z0-9\-_]+/);
     if (match) tgt = match[0];
@@ -202,12 +211,31 @@ function _epiasTgtYenile(props) {
                     resp.getContentText().substring(0, 300));
   }
 
-  // TGT'yi 7.5 saat (27000 sn) geçerli olarak sakla (8 saatlik ömründen tampon)
+  // TGT'yi 7.5 saat (27000 sn) geçerli olarak sakla
   var expiresAt = new Date(Date.now() + 27000 * 1000).toISOString();
   props.setProperty(_EPIAS_PROP_TGT,        tgt);
   props.setProperty(_EPIAS_PROP_TGT_EXPIRY, expiresAt);
   Logger.log('✅ EPİAŞ TGT yenilendi: ' + tgt.substring(0, 30) + '...');
   return tgt;
+}
+
+/**
+ * Hata durumunda e-posta gönderir.
+ * GAS'ın aktif kullanıcısına (script sahibine) mail atar.
+ */
+function _ptfHataMailAt(konu, mesaj) {
+  try {
+    var email = 'mrtcsk0320@gmail.com';
+    MailApp.sendEmail({
+      to     : email,
+      subject: '⚠️ Kojen Maliyet — ' + konu,
+      body   : mesaj + '\n\nZaman: ' + new Date().toLocaleString('tr-TR') +
+               '\n\nBu mesaj otomatik olarak Google Apps Script tarafından gönderilmiştir.'
+    });
+    Logger.log('📧 Hata maili gönderildi: ' + email);
+  } catch(e) {
+    Logger.log('📧 Mail gönderilemedi: ' + e.toString());
+  }
 }
 
 /**
@@ -315,22 +343,17 @@ function _ptfSayfayaYaz(ss, items, isoTarih) {
     var saatStr = '';
     var dateField = item.date || item.time || '';
     if (dateField) {
-      // "2026-09-29T00:00:00+03:00" → saat kısmını al
       var timePart = String(dateField).split('T')[1] || '';
-      // "00:00:00+03:00" → "00:00:00"
       saatStr = timePart.split('+')[0].split('-')[0].trim();
-      // "00:00" → "00:00:00"
-      if (saatStr.length === 5) saatStr = saatStr + ':00';    }
+      if (saatStr.length === 5) saatStr = saatStr + ':00';
+    }
     if (saatStr) map[saatStr] = item;
   });
 
-  // O tarihe ait mevcut satırları temizle (upsert)
+  // Sayfayı tamamen temizle, sadece başlığı koru
   var lastRow = sheet.getLastRow();
   if (lastRow > 1) {
-    var tarihler = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    for (var r = lastRow - 1; r >= 1; r--) {
-      if (String(tarihler[r - 1][0]).trim() === trTarih) sheet.deleteRow(r + 1);
-    }
+    sheet.getRange(2, 1, lastRow - 1, 6).clearContent().clearFormat();
   }
 
   // 24 saatlik yeni satırlar
@@ -339,7 +362,6 @@ function _ptfSayfayaYaz(ss, items, isoTarih) {
     var saat = _ptfPad2(h) + ':00:00';
     var item = map[saat] || {};
 
-    // Alan adı uyumu: EPİAŞ yanıt formatı
     var ptf = _ptfParseFloat(item.ptf || 0);
     var smf = _ptfParseFloat(item.smf || 0);
     var poz = _ptfParseFloat(item.positiveImbalance || 0);
@@ -348,13 +370,12 @@ function _ptfSayfayaYaz(ss, items, isoTarih) {
     satirlar.push([trTarih, saat, ptf, smf, poz, neg]);
   }
 
-  var insertRow = sheet.getLastRow() + 1;
-  sheet.getRange(insertRow, 1, 24, 6).setValues(satirlar);
-  sheet.getRange(insertRow, 3, 24, 4).setNumberFormat('#,##0.00 "₺"');
+  sheet.getRange(2, 1, 24, 6).setValues(satirlar);
+  sheet.getRange(2, 3, 24, 4).setNumberFormat('#,##0.00 "₺"');
 
   // Zebra renklendirme
   for (var z = 0; z < 24; z++) {
-    sheet.getRange(insertRow + z, 1, 1, 6)
+    sheet.getRange(2 + z, 1, 1, 6)
       .setBackground(z % 2 === 0 ? '#F7F9FC' : '#FFFFFF');
   }
 
@@ -401,7 +422,14 @@ function ptfTarihTest() {
   return r;
 }
 
-/** Ham API yanıtını loglara yazar — alan adlarını görmek için */
+/** Mail gönderimini test eder */
+function ptfMailTest() {
+  _ptfHataMailAt(
+    'Test Bildirimi',
+    'Bu bir test mesajıdır.\n\nMail bildirimi çalışıyor — EPİAŞ şifre değişince bu şekilde bildirim alacaksınız.'
+  );
+  Logger.log('✅ Test maili gönderildi.');
+}
 function epiasHamYanitTest() {
   try {
     var isoTarih = '2026-09-30';  // ← tarihi değiştirin
