@@ -9,7 +9,7 @@
  * Dosya adı örneği:
  *   MaliyetYedek_2026-09-30.xlsx  (3 sekme: PiyasaFiyatlari, BaglantiNoktalari, AMR_Saatlik)
  *
- * Trigger:  yedekTriggerKur()   → her gün 09:55
+ * Trigger:  yedekTriggerKur()   → her gün 11:55
  * Manuel:   gunlukYedekAl()     → hemen yedek al
  */
 
@@ -31,7 +31,7 @@ function yedekTriggerKur() {
     if (t.getHandlerFunction() === 'gunlukYedekAl') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('gunlukYedekAl')
-    .timeBased().everyDays(1).atHour(9).nearMinute(55)
+    .timeBased().everyDays(1).atHour(11).nearMinute(55)
     .inTimezone(Session.getScriptTimeZone()).create();
   Logger.log('✅ Yedek trigger kuruldu — her gün 09:55.');
   return { success: true };
