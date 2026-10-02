@@ -63,6 +63,15 @@ function gunlukOtomatikCalis() {
     ayYedekle(dun.getMonth() + 1, dun.getFullYear());
   }
 
+  // Hesaplama tamamlandıktan sonra günlük Excel yedeklerini al
+  try {
+    Logger.log('📁 Günlük yedekleme başlıyor...');
+    gunlukYedekAl();
+    Logger.log('📁 Günlük yedekleme tamamlandı.');
+  } catch(e) {
+    Logger.log('⚠️ Yedekleme hatası (hesaplama etkilenmedi): ' + e.toString());
+  }
+
   return sonuc;
 }
 
