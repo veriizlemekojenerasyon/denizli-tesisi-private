@@ -1,0 +1,996 @@
+.comparison-toolbar {
+    grid-template-columns: auto minmax(0, 1fr);
+}
+
+.field select {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 10px;
+    color: var(--text);
+    background: #ffffff;
+    font: inherit;
+    font-weight: 700;
+}
+
+.comparison-kpis {
+    grid-template-columns: repeat(4, minmax(170px, 1fr));
+}
+
+.comparison-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.55fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.comparison-layout.lower {
+    grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.5fr);
+}
+
+.motor-analysis-grid,
+.signal-stack,
+.issue-list,
+.unmatched-box {
+    display: grid;
+    gap: 10px;
+}
+
+.motor-card {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.motor-card.critical {
+    border-color: #fecaca;
+    background: #fff5f5;
+}
+
+.motor-card.warn {
+    border-color: #fed7aa;
+    background: #fffbeb;
+}
+
+.motor-card.good {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.motor-card-head,
+.signal-head,
+.issue-head,
+.unmatched-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.motor-card h3,
+.signal-card h3,
+.issue-card h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.risk-pill,
+.status-pill {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.risk-pill.good,
+.status-pill.good {
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+.risk-pill.warn,
+.status-pill.warn {
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+
+.risk-pill.critical,
+.status-pill.critical {
+    background: #fee2e2;
+    color: var(--red);
+}
+
+.motor-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.motor-metrics > span {
+    min-height: 54px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #ffffff;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.motor-metrics b {
+    color: var(--text);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.metric-clickable {
+    padding: 0;
+    overflow: hidden;
+}
+
+.metric-detail-btn {
+    width: 100%;
+    min-height: 54px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    padding: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+}
+
+.metric-detail-btn:hover,
+.metric-detail-btn:focus-visible {
+    background: #eff6ff;
+    outline: 2px solid #bfdbfe;
+    outline-offset: -2px;
+}
+
+.metric-detail-btn b {
+    color: var(--blue);
+}
+
+.score-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.score-fill {
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: var(--green);
+}
+
+.motor-card.warn .score-fill {
+    background: var(--amber);
+}
+
+.motor-card.critical .score-fill {
+    background: var(--red);
+}
+
+.motor-notes,
+.row-issues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.note-chip {
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.note-chip.critical {
+    border-color: #fecaca;
+    background: #fee2e2;
+    color: var(--red);
+}
+
+.note-chip.warn {
+    border-color: #fed7aa;
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+
+.signal-card,
+.issue-card,
+.unmatched-card {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.signal-card {
+    display: grid;
+    gap: 8px;
+}
+
+.signal-meta,
+.issue-meta,
+.unmatched-meta {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.signal-bar {
+    height: 9px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.signal-bar span {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: var(--blue);
+}
+
+.signal-card.critical .signal-bar span {
+    background: var(--red);
+}
+
+.signal-card.warn .signal-bar span {
+    background: var(--amber);
+}
+
+.comparison-table-wrap {
+    max-height: 620px;
+}
+
+.comparison-table {
+    min-width: 1500px;
+}
+
+.comparison-table td {
+    vertical-align: top;
+}
+
+.comparison-table .score-cell {
+    font-weight: 900;
+}
+
+.comparison-table tr.critical-row td {
+    background: #fff5f5;
+}
+
+.comparison-table tr.warn-row td {
+    background: #fffbeb;
+}
+
+.analysis-cell {
+    min-width: 280px;
+}
+
+.empty-line {
+    min-height: 120px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-weight: 800;
+    text-align: center;
+}
+
+.locked-state {
+    min-height: 420px;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.locked-card {
+    width: min(460px, 100%);
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.locked-card h2 {
+    margin: 0 0 8px;
+    color: var(--text);
+}
+
+.locked-card p {
+    margin: 0;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.comparison-record-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+}
+
+.comparison-record-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.comparison-record-modal__panel {
+    position: relative;
+    width: min(920px, 100%);
+    max-height: min(820px, calc(100vh - 36px));
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+    overflow: hidden;
+}
+
+.comparison-record-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+    background: #f8fafc;
+}
+
+.comparison-record-modal__header p,
+.comparison-record-modal__header h2 {
+    margin: 0;
+}
+
+.comparison-record-modal__header p {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.comparison-record-modal__header h2 {
+    color: var(--text);
+    font-size: 20px;
+    letter-spacing: 0;
+}
+
+.comparison-record-modal__close {
+    width: 36px;
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #ffffff;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.comparison-record-modal__body {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    overflow: auto;
+}
+
+.record-modal-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.record-modal-summary > span:not(.status-pill) {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.record-modal-summary b {
+    color: var(--text);
+}
+
+.record-modal-section {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.record-modal-section h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.record-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.record-detail-grid div {
+    min-height: 54px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #f8fafc;
+}
+
+.record-detail-grid span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.record-detail-grid b {
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+@media (max-width: 1220px) {
+    .comparison-toolbar,
+    .comparison-layout,
+    .comparison-layout.lower {
+        grid-template-columns: 1fr;
+    }
+
+    .comparison-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .motor-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .comparison-kpis,
+    .motor-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .motor-card-head,
+    .signal-head,
+    .issue-head,
+    .unmatched-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .record-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .comparison-record-modal {
+        padding: 10px;
+    }
+
+    .comparison-record-modal__header {
+        align-items: flex-start;
+    }
+}
+
+/* ─── Motor Veri Karsilastirma — ek stiller ─────────────────────────────────── */
+
+/* Renk yardımcıları */
+.text-critical { color: var(--red, #dc2626) !important; font-weight: 700; }
+.text-warn      { color: var(--amber, #d97706) !important; font-weight: 700; }
+
+/* ─── Motor kart — grid layout ───────────────────────────────────────────── */
+.motor-analysis-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.motor-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.motor-card.status-critical { border-color: #fecaca; background: #fff5f5; }
+.motor-card.status-warn     { border-color: #fed7aa; background: #fffbeb; }
+.motor-card.status-good     { border-color: #bbf7d0; background: #f0fdf4; }
+
+.motor-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.motor-name {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--text, #1e293b);
+    letter-spacing: 0.02em;
+}
+
+/* Metrik kutuları — 5 kolonlu grid */
+.motor-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.motor-metric {
+    min-height: 54px;
+    display: grid;
+    align-content: center;
+    gap: 4px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--muted, #64748b);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.motor-metric b {
+    display: block;
+    color: var(--text, #1e293b);
+    font-size: 14px;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.motor-metric.text-critical,
+.motor-metric.text-critical b { color: var(--red, #dc2626) !important; }
+.motor-metric.text-warn,
+.motor-metric.text-warn b     { color: var(--amber, #d97706) !important; }
+
+/* Sağlık çubuğu */
+.motor-health-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+.motor-health-fill {
+    height: 100%;
+    min-width: 4px;
+    border-radius: inherit;
+    transition: width 0.4s ease;
+}
+
+.motor-signal-text {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted, #64748b);
+}
+.motor-card.status-critical .motor-signal-text { color: var(--red, #dc2626); }
+.motor-card.status-warn     .motor-signal-text { color: var(--amber, #d97706); }
+
+/* Eski stat-row (artık kullanılmıyor ama diğer yerlerde varsa bozmasın) */
+.motor-card-stats, .stat-row, .stat-label, .stat-value { display: none; }
+
+@media (max-width: 1400px) {
+    .motor-metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+    .motor-metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+    .motor-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Status badge */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.badge-critical { background: #fee2e2; color: var(--red, #dc2626); }
+.badge-warn     { background: #fef3c7; color: var(--amber, #d97706); }
+.badge-good     { background: #dcfce7; color: var(--green, #16a34a); }
+
+/* Durum badge — tablo için */
+.durum-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.durum-normal     { background: #dcfce7; color: var(--green, #16a34a); }
+.durum-calismiyor { background: #f1f5f9; color: var(--muted, #64748b); }
+
+/* Tablo satır renkleri */
+.comparison-table tr.row-critical td { background: #fff5f5; }
+.comparison-table tr.row-warn td     { background: #fffbeb; }
+
+/* Kaydeden sütunu */
+.td-savedby {
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--muted, #64748b);
+    font-size: 11px;
+}
+
+/* Sinyal paneli — yatay chip akışı */
+.signal-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.signal-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 999px;
+    background: #f8fafc;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.signal-item.signal-critical {
+    border-color: #fecaca;
+    background: #fee2e2;
+}
+
+.signal-item.signal-warn {
+    border-color: #fed7aa;
+    background: #fef3c7;
+}
+
+.signal-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.signal-title {
+    color: var(--text, #1e293b);
+    font-weight: 800;
+    font-size: 12px;
+}
+
+.signal-item.signal-critical .signal-title { color: var(--red, #dc2626); }
+.signal-item.signal-warn     .signal-title { color: var(--amber, #d97706); }
+
+.signal-count {
+    background: rgba(0,0,0,0.08);
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.signal-item .signal-meta {
+    display: flex;
+    gap: 6px;
+    color: var(--muted, #64748b);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.signal-item .signal-meta span + span::before {
+    content: '·';
+    margin-right: 6px;
+}
+
+/* Boş state */
+.empty-state {
+    padding: 20px;
+    text-align: center;
+    color: var(--muted, #64748b);
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* Tablo tam genişlik — lower panel */
+@media (min-width: 1px) {
+    .comparison-layout.lower article.table-panel[style*="grid-column"] {
+        width: 100%;
+    }
+}
+
+/* ─── Stat divider ───────────────────────────────────────────────────────────── */
+
+.stat-row.stat-divider {
+    padding: 0;
+    height: 1px;
+    background: var(--line, #e2e8f0);
+    border-radius: 0;
+    min-height: 1px;
+}
+
+/* ─── Tablo satır — çalışmıyor ──────────────────────────────────────────────── */
+
+.comparison-table tr.row-stopped td {
+    background: #f8fafc;
+    color: var(--muted, #64748b);
+}
+
+/* ─── Tıklanabilir satır ─────────────────────────────────────────────────────── */
+
+.table-row-clickable {
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.table-row-clickable:hover td {
+    background: #eff6ff !important;
+}
+
+/* ─── Detay Modal ────────────────────────────────────────────────────────────── */
+
+.motor-detail-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.motor-detail-modal.is-open {
+    opacity: 1;
+}
+
+.motor-detail-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.motor-detail-modal__panel {
+    position: relative;
+    width: min(720px, 100%);
+    max-height: min(90vh, 820px);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid var(--line, #e2e8f0);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+    overflow: hidden;
+    transform: translateY(10px);
+    transition: transform 0.18s ease;
+}
+
+.motor-detail-modal.is-open .motor-detail-modal__panel {
+    transform: translateY(0);
+}
+
+.motor-detail-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line, #e2e8f0);
+    background: #f8fafc;
+}
+
+.modal-eyebrow {
+    margin: 0 0 2px;
+    color: var(--muted, #64748b);
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.motor-detail-modal__header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--text, #1e293b);
+    letter-spacing: 0;
+}
+
+.motor-detail-modal__close {
+    width: 32px;
+    height: 32px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 7px;
+    background: #ffffff;
+    color: var(--text, #1e293b);
+    font-size: 16px;
+    font-weight: 900;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.motor-detail-modal__body {
+    overflow-y: auto;
+    padding: 16px 18px;
+    display: grid;
+    gap: 12px;
+}
+
+.detail-section {
+    padding: 12px 14px;
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 8px;
+    background: #f8fafc;
+    display: grid;
+    gap: 6px;
+}
+
+.detail-section h3 {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted, #64748b);
+}
+
+.detail-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: var(--muted, #64748b);
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.detail-value {
+    color: var(--text, #1e293b);
+    font-size: 13px;
+    font-weight: 800;
+    text-align: right;
+}
+
+.detail-footer {
+    background: transparent;
+    border-color: transparent;
+    padding: 4px 0;
+}
+
+/* stopped badge */
+.badge-stopped {
+    background: #f1f5f9;
+    color: var(--muted, #64748b);
+}
+
+/* ─── Maksimum Değer Tablosu ───────────────────────────────────────────────────── */
+
+.max-value-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+}
+
+.max-value-table thead {
+    background: #f8fafc;
+}
+
+.max-value-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--line, #e2e8f0);
+}
+
+.max-value-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.max-value-table tr:last-child td {
+    border-bottom: none;
+}
+
+.max-value-table tr:hover td {
+    background: #f8fafc;
+}
+
+/* ─── Tıklanabilir Metrik ─────────────────────────────────────────────────────── */
+
+.motor-metric[data-max-type] {
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.motor-metric[data-max-type]:hover {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.motor-metric[data-max-type]:active {
+    transform: translateY(0);
+}

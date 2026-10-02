@@ -1,0 +1,1265 @@
+﻿const AdminControlConfig = window.AppConfig ? window.AppConfig.SCRIPT_URLS : {};
+
+const AdminControlLabels = {
+    saatlik: 'Saatlik Veri',
+    motor: 'Kojen Motor',
+    enerji: 'Kojen Enerji',
+    enerjiGunSonu: 'Enerji Gun Sonu',
+    buhar: 'Buhar',
+    gunluk: 'Gunluk Veri',
+    bakim: 'Bakim Takip',
+    vardiya: 'Vardiya',
+    bildirim: 'Bildirim',
+    vgen: 'V-Gen Plan',
+    stok: 'Stok Takip'
+};
+
+const AdminTriggerModules = {
+    saatlik: {
+        title: 'Saatlik Veri',
+        healthAction: 'getTriggerHealth',
+        installAction: 'installHourlyMissingRecordTrigger',
+        testAction: 'checkHourlyMissingRecords'
+    },
+    motor: {
+        title: 'Kojen Motor',
+        healthAction: 'getTriggerHealth',
+        installAction: 'installHourlyMissingRecordTrigger',
+        testAction: 'checkHourlyMissingRecords'
+    },
+    enerji: {
+        title: 'Kojen Enerji',
+        healthAction: 'getTriggerHealth',
+        installAction: 'installHourlyMissingRecordTrigger',
+        testAction: 'checkHourlyMissingRecords'
+    },
+    enerjiGunSonu: {
+        title: 'Enerji Gun Sonu',
+        healthAction: 'getEndOfDayAutoTriggerHealth',
+        installAction: 'installEndOfDayAutoTrigger',
+        testAction: 'autoCreateMissingEndOfDayValues'
+    },
+    buhar: {
+        title: 'Buhar',
+        healthAction: 'getTriggerHealth',
+        installAction: 'installHourlyMissingRecordTrigger',
+        testAction: 'checkHourlyMissingRecords'
+    },
+    gunluk: {
+        title: 'Gunluk Veri',
+        healthAction: 'getTriggerHealth',
+        installAction: 'installHourlyMissingRecordTrigger',
+        testAction: 'checkHourlyMissingRecords'
+    },
+    bakim: {
+        title: 'Bakim Takip',
+        healthAction: 'getMaintenanceTriggers',
+        installAction: 'installMaintenanceTriggers',
+        testAction: 'runMaintenanceCheck'
+    },
+    bildirim: {
+        title: 'Gunluk Sistem Raporu',
+        healthAction: 'getDailySystemReportTriggerHealth',
+        installAction: 'installDailySystemReportTrigger',
+        testAction: 'sendDailySystemReport'
+    },
+    vgen: {
+        title: 'V-Gen Plan Bildirimi',
+        serviceKey: 'bildirim',
+        healthAction: 'getVgenPlanTriggerHealth',
+        installAction: 'installVgenPlanDailyTrigger',
+        testAction: 'testVgenPlanPreview'
+    }
+};
+
+const AdminBackupModules = {
+    saatlik: { label: 'Saatlik Veri', urlKey: 'saatlik', params: { action: 'getRecords' } },
+    motor: { label: 'Kojen Motor', urlKey: 'motor', params: { action: 'getRecords' } },
+    enerji: { label: 'Kojen Enerji', urlKey: 'enerji', params: { action: 'getRecords' } },
+    buhar: { label: 'Buhar', urlKey: 'buhar', params: { action: 'getRecords' } },
+    gunluk: { label: 'Gunluk Veri', urlKey: 'gunluk', params: { action: 'getRecords' } },
+    vardiya: { label: 'Vardiya', urlKey: 'vardiya', params: { action: 'getRecords' } },
+    bildirim: { label: 'Bildirim', urlKey: 'bildirim', params: { action: 'getAnnouncements' } }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (!requireAdmin()) return;
+
+    if (window.SessionAuth) {
+        window.SessionAuth.validateAdminSession().then(function(valid) {
+            if (!valid) return;
+            // Token doğrulandı — içeriği göster
+            const main = document.querySelector('main');
+            if (main) main.style.visibility = '';
+            window.SessionAuth.startTokenWatcher();
+            _initAdminKontrol();
+        });
+    } else {
+        const main = document.querySelector('main');
+        if (main) main.style.visibility = '';
+        _initAdminKontrol();
+    }
+
+    function _initAdminKontrol() {
+        document.getElementById('refreshDashboardBtn')?.addEventListener('click', loadDashboard);
+        document.getElementById('clearLogsBtn')?.addEventListener('click', clearLogs);
+        document.getElementById('installTriggersBtn')?.addEventListener('click', installAllTriggers);
+        document.getElementById('testMailBtn')?.addEventListener('click', runTestMail);
+        document.getElementById('backupAllBtn')?.addEventListener('click', runFullBackup);
+        document.getElementById('previewDailyReportBtn')?.addEventListener('click', previewDailyReport);
+        
+        // Mobile menu toggle için event listener
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const body = document.body;
+                const sidebar = document.querySelector('.sidebar');
+                
+                if (body.classList.contains('sidebar-mobile-open')) {
+                    body.classList.remove('sidebar-mobile-open');
+                    if (sidebar) sidebar.classList.remove('is-expanded');
+                    const backdrop = document.querySelector('.sidebar-mobile-backdrop');
+                    if (backdrop) backdrop.hidden = true;
+                } else {
+                    body.classList.add('sidebar-mobile-open');
+                    if (sidebar) sidebar.classList.add('is-expanded');
+                    
+                    // Backdrop oluştur veya göster
+                    let backdrop = document.querySelector('.sidebar-mobile-backdrop');
+                    if (!backdrop) {
+                        backdrop = document.createElement('div');
+                        backdrop.className = 'sidebar-mobile-backdrop';
+                        backdrop.addEventListener('click', function() {
+                            body.classList.remove('sidebar-mobile-open');
+                            if (sidebar) sidebar.classList.remove('is-expanded');
+                            backdrop.hidden = true;
+                        });
+                        document.body.appendChild(backdrop);
+                    }
+                    backdrop.hidden = false;
+                }
+            });
+        }
+        
+        document.getElementById('sendDailyReportBtn')?.addEventListener('click', sendDailyReportNow);
+        document.querySelectorAll('[data-backup-module]').forEach(button => {
+            button.addEventListener('click', () => runModuleBackup(button.dataset.backupModule));
+        });
+        document.querySelectorAll('[data-test-module]').forEach(button => {
+            button.addEventListener('click', () => runModuleTest(button.dataset.testModule));
+        });
+        
+        loadDashboard();
+    }
+});
+
+function requireAdmin() {
+    const user = getCurrentUser();
+    if (!user) {
+        location.href = 'index.html';
+        return false;
+    }
+
+    if (user.role !== 'admin') {
+        document.body.innerHTML = `
+            <div class="admin-shell">
+                <section class="panel">
+                    <h1>Yetki Gerekli</h1>
+                    <p>Bu sayfa sadece admin kullanicilar icindir.</p>
+                    <a class="btn ghost" href="anasayfa.html">Ana Sayfa</a>
+                </section>
+            </div>`;
+        return false;
+    }
+
+    const nameNode = document.getElementById('adminUserName');
+    if (nameNode) nameNode.textContent = getUserName(user);
+    
+    const sidebarNameNode = document.getElementById('sidebarUserNameDisplay');
+    if (sidebarNameNode) sidebarNameNode.textContent = getUserName(user);
+
+    // İçeriği gizle — validateAdminSession doğrulayana kadar gösterme
+    const main = document.querySelector('main');
+    if (main) main.style.visibility = 'hidden';
+
+    return true;
+}
+
+async function loadDashboard() {
+    const statusGrid = document.getElementById('statusGrid');
+    const checkList = document.getElementById('missingCheckList');
+    if (statusGrid) statusGrid.innerHTML = loadingCard();
+    if (checkList) checkList.innerHTML = '<div class="empty">Kontroller calisiyor...</div>';
+
+    renderTriggerHealthLoading();
+
+    const [saatlik, motor, enerji, vardiya, bildirim, stok] = await Promise.all([
+        fetchJson(AdminControlConfig.saatlik, { action: 'getLastRecords', count: '24' }),
+        fetchJson(AdminControlConfig.motor, { action: 'getLastRecords', count: '60' }),
+        fetchJson(AdminControlConfig.enerji, { action: 'getLastRecords', count: '60' }),
+        fetchJson(AdminControlConfig.vardiya, { action: 'getLastRecordsWithIslemler', count: '12' }),
+        fetchJson(AdminControlConfig.bildirim, { action: 'getAnnouncements', active: 'true' }),
+        fetchJson(AdminControlConfig.stok, { action: 'getLowStockItems' })
+    ]);
+
+    const checks = [
+        buildSaatlikCheck(saatlik),
+        buildMotorCheck(motor, 'Kojen Motor'),
+        buildMotorCheck(enerji, 'Kojen Enerji'),
+        buildVardiyaCheck(vardiya),
+        buildBildirimCheck(bildirim),
+        buildStokCheck(stok)
+    ];
+    const qualityChecks = buildQualityChecks(saatlik, motor, enerji);
+    const qualityDetails = buildDetailedQuality(saatlik, motor, enerji);
+    const shiftChecks = buildShiftCloseChecks(saatlik, motor, enerji, vardiya, bildirim);
+
+    if (statusGrid) statusGrid.innerHTML = checks.map(renderStatusCard).join('');
+    if (checkList) checkList.innerHTML = checks.concat(qualityChecks).map(renderCheckItem).join('');
+    renderShiftCloseChecklist(shiftChecks);
+    renderQualityDetails(qualityDetails);
+    renderOperatorMobileSummary(checks, shiftChecks);
+    renderAlarmCenter(buildAlarmItems(checks, qualityChecks, qualityDetails, shiftChecks, [], stok));
+    renderUserActivity();
+
+    window.SystemAuditLog?.write?.(
+        'Merkezi kontrol yenilendi',
+        `${checks.length} ana kontrol, ${qualityDetails.length} kalite uyarisi`,
+        checks.some(item => item.level === 'danger') ? 'warn' : 'ok'
+    );
+    loadDeferredAdminData();
+}
+
+async function loadDeferredAdminData() {
+    const items = await Promise.all(Object.keys(AdminTriggerModules).map(async key => {
+        const module = AdminTriggerModules[key];
+        const result = await fetchJson(getAdminModuleUrl(key), { action: module.healthAction });
+        return { key, title: module.title, result: normalizeTriggerHealth(result) };
+    }));
+
+    renderTriggerHealth(items);
+    await renderLogs();
+}
+
+async function fetchJson(baseUrl, params) {
+    let urlText = baseUrl || '';
+    try {
+        if (!baseUrl) {
+            return { success: false, error: 'Servis URL tanimli degil' };
+        }
+
+        const url = new URL(baseUrl);
+        Object.keys(params).forEach(key => url.searchParams.set(key, params[key]));
+        urlText = url.toString();
+        const response = await fetch(url);
+        const contentType = response.headers.get('content-type') || '';
+        const text = await response.text();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: `HTTP ${response.status}: ${extractServiceError(text)}`,
+                url: urlText
+            };
+        }
+
+        if (contentType.indexOf('application/json') === -1 && text.trim().charAt(0) !== '{' && text.trim().charAt(0) !== '[') {
+            return {
+                success: false,
+                error: extractServiceError(text),
+                url: urlText
+            };
+        }
+
+        const result = JSON.parse(text);
+        if (!result.success) {
+            return { success: false, error: result.error || 'Servis hatasi', url: urlText, service: result.service || '' };
+        }
+        return { ...result, url: urlText };
+    } catch (error) {
+        return { success: false, error: formatFetchError(error, urlText), url: urlText };
+    }
+}
+
+function formatFetchError(error, urlText) {
+    const message = error && error.message ? error.message : String(error);
+    const detail = message === 'Failed to fetch'
+        ? 'Servisten JSON alinamadi. Apps Script deployment hata/izin sayfasi donduruyor olabilir.'
+        : message;
+    return urlText ? `${detail} (${urlText})` : detail;
+}
+
+function extractServiceError(text) {
+    const raw = String(text || '').trim();
+    if (!raw) return 'Bos servis cevabi';
+
+    const referenceMatch = raw.match(/ReferenceError:[^<]+/i);
+    if (referenceMatch) return referenceMatch[0].replace(/&quot;/g, '"');
+
+    const htmlText = raw
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&quot;/g, '"')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    return (htmlText || raw).substring(0, 220);
+}
+
+async function postCentralLog(action, detail, status = 'info') {
+    window.SystemAuditLog?.write?.(action, detail, status);
+    try {
+        await fetchJson(AdminControlConfig.bildirim, {
+            action: 'addSystemLog',
+            modul: 'Merkezi Kontrol',
+            eksikKayit: action,
+            otomatikKayitSonucu: status,
+            mailSonucu: '-',
+            hataMesaji: status === 'danger' ? detail : '',
+            detay: detail
+        });
+    } catch (error) {
+        console.warn('Merkezi log yazilamadi:', error);
+    }
+}
+
+function buildSaatlikCheck(result) {
+    if (!result.success) return makeCheck('Saatlik Veri', 'Hata', result.error, 'danger');
+    const records = Array.isArray(result.data) ? result.data : [];
+    const slot = getExpectedSlot();
+    const exists = records.some(record => matchesDate(record.tarih, slot.trDate) && record.saat === slot.hour);
+    return makeCheck(
+        'Saatlik Veri',
+        exists ? 'Tamam' : 'Kontrol Et',
+        exists ? `${slot.trDate} ${slot.hour} kaydi mevcut` : `${slot.trDate} ${slot.hour} kaydi gorunmuyor`,
+        exists ? 'ok' : 'warn'
+    );
+}
+
+function buildMotorCheck(result, title) {
+    if (!result.success) return makeCheck(title, 'Hata', result.error, 'danger');
+    const records = Array.isArray(result.data) ? result.data : [];
+    const slot = getExpectedSlot();
+    const motors = ['GM-1', 'GM-2', 'GM-3'];
+    const missing = motors.filter(motor =>
+        !records.some(record => matchesDate(record.tarih, slot.trDate) && record.saat === slot.hour && String(record.motor || '').trim() === motor)
+    );
+    return makeCheck(
+        title,
+        missing.length ? `${missing.length} Eksik` : 'Tamam',
+        missing.length ? `${slot.trDate} ${slot.hour}: ${missing.join(', ')}` : `${slot.trDate} ${slot.hour} kayitlari mevcut`,
+        missing.length ? 'warn' : 'ok'
+    );
+}
+
+function buildVardiyaCheck(result) {
+    if (!result.success) return makeCheck('Vardiya', 'Hata', result.error, 'danger');
+    const records = Array.isArray(result.data) ? result.data : [];
+    const active = records.find(record => String(record.durum || '').toLowerCase() === 'aktif');
+    return makeCheck(
+        'Vardiya',
+        active ? 'Aktif' : 'Pasif',
+        active ? `${active.vardiya} - ${active.personel}` : 'Aktif vardiya gorunmuyor',
+        active ? 'ok' : 'warn'
+    );
+}
+
+function buildBildirimCheck(result) {
+    if (!result.success) return makeCheck('Duyurular', 'Hata', result.error, 'danger');
+    const records = Array.isArray(result.data) ? result.data : [];
+    return makeCheck(
+        'Duyurular',
+        `${records.length} Aktif`,
+        records.length ? 'Aktif duyuru yayinda' : 'Aktif duyuru yok',
+        records.length ? 'ok' : 'warn'
+    );
+}
+
+function buildStokCheck(result) {
+    if (!result.success) return makeCheck('Stok', 'Hata', result.error, 'danger');
+    const records = Array.isArray(result.data) ? result.data : [];
+    return makeCheck(
+        'Stok Kritik Seviye',
+        records.length ? `${records.length} Kritik` : 'Tamam',
+        records.length ? records.slice(0, 5).map(item => `${item.name || item.materialName || item.code}: ${item.quantity ?? '-'}`).join(', ') : 'Kritik stokta malzeme yok',
+        records.length ? 'warn' : 'ok'
+    );
+}
+
+function buildQualityChecks(saatlik, motor, enerji) {
+    const saatlikIssues = analyzeSaatlikQuality(Array.isArray(saatlik.data) ? saatlik.data : []);
+    const motorIssues = analyzeMotorQuality(Array.isArray(motor.data) ? motor.data : []);
+    const enerjiIssues = analyzeEnerjiQuality(Array.isArray(enerji.data) ? enerji.data : []);
+
+    return [
+        makeCheck('Saatlik Kalite', saatlikIssues.length ? `${saatlikIssues.length} Uyari` : 'Temiz', saatlikIssues[0]?.text || 'Son kayitlarda supheli durum yok', saatlikIssues.length ? 'warn' : 'ok'),
+        makeCheck('Motor Kalite', motorIssues.length ? `${motorIssues.length} Uyari` : 'Temiz', motorIssues[0]?.text || 'Son motor kayitlari normal', motorIssues.length ? 'warn' : 'ok'),
+        makeCheck('Enerji Kalite', enerjiIssues.length ? `${enerjiIssues.length} Uyari` : 'Temiz', enerjiIssues[0]?.text || 'Son enerji kayitlari normal', enerjiIssues.length ? 'warn' : 'ok')
+    ];
+}
+
+function buildDetailedQuality(saatlik, motor, enerji) {
+    return []
+        .concat(analyzeSaatlikQuality(Array.isArray(saatlik.data) ? saatlik.data : []))
+        .concat(analyzeMotorQuality(Array.isArray(motor.data) ? motor.data : []))
+        .concat(analyzeEnerjiQuality(Array.isArray(enerji.data) ? enerji.data : []));
+}
+
+function analyzeSaatlikQuality(records) {
+    const issues = [];
+    const sorted = sortRecordsAsc(records);
+    for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1];
+        const cur = sorted[i];
+        if (toNumber(cur.aktifMwh) < toNumber(prev.aktifMwh)) {
+            issues.push(makeIssue('Saatlik Veri', 'danger', `${cur.tarih} ${cur.saat}: aktif enerji onceki kayittan dusuk`, `Onceki: ${prev.aktifMwh}, simdiki: ${cur.aktifMwh}`));
+        }
+        const prev2 = sorted[i - 2];
+        if (prev2 &&
+            toNumber(prev2.aktifMwh) === toNumber(prev.aktifMwh) &&
+            toNumber(prev.aktifMwh) === toNumber(cur.aktifMwh) &&
+            toNumber(prev2.reaktifMwh) === toNumber(prev.reaktifMwh) &&
+            toNumber(prev.reaktifMwh) === toNumber(cur.reaktifMwh)) {
+            issues.push(makeIssue('Saatlik Veri', 'warn', `${cur.tarih} ${cur.saat}: ayni degerler 3 kayittir tekrar ediyor`, `Aktif: ${cur.aktifMwh}, Reaktif: ${cur.reaktifMwh}`));
+        }
+    }
+    return issues.slice(0, 6);
+}
+
+function analyzeMotorQuality(records) {
+    const issues = [];
+    records.slice(0, 90).forEach(record => {
+        const durum = String(record.durum || '').toUpperCase();
+        const values = [
+            record.jenYatakSicaklikDE, record.jenYatakSicaklikNDE, record.sogutmaSuyuSicaklik,
+            record.yagSicaklik, record.yagBasinc, record.sarjSicaklik,
+            record.sargiSicaklik1, record.sargiSicaklik2, record.sargiSicaklik3
+        ].map(toNumber);
+        if (durum === 'NORMAL' && values.every(value => value === 0)) {
+            issues.push(makeIssue('Kojen Motor', 'danger', `${record.tarih} ${record.saat} ${record.motor}: normal ama tum degerler sifir`, 'Durum NORMAL ise olcum degerleri kontrol edilmeli'));
+        }
+        if (toNumber(record.sogutmaSuyuSicaklik) > 110 || toNumber(record.yagSicaklik) > 120 || toNumber(record.yagBasinc) > 10) {
+            issues.push(makeIssue('Kojen Motor', 'danger', `${record.tarih} ${record.saat} ${record.motor}: limit disi sicaklik/basinc`, `Sogutma: ${record.sogutmaSuyuSicaklik}, Yag sic.: ${record.yagSicaklik}, Yag bas.: ${record.yagBasinc}`));
+        }
+        if (durum === 'NORMAL' && toNumber(record.yagBasinc) < 1) {
+            issues.push(makeIssue('Kojen Motor', 'warn', `${record.tarih} ${record.saat} ${record.motor}: yag basinci dusuk gorunuyor`, `Yag basinci: ${record.yagBasinc}`));
+        }
+    });
+    return issues.slice(0, 8);
+}
+
+function analyzeEnerjiQuality(records) {
+    const issues = [];
+    const byMotor = {};
+    sortRecordsAsc(records).forEach(record => {
+        const motor = String(record.motor || '').trim();
+        const durum = String(record.durum || '').toUpperCase();
+        if (durum === 'NORMAL') {
+            const liveValues = [record.aydemVoltaji, record.aktifGuc, record.reaktifGuc, record.ortAkim, record.ortGerilim].map(toNumber);
+            if (liveValues.every(value => value === 0)) {
+                issues.push(makeIssue('Kojen Enerji', 'danger', `${record.tarih} ${record.saat} ${motor}: normal ama enerji degerleri sifir`, 'Durum NORMAL iken anlik enerji degerleri sifir'));
+            }
+            if (toNumber(record.cosPhi) > 1 || toNumber(record.cosPhi) < 0) {
+                issues.push(makeIssue('Kojen Enerji', 'warn', `${record.tarih} ${record.saat} ${motor}: Cos Phi aralik disi`, `Cos Phi: ${record.cosPhi}`));
+            }
+        }
+
+        const total = toNumber(record.toplamAktifEnerji);
+        if (byMotor[motor] !== undefined && total < byMotor[motor]) {
+            issues.push(makeIssue('Kojen Enerji', 'danger', `${record.tarih} ${record.saat} ${motor}: toplam aktif enerji geriye dusmus`, `Onceki toplam: ${byMotor[motor]}, simdiki: ${total}`));
+        }
+        byMotor[motor] = total;
+    });
+    return issues.slice(0, 8);
+}
+
+function buildShiftCloseChecks(saatlik, motor, enerji, vardiya, bildirim) {
+    const slot = getExpectedSlot();
+    const activeShift = Array.isArray(vardiya.data) ? vardiya.data.find(record => String(record.durum || '').toLowerCase() === 'aktif') : null;
+    const activeAnnouncements = Array.isArray(bildirim.data) ? bildirim.data : [];
+    const criticalOpen = activeAnnouncements.filter(item => item.priority === 'high' && !item.completed);
+
+    return [
+        buildSaatlikCheck(saatlik),
+        buildMotorCheck(motor, 'Kojen Motor'),
+        buildMotorCheck(enerji, 'Kojen Enerji'),
+        makeCheck('Aktif Vardiya', activeShift ? 'Var' : 'Yok', activeShift ? `${activeShift.vardiya} - ${activeShift.personel}` : 'Vardiya kapatma icin aktif vardiya gorunmuyor', activeShift ? 'ok' : 'warn'),
+        makeCheck('Kritik Duyuru', criticalOpen.length ? `${criticalOpen.length} Acik` : 'Tamam', criticalOpen.length ? criticalOpen.map(item => item.title || item.message).join(', ') : 'Tamamlanmamis kritik duyuru yok', criticalOpen.length ? 'warn' : 'ok'),
+        makeCheck('Kontrol Saati', slot.hour, `${slot.trDate} saatine gore on kontrol`, 'ok')
+    ];
+}
+
+function renderTriggerHealth(items) {
+    const list = document.getElementById('triggerHealthList');
+    if (!list) return;
+    list.innerHTML = items.map(item => {
+        const result = item.result || {};
+        const level = result.success ? (result.installed ? 'ok' : 'warn') : 'danger';
+        const detail = result.success
+            ? `${result.triggerCount || 0} tetikleyici. Son log: ${result.lastLog?.kayitZamani || 'yok'}`
+            : result.error || 'Servis okunamadi';
+        return `
+            <div class="health-card ${level}">
+                <div>
+                    <strong>${escapeHtml(item.title)}</strong>
+                    <p>${escapeHtml(detail)}</p>
+                </div>
+                <span class="badge ${level}">${result.installed ? 'Kurulu' : (result.success ? 'Eksik' : 'Hata')}</span>
+            </div>`;
+    }).join('');
+}
+
+function renderTriggerHealthLoading() {
+    const list = document.getElementById('triggerHealthList');
+    if (!list) return;
+    list.innerHTML = '<div class="empty">Tetikleyici sagligi arka planda okunuyor...</div>';
+}
+
+function renderShiftCloseChecklist(items) {
+    const list = document.getElementById('shiftCloseChecklist');
+    if (!list) return;
+    list.innerHTML = items.map(renderCheckItem).join('');
+}
+
+function renderQualityDetails(items) {
+    const list = document.getElementById('qualityDetailList');
+    if (!list) return;
+    if (!items.length) {
+        list.innerHTML = '<div class="quality-item ok"><strong>Kalite temiz</strong><p>Son kayitlarda detayli uyari yok.</p></div>';
+        return;
+    }
+    list.innerHTML = items.map(item => `
+        <div class="quality-item ${item.level}">
+            <strong>${escapeHtml(item.module)}</strong>
+            <p>${escapeHtml(item.text)}</p>
+            <div class="meta-row">
+                <span class="badge ${item.level}">${escapeHtml(item.level)}</span>
+                <span>${escapeHtml(item.detail || '')}</span>
+            </div>
+        </div>`).join('');
+}
+
+function renderOperatorMobileSummary(checks, shiftChecks) {
+    const list = document.getElementById('operatorMobileList');
+    if (!list) return;
+    const actionItems = checks
+        .concat(shiftChecks.filter(item => ['Kritik Duyuru', 'Aktif Vardiya'].includes(item.title)))
+        .filter(item => item.level !== 'ok')
+        .slice(0, 6);
+    if (!actionItems.length) {
+        list.innerHTML = '<div class="operator-action-card ok"><strong>Operatore acil is yok</strong><p>Eksik kayit veya kritik uyari gorunmuyor.</p></div>';
+        return;
+    }
+    list.innerHTML = actionItems.map(item => `
+        <div class="operator-action-card ${item.level}">
+            <strong>${escapeHtml(item.title)} - ${escapeHtml(item.value)}</strong>
+            <p>${escapeHtml(item.detail)}</p>
+        </div>`).join('');
+}
+
+function renderUserActivity() {
+    const list = document.getElementById('userActivityList');
+    if (!list) return;
+    const logs = window.SystemAuditLog?.read?.() || [];
+    const byUser = {};
+    logs.forEach(log => {
+        const key = log.user || log.email || 'Bilinmeyen Kullanici';
+        if (!byUser[key]) byUser[key] = { count: 0, last: '' };
+        byUser[key].count++;
+        byUser[key].last = byUser[key].last || `${log.action || '-'} - ${log.at || ''}`;
+    });
+    const rows = Object.keys(byUser).map(user => ({ user, ...byUser[user] })).slice(0, 8);
+    if (!rows.length) {
+        list.innerHTML = '<div class="activity-item"><strong>Kayit yok</strong><p>Bu tarayicida kullanici islem gecmisi bulunmuyor.</p></div>';
+        return;
+    }
+    list.innerHTML = rows.map(row => `
+        <div class="activity-item">
+            <strong>${escapeHtml(row.user)}</strong>
+            <p>${row.count} islem. Son: ${escapeHtml(row.last)}</p>
+        </div>`).join('');
+}
+
+function buildAlarmItems(checks, qualityChecks, qualityDetails, shiftChecks, logs = [], stokResult = null) {
+    const alarms = [];
+    checks.concat(qualityChecks, shiftChecks).forEach(item => {
+        if (!item || item.level === 'ok') return;
+        alarms.push({
+            level: item.level,
+            source: item.title,
+            title: `${item.title}: ${item.value}`,
+            detail: item.detail,
+            action: getAlarmAction(item.title)
+        });
+    });
+
+    qualityDetails.forEach(item => {
+        if (!item || item.level === 'ok') return;
+        alarms.push({
+            level: item.level,
+            source: item.module,
+            title: item.text,
+            detail: item.detail || '',
+            action: getAlarmAction(item.module)
+        });
+    });
+
+    logs.slice(0, 20).forEach(log => {
+        const level = getLogBadgeLevel(log);
+        if (level === 'ok') return;
+        alarms.push({
+            level,
+            source: log.modul || log.page || 'Log',
+            title: log.eksikKayit || log.action || 'Sistem logu',
+            detail: log.hataMesaji || log.detay || log.detail || log.otomatikKayitSonucu || '-',
+            action: 'Sistem logunu kontrol et'
+        });
+    });
+
+    if (stokResult && stokResult.success && Array.isArray(stokResult.data)) {
+        stokResult.data.slice(0, 20).forEach(item => {
+            alarms.push({
+                level: toNumber(item.quantity) <= 0 ? 'danger' : 'warn',
+                source: 'Stok Takip',
+                title: `Kritik stok: ${item.name || item.materialName || item.code || 'Malzeme'}`,
+                detail: `Mevcut: ${item.quantity ?? '-'} ${item.unit || ''}, minimum: ${item.minStock ?? '-'}`,
+                action: 'Stok Takip sayfasinda giris planla'
+            });
+        });
+    }
+
+    return dedupeAlarms(alarms)
+        .sort((a, b) => alarmWeight(b.level) - alarmWeight(a.level))
+        .slice(0, 40);
+}
+
+function renderAlarmCenter(alarms) {
+    const summary = document.getElementById('alarmSummary');
+    const list = document.getElementById('alarmList');
+    if (!summary || !list) return;
+
+    const counts = alarms.reduce((acc, item) => {
+        acc[item.level] = (acc[item.level] || 0) + 1;
+        return acc;
+    }, { danger: 0, warn: 0, ok: 0 });
+
+    summary.innerHTML = [
+        renderAlarmSummaryCard('Kritik', counts.danger || 0, 'danger'),
+        renderAlarmSummaryCard('Uyari', counts.warn || 0, 'warn'),
+        renderAlarmSummaryCard('Toplam Alarm', alarms.length, alarms.length ? 'warn' : 'ok')
+    ].join('');
+
+    if (!alarms.length) {
+        list.innerHTML = '<div class="alarm-item ok"><strong>Aktif alarm yok</strong><p>Sistem kontrollerinde kritik veya uyarili durum gorunmuyor.</p></div>';
+        return;
+    }
+
+    list.innerHTML = alarms.map(item => `
+        <div class="alarm-item ${item.level}">
+            <div>
+                <strong>${escapeHtml(item.title)}</strong>
+                <p>${escapeHtml(item.detail)}</p>
+                <span>${escapeHtml(item.source)} - ${escapeHtml(item.action)}</span>
+            </div>
+            <span class="badge ${item.level}">${item.level === 'danger' ? 'Kritik' : 'Uyari'}</span>
+        </div>`).join('');
+}
+
+function renderAlarmSummaryCard(title, value, level) {
+    return `
+        <div class="alarm-summary-card ${level}">
+            <span>${escapeHtml(title)}</span>
+            <strong>${escapeHtml(value)}</strong>
+        </div>`;
+}
+
+function dedupeAlarms(alarms) {
+    const seen = new Set();
+    return alarms.filter(item => {
+        const key = `${item.level}|${item.source}|${item.title}|${item.detail}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function alarmWeight(level) {
+    if (level === 'danger') return 3;
+    if (level === 'warn') return 2;
+    return 1;
+}
+
+function getAlarmAction(title) {
+    const text = String(title || '').toLowerCase();
+    if (text.includes('saatlik')) return 'Saatlik Veri sayfasinda kaydi kontrol et';
+    if (text.includes('motor')) return 'Kojen Motor kaydini kontrol et';
+    if (text.includes('enerji')) return 'Kojen Enerji kaydini kontrol et';
+    if (text.includes('vardiya')) return 'Vardiya kaydini kontrol et';
+    if (text.includes('duyuru')) return 'Bildirim Yonetimi sayfasini kontrol et';
+    return 'Merkezi Kontrol detaylarini incele';
+}
+
+async function previewDailyReport() {
+    const box = document.getElementById('dailyReportPreview');
+    if (box) box.textContent = 'Gunluk rapor onizlemesi aliniyor...';
+    const result = await fetchJson(AdminControlConfig.bildirim, { action: 'getDailySystemReportPreview' });
+    if (!result.success) {
+        if (box) box.textContent = `Rapor onizleme hatasi: ${result.error}`;
+        await postCentralLog('Gunluk rapor onizleme', result.error || 'Onizleme alinamadi', 'danger');
+        return;
+    }
+    if (box) renderDailyReportPreview(box, result);
+    await postCentralLog('Gunluk rapor onizleme', `${result.tarih || '-'} raporu onizlendi`, 'ok');
+}
+
+async function sendDailyReportNow() {
+    const box = document.getElementById('dailyReportPreview');
+    if (box) box.textContent = 'Gunluk sistem raporu gonderiliyor...';
+    const result = await fetchJson(AdminControlConfig.bildirim, { action: 'sendDailySystemReport', force: 'true', sendEmpty: 'true' });
+    const message = result.success
+        ? `Gunluk rapor gonderildi. Tarih: ${result.tarih || '-'}, olay: ${result.issueCount ?? '-'}, log: ${result.rowCount ?? '-'}`
+        : `Gunluk rapor gonderilemedi: ${result.error}`;
+    if (box) box.innerHTML = renderDailyReportMailStatus(result, message);
+    await postCentralLog('Gunluk rapor manuel', message, result.success ? 'ok' : 'danger');
+    renderLogs();
+}
+
+function renderDailyReportPreview(box, result) {
+    const summary = result.summary || {};
+    const cards = [
+        { label: 'Toplam Log', value: summary.rowCount ?? result.rowCount ?? 0, level: 'ok' },
+        { label: 'Kritik', value: summary.criticalCount ?? result.alarmSummary?.critical ?? 0, level: 'danger' },
+        { label: 'Uyari', value: summary.warningCount ?? result.alarmSummary?.warning ?? 0, level: 'warn' },
+        { label: 'Eksik Veri', value: summary.missingCount ?? 0, level: (summary.missingCount || 0) ? 'warn' : 'ok' },
+        { label: 'Otomatik Mudahale', value: summary.autoActionCount ?? 0, level: 'ok' },
+        { label: 'Tekrar Eden Hata', value: summary.repeatedErrorCount ?? 0, level: (summary.repeatedErrorCount || 0) ? 'danger' : 'ok' }
+    ];
+
+    box.innerHTML = `
+        <div class="daily-report-sections">
+            <section class="report-section">
+                <div class="report-section-title">
+                    <h3>Gunluk Ozet</h3>
+                    <span>${escapeHtml(result.tarih || summary.reportDate || '-')}</span>
+                </div>
+                <div class="report-mini-grid">
+                    ${cards.map(card => `
+                        <div class="report-mini-card ${card.level}">
+                            <span>${escapeHtml(card.label)}</span>
+                            <strong>${escapeHtml(card.value)}</strong>
+                        </div>`).join('')}
+                </div>
+            </section>
+            ${renderDailyReportSection('Eksik Veri Takibi', result.missingData, item => ({
+                level: 'warn',
+                title: `${item.modul || '-'} - ${item.eksikKayit || '-'}`,
+                detail: `${item.saat || item.kayitZamani || '--:--'} | ${item.otomatikKayitSonucu || item.detay || '-'}`
+            }))}
+            ${renderDailyReportSection('Otomatik Mudahale Ozeti', result.autoActions, item => ({
+                level: getLogBadgeLevel(item),
+                title: `${item.modul || '-'} - ${item.otomatikKayitSonucu || '-'}`,
+                detail: `${item.saat || item.kayitZamani || '--:--'} | ${item.detay || item.mailSonucu || '-'}`
+            }))}
+            ${renderDailyReportSection('Tekrar Eden Hata Analizi', result.repeatedErrors, item => ({
+                level: 'danger',
+                title: `${item.modul || '-'} - ${item.count || 0} kez`,
+                detail: item.error || '-'
+            }))}
+            ${renderDailyReportSection('Renkli Alarm Merkezi', result.alarmItems, item => ({
+                level: item.level === 'danger' ? 'danger' : 'warn',
+                title: `${item.label || ''} ${item.module || '-'} - ${item.title || '-'}`.trim(),
+                detail: `${item.time || '--:--'} | ${item.detail || '-'}`
+            }))}
+            <section class="report-section">
+                <div class="report-section-title">
+                    <h3>Yoneticinin Gun Sonu Maili</h3>
+                    <span>00:20 tetikleyici</span>
+                </div>
+                <div class="report-list">
+                    <div class="report-row ok">
+                        <strong>Mail icerigi hazir</strong>
+                        <p>Bu bolumler gun sonunda yoneticiye HTML ve metin olarak gonderilecek.</p>
+                    </div>
+                </div>
+            </section>
+        </div>`;
+}
+
+function renderDailyReportSection(title, items, mapper) {
+    const rows = Array.isArray(items) ? items.slice(0, 12) : [];
+    return `
+        <section class="report-section">
+            <div class="report-section-title">
+                <h3>${escapeHtml(title)}</h3>
+                <span>${rows.length} kayit</span>
+            </div>
+            <div class="report-list">
+                ${rows.length ? rows.map(item => {
+                    const row = mapper(item);
+                    return `
+                        <div class="report-row ${row.level || 'ok'}">
+                            <strong>${escapeHtml(row.title || '-')}</strong>
+                            <p>${escapeHtml(row.detail || '-')}</p>
+                        </div>`;
+                }).join('') : '<div class="report-row ok"><strong>Kayit yok</strong><p>Bu baslikta dikkat gerektiren veri gorunmuyor.</p></div>'}
+            </div>
+        </section>`;
+}
+
+function renderDailyReportMailStatus(result, message) {
+    const level = result.success ? 'ok' : 'danger';
+    const summary = result.summary || {};
+    return `
+        <div class="daily-report-sections">
+            <section class="report-section">
+                <div class="report-row ${level}">
+                    <strong>${escapeHtml(message)}</strong>
+                    <p>${result.success
+                        ? `Alici: ${escapeHtml(result.to || '-')} | Kritik: ${escapeHtml(summary.criticalCount ?? result.alarmSummary?.critical ?? '-')} | Uyari: ${escapeHtml(summary.warningCount ?? result.alarmSummary?.warning ?? '-')}`
+                        : escapeHtml(result.error || 'Mail gonderilemedi')}</p>
+                </div>
+            </section>
+        </div>`;
+}
+
+async function installAllTriggers() {
+    const box = document.getElementById('testResultBox');
+    if (box) box.textContent = 'Tetikleyiciler kuruluyor...';
+    const modules = Object.keys(AdminTriggerModules);
+    const results = await Promise.all(modules.map(moduleName =>
+        fetchJson(getAdminModuleUrl(moduleName), { action: AdminTriggerModules[moduleName].installAction })
+            .then(result => ({ moduleName, result }))
+    ));
+    const summary = results.map(item => `${AdminControlLabels[item.moduleName]}: ${item.result.success ? 'kuruldu' : item.result.error}`).join(' | ');
+    if (box) box.textContent = summary;
+    await postCentralLog('Tetikleyici kurulumu', summary, results.every(item => item.result.success) ? 'ok' : 'warn');
+    loadDashboard();
+}
+
+async function runModuleTest(moduleName) {
+    const box = document.getElementById('testResultBox');
+    if (box) box.textContent = `${AdminControlLabels[moduleName] || moduleName} testi calisiyor...`;
+    const action = AdminTriggerModules[moduleName]?.testAction || 'checkHourlyMissingRecords';
+    const result = await fetchJson(getAdminModuleUrl(moduleName), { action });
+    const summary = result.success
+        ? `${AdminControlLabels[moduleName]}: ${result.message || `eksik=${result.missingCount ?? result.missing ?? '-'}, eklenen=${result.addedCount ?? result.added ?? '-'}`}`
+        : `${AdminControlLabels[moduleName]}: ${result.error}`;
+    if (box) box.textContent = summary;
+    await postCentralLog('Manuel test', summary, result.success ? 'ok' : 'danger');
+    loadDashboard();
+}
+
+function getAdminModuleUrl(moduleName) {
+    const serviceKey = AdminTriggerModules[moduleName]?.serviceKey || moduleName;
+    return AdminControlConfig[serviceKey];
+}
+
+function normalizeTriggerHealth(result) {
+    if (!result.success) return result;
+    if (typeof result.installed !== 'undefined') return result;
+
+    const triggers = Array.isArray(result.triggers) ? result.triggers : [];
+    return {
+        ...result,
+        installed: triggers.length > 0,
+        triggerCount: triggers.length,
+        lastLog: result.lastLog || null
+    };
+}
+
+async function runTestMail() {
+    const box = document.getElementById('testResultBox');
+    if (box) box.textContent = 'Test maili gonderiliyor...';
+    const result = await fetchJson(AdminControlConfig.saatlik, {
+        action: 'sendEmail',
+        subject: 'Merkezi Kontrol Test Maili',
+        body: `Merkezi kontrol test maili. Zaman: ${new Date().toLocaleString('tr-TR')}`
+    });
+    const summary = result.success ? 'Test maili basarili' : `Test maili hata: ${result.error}`;
+    if (box) box.textContent = summary;
+    await postCentralLog('Test maili', summary, result.success ? 'ok' : 'danger');
+    renderLogs();
+}
+
+async function runFullBackup() {
+    const box = document.getElementById('backupResultBox');
+    setBackupStatus('Tum yedek hazirlaniyor...');
+    const keys = Object.keys(AdminBackupModules);
+    const results = await Promise.all(keys.map(key => fetchBackupModule(key)));
+    const data = {};
+    const errors = [];
+
+    results.forEach(item => {
+        data[item.key] = item.result.success ? item.result.data : [];
+        if (!item.result.success) {
+            errors.push(`${item.label}: ${item.result.error || 'Yedek alinamadi'}`);
+        }
+    });
+
+    const logs = await buildLogsBackup();
+    data.loglar = logs.data;
+    if (logs.errors.length) errors.push(...logs.errors);
+
+    const payload = createBackupPayload('tum-veriler', data, errors);
+    exportBackupPayload(payload, `kojenerasyon-tum-yedek-${fileDateStamp()}`);
+
+    const total = Object.keys(data).reduce((sum, key) => sum + (Array.isArray(data[key]) ? data[key].length : 0), 0);
+    const message = errors.length
+        ? `Yedek indirildi; ${errors.length} bolumde uyari var. Toplam ${total} kayit.`
+        : `Yedek indirildi. Toplam ${total} kayit.`;
+    if (box) box.textContent = message;
+    await postCentralLog('Veri yedegi', message, errors.length ? 'warn' : 'ok');
+}
+
+async function runModuleBackup(moduleKey) {
+    setBackupStatus(`${AdminControlLabels[moduleKey] || moduleKey} yedegi hazirlaniyor...`);
+    let payload;
+
+    if (moduleKey === 'loglar') {
+        const logs = await buildLogsBackup();
+        payload = createBackupPayload('loglar', { loglar: logs.data }, logs.errors);
+    } else {
+        const item = await fetchBackupModule(moduleKey);
+        const errors = item.result.success ? [] : [item.result.error || 'Yedek alinamadi'];
+        payload = createBackupPayload(moduleKey, { [moduleKey]: item.result.success ? item.result.data : [] }, errors);
+    }
+
+    exportBackupPayload(payload, `kojenerasyon-${moduleKey}-yedek-${fileDateStamp()}`);
+    const count = Object.values(payload.data).reduce((sum, value) => sum + (Array.isArray(value) ? value.length : 0), 0);
+    const message = `${payload.title} yedegi indirildi. Kayit: ${count}${payload.errors.length ? ', uyari: ' + payload.errors.length : ''}.`;
+    setBackupStatus(message);
+    await postCentralLog('Modul yedegi', message, payload.errors.length ? 'warn' : 'ok');
+}
+
+async function fetchBackupModule(moduleKey) {
+    const config = AdminBackupModules[moduleKey];
+    if (!config) {
+        return { key: moduleKey, label: moduleKey, result: { success: false, error: 'Bilinmeyen modul' } };
+    }
+    const result = await fetchJson(AdminControlConfig[config.urlKey], config.params);
+    return { key: moduleKey, label: config.label, result };
+}
+
+async function buildLogsBackup() {
+    const errors = [];
+    const remoteLogs = await fetchAllSystemLogs().catch(error => {
+        errors.push(error.message || String(error));
+        return [];
+    });
+    const localLogs = window.SystemAuditLog?.read?.() || [];
+    return {
+        data: remoteLogs.concat(localLogs.map(log => ({
+            kayitZamani: log.at,
+            modul: log.page,
+            eksikKayit: log.action,
+            otomatikKayitSonucu: log.status,
+            detay: log.detail,
+            kaynak: 'local'
+        }))),
+        errors
+    };
+}
+
+function createBackupPayload(title, data, errors) {
+    return {
+        title,
+        createdAt: new Date().toISOString(),
+        createdAtLocal: new Date().toLocaleString('tr-TR'),
+        version: 1,
+        data,
+        errors: errors || []
+    };
+}
+
+function exportBackupPayload(payload, fileBaseName) {
+    const format = getBackupFormat();
+    if (format === 'excel') {
+        downloadExcelBackup(payload, `${fileBaseName}.xls`);
+        return;
+    }
+    if (format === 'pdf') {
+        openPdfBackup(payload);
+        return;
+    }
+    downloadJsonBackup(payload, `${fileBaseName}.json`);
+}
+
+function getBackupFormat() {
+    return document.getElementById('backupFormatSelect')?.value || 'json';
+}
+
+function downloadJsonBackup(payload, fileName) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+    downloadBlob(blob, fileName);
+}
+
+function downloadExcelBackup(payload, fileName) {
+    const html = buildExcelHtml(payload);
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    downloadBlob(blob, fileName);
+}
+
+function downloadBlob(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
+function openPdfBackup(payload) {
+    const win = window.open('', '_blank');
+    if (!win) {
+        setBackupStatus('PDF penceresi acilamadi. Tarayici popup iznini kontrol edin.');
+        return;
+    }
+    win.document.open();
+    win.document.write(buildPdfHtml(payload));
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
+}
+
+function buildExcelHtml(payload) {
+    const sections = Object.keys(payload.data || {}).map(key => {
+        const rows = Array.isArray(payload.data[key]) ? payload.data[key] : [];
+        return `<h2>${escapeHtml(getBackupSectionTitle(key))}</h2>${buildHtmlTable(rows)}`;
+    }).join('<br>');
+    return `\uFEFF<html><head><meta charset="UTF-8"></head><body>
+        <h1>${escapeHtml(payload.title)}</h1>
+        <p>Olusturma: ${escapeHtml(payload.createdAtLocal)}</p>
+        ${sections}
+        ${payload.errors.length ? `<h2>Uyarilar</h2><p>${escapeHtml(payload.errors.join(' | '))}</p>` : ''}
+    </body></html>`;
+}
+
+function buildPdfHtml(payload) {
+    const sections = Object.keys(payload.data || {}).map(key => {
+        const rows = Array.isArray(payload.data[key]) ? payload.data[key] : [];
+        return `<section><h2>${escapeHtml(getBackupSectionTitle(key))} (${rows.length})</h2>${buildHtmlTable(rows.slice(0, 250))}${rows.length > 250 ? '<p>PDF on izlemede ilk 250 kayit gosterildi. Tum kayitlar icin JSON/Excel alin.</p>' : ''}</section>`;
+    }).join('');
+    return `<!doctype html><html><head><meta charset="UTF-8"><title>${escapeHtml(payload.title)}</title>
+        <style>
+            body{font-family:Arial,sans-serif;color:#172033;margin:24px}
+            h1{font-size:22px;margin-bottom:4px} h2{font-size:16px;margin-top:22px}
+            p{color:#64748b} table{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}
+            th,td{border:1px solid #d9e2ef;padding:5px;text-align:left;vertical-align:top}
+            th{background:#eef4ff} section{page-break-inside:auto}
+            @media print{button{display:none} body{margin:10mm}}
+        </style></head><body>
+        <button onclick="window.print()">PDF Kaydet / Yazdir</button>
+        <h1>${escapeHtml(payload.title)}</h1>
+        <p>Olusturma: ${escapeHtml(payload.createdAtLocal)}</p>
+        ${sections}
+        ${payload.errors.length ? `<h2>Uyarilar</h2><p>${escapeHtml(payload.errors.join(' | '))}</p>` : ''}
+    </body></html>`;
+}
+
+function buildHtmlTable(rows) {
+    if (!rows.length) return '<p>Kayit yok.</p>';
+    const columns = Array.from(rows.reduce((set, row) => {
+        Object.keys(row || {}).forEach(key => set.add(key));
+        return set;
+    }, new Set()));
+    return `<table><thead><tr>${columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}</tr></thead><tbody>
+        ${rows.map(row => `<tr>${columns.map(col => `<td>${escapeHtml(formatBackupCell(row?.[col]))}</td>`).join('')}</tr>`).join('')}
+    </tbody></table>`;
+}
+
+function formatBackupCell(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+}
+
+function getBackupSectionTitle(key) {
+    return AdminBackupModules[key]?.label || (key === 'loglar' ? 'Loglar' : key);
+}
+
+function setBackupStatus(message) {
+    const box = document.getElementById('backupResultBox');
+    if (box) box.textContent = message;
+}
+
+function fileDateStamp() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+async function renderLogs() {
+    const body = document.getElementById('logTableBody');
+    if (!body) return;
+    const localLogs = window.SystemAuditLog?.read?.() || [];
+    const remoteLogs = await fetchAllSystemLogs();
+    const logs = remoteLogs.concat(localLogs.map(log => ({
+        kayitZamani: log.at,
+        modul: log.page,
+        tarih: '',
+        saat: '',
+        eksikKayit: log.action,
+        otomatikKayitSonucu: log.status,
+        mailSonucu: '-',
+        hataMesaji: '',
+        detay: log.detail
+    })));
+    renderLogAlarms(logs);
+    if (!logs.length) {
+        body.innerHTML = '<tr><td colspan="6" class="empty">Henuz log yok.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = logs.slice(0, 80).map(log => `
+        <tr>
+            <td>${escapeHtml(log.kayitZamani || log.at)}</td>
+            <td>${escapeHtml(log.modul || log.page || '-')}</td>
+            <td>${escapeHtml(`${log.tarih || ''} ${log.saat || ''}`.trim() || '-')}</td>
+            <td>${escapeHtml(log.eksikKayit || log.action || '-')}</td>
+            <td>${escapeHtml(log.detay || log.detail || log.hataMesaji || '-')}</td>
+            <td><span class="badge ${getLogBadgeLevel(log)}">${escapeHtml(log.otomatikKayitSonucu || log.status || 'info')}</span></td>
+        </tr>`).join('');
+}
+
+function renderLogAlarms(logs) {
+    const currentAlarmItems = Array.from(document.querySelectorAll('#alarmList .alarm-item')).map(node => ({
+        level: node.classList.contains('danger') ? 'danger' : (node.classList.contains('warn') ? 'warn' : 'ok'),
+        source: 'Anlik Kontrol',
+        title: node.querySelector('strong')?.textContent || '',
+        detail: node.querySelector('p')?.textContent || '',
+        action: node.querySelector('span:not(.badge)')?.textContent || 'Merkezi Kontrol detaylarini incele'
+    })).filter(item => item.title && item.level !== 'ok');
+    const merged = dedupeAlarms(buildAlarmItems([], [], [], [], logs).concat(currentAlarmItems))
+        .sort((a, b) => alarmWeight(b.level) - alarmWeight(a.level));
+    renderAlarmCenter(merged);
+}
+
+function clearLogs() {
+    if (!confirm('Sistem loglari temizlensin mi?')) return;
+    window.SystemAuditLog?.clear?.();
+    renderUserActivity();
+    renderLogs();
+}
+
+async function fetchAllSystemLogs() {
+    const results = await Promise.all([
+        fetchJson(AdminControlConfig.saatlik, { action: 'getSystemLogs', count: '30' }),
+        fetchJson(AdminControlConfig.motor, { action: 'getSystemLogs', count: '30' }),
+        fetchJson(AdminControlConfig.enerji, { action: 'getSystemLogs', count: '30' }),
+        fetchJson(AdminControlConfig.buhar, { action: 'getSystemLogs', count: '30' }),
+        fetchJson(AdminControlConfig.gunluk, { action: 'getSystemLogs', count: '30' }),
+        fetchJson(AdminControlConfig.bildirim, { action: 'getSystemLogs', count: '30' })
+    ]);
+    return results.flatMap(result => result.success && Array.isArray(result.data) ? result.data : []);
+}
+
+function getLogBadgeLevel(log) {
+    const text = `${log.otomatikKayitSonucu || ''} ${log.mailSonucu || ''} ${log.hataMesaji || ''}`.toLowerCase();
+    if (text.includes('hata') || text.includes('basarisiz') || text.includes('danger')) return 'danger';
+    if (text.includes('gerekmedi') || text.includes('basarili') || text.includes('ok')) return 'ok';
+    return 'warn';
+}
+
+function makeCheck(title, value, detail, level) {
+    return { title, value, detail, level };
+}
+
+function makeIssue(module, level, text, detail) {
+    return { module, level, text, detail };
+}
+
+function renderStatusCard(item) {
+    return `
+        <article class="status-card ${item.level}">
+            <span class="card-label">${escapeHtml(item.title)}</span>
+            <strong>${escapeHtml(item.value)}</strong>
+            <p>${escapeHtml(item.detail)}</p>
+        </article>`;
+}
+
+function renderCheckItem(item) {
+    return `
+        <div class="check-item ${item.level}">
+            <span class="check-dot"></span>
+            <div>
+                <strong>${escapeHtml(item.title)}</strong>
+                <p>${escapeHtml(item.detail)}</p>
+            </div>
+            <span class="badge ${item.level}">${escapeHtml(item.value)}</span>
+        </div>`;
+}
+
+function loadingCard() {
+    return `
+        <article class="status-card loading">
+            <span class="card-label">Sistem</span>
+            <strong>Kontrol</strong>
+            <p>Veriler okunuyor.</p>
+        </article>`;
+}
+
+function getExpectedSlot() {
+    const now = new Date();
+    if (now.getMinutes() < 55) {
+        now.setHours(now.getHours() - 1);
+    }
+    return {
+        hour: `${String(now.getHours()).padStart(2, '0')}:00`,
+        trDate: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`,
+        isoDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    };
+}
+
+function matchesDate(value, trDate) {
+    const parts = trDate.split('.');
+    const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return String(value || '').includes(trDate) || String(value || '').startsWith(isoDate);
+}
+
+function sortRecordsAsc(records) {
+    return [...records].sort((a, b) => recordTime(a) - recordTime(b));
+}
+
+function recordTime(record) {
+    const date = normalizeDateForParse(record.tarih);
+    const hour = String(record.saat || '00:00').split(':')[0] || '0';
+    return new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`).getTime() || 0;
+}
+
+function normalizeDateForParse(value) {
+    const text = String(value || '').trim();
+    if (text.includes('-')) return text.slice(0, 10);
+    const parts = text.split('.');
+    return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : '1970-01-01';
+}
+
+function toNumber(value) {
+    const normalized = String(value ?? '').replace(/\./g, '').replace(',', '.');
+    const parsed = parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getCurrentUser() {
+    try {
+        return JSON.parse(localStorage.getItem('loggedInUser') || 'null');
+    } catch (error) {
+        return null;
+    }
+}
+
+function getUserName(user) {
+    const firstName = user.firstName || user.ad || user['Ad'] || user.name || '';
+    const lastName = user.lastName || user.soyad || user['Soyad'] || user.surname || '';
+    const fullName = (firstName + ' ' + lastName).trim() || user.email || 'Admin';
+    return fullName;
+}
+
+function escapeHtml(value) {
+    return window.Utils ? window.Utils.escapeHtml(value) : String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}

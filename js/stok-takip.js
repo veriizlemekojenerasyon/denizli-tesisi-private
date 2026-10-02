@@ -1,0 +1,833 @@
+// Stok Takip JavaScript
+
+// Google Apps Script URL
+const SCRIPT_URL = window.AppConfig.getScriptUrl('stok');
+let stockMaterialsCache = null;
+let stockMaterialsPromise = null;
+
+async function fetchStockMaterials(forceRefresh = false) {
+    if (!forceRefresh && Array.isArray(stockMaterialsCache)) {
+        return stockMaterialsCache;
+    }
+    if (!forceRefresh && stockMaterialsPromise) {
+        return stockMaterialsPromise;
+    }
+
+    stockMaterialsPromise = fetch(SCRIPT_URL + '?action=getMaterials')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Response is not JSON');
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (!result.success) {
+                throw new Error(result.error || 'Malzemeler alinamadi');
+            }
+            stockMaterialsCache = result.data || [];
+            localStorage.setItem('stockMaterials', JSON.stringify(stockMaterialsCache));
+            return stockMaterialsCache;
+        })
+        .finally(() => {
+            stockMaterialsPromise = null;
+        });
+
+    return stockMaterialsPromise;
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Başlangıç değerlerini ayarla
+    await initializePage();
+    
+    // Event listener'ları ekle
+    setupEventListeners();
+    
+    // Stok listesini yükle
+    await loadStockList();
+    
+    // Son işlemleri yükle
+    await loadRecentTransactions();
+    
+    // Özet kartları güncelle
+    await updateSummaryCards();
+    
+    // Kullanıcı adını göster
+    displayUserName();
+});
+
+// Sayfa başlangıç ayarları
+async function initializePage() {
+    // Tarih alanını bugün olarak ayarla
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    const today = new Date().toISOString().split('T')[0];
+    dateInputs.forEach(input => {
+        if (!input.value) {
+            input.value = today;
+        }
+    });
+    
+    // İşlem formundaki malzeme select'ini doldur
+    await populateMaterialSelect();
+    
+    // Personel select'ini doldur
+    populatePersonnelSelect();
+}
+
+// Event listener'ları ekle
+function setupEventListeners() {
+    // Malzeme ekleme formu
+    const stockForm = document.getElementById('stock-form');
+    if (stockForm) {
+        stockForm.addEventListener('submit', handleStockSubmit);
+    }
+    
+    // Stok giriş/çıkış formu
+    const transactionForm = document.getElementById('transaction-form');
+    if (transactionForm) {
+        transactionForm.addEventListener('submit', handleTransactionSubmit);
+    }
+    
+    // Arama ve filtreleme
+    const searchInput = document.getElementById('stock-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterStockList);
+    }
+    
+    const categoryFilter = document.getElementById('category-filter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', filterStockList);
+    }
+    
+    // Excel export
+    const exportBtn = document.getElementById('export-stock');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportToExcel);
+    }
+
+    setupBarcodeScanners();
+
+    const transactionBarcodeInput = document.getElementById('transaction-barcode');
+    if (transactionBarcodeInput) {
+        transactionBarcodeInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyBarcodeToTransaction(transactionBarcodeInput.value);
+            }
+        });
+        transactionBarcodeInput.addEventListener('change', function () {
+            if (transactionBarcodeInput.value.trim()) {
+                applyBarcodeToTransaction(transactionBarcodeInput.value);
+            }
+        });
+    }
+    
+    // Çıkış butonları
+    const sidebarLogout = document.getElementById('sidebarLogout');
+    const headerLogout = document.getElementById('headerLogout');
+    
+    if (sidebarLogout) {
+        sidebarLogout.addEventListener('click', handleLogout);
+    }
+    if (headerLogout) {
+        headerLogout.addEventListener('click', handleLogout);
+    }
+}
+
+// Malzeme ekleme formu gönderimi
+async function handleStockSubmit(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    
+    try {
+        // Backend'e malzeme ekle
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'addMaterial',
+                materialCode: formData.get('material-code'),
+                materialName: formData.get('material-name'),
+                materialCategory: formData.get('material-category'),
+                materialQuantity: formData.get('material-quantity'),
+                materialUnit: formData.get('material-unit'),
+                minStock: formData.get('min-stock'),
+                materialDescription: formData.get('material-description'),
+                createdBy: 'Admin'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Başarılı', result.message);
+            
+            // Formu temizle ve listeyi güncelle
+            e.target.reset();
+            await loadStockList(true);
+            populateMaterialSelect(stockMaterialsCache);
+            await updateSummaryCards();
+        } else {
+            showNotification('error', 'Hata', result.error || 'Malzeme eklenemedi!');
+        }
+        
+    } catch (error) {
+        console.error('Malzeme ekleme hatası:', error);
+        showNotification('error', 'Hata', 'Bağlantı hatası! Lütfen tekrar deneyin.');
+    }
+}
+
+// Stok giriş/çıkış formu gönderimi
+async function handleTransactionSubmit(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    
+    try {
+        // Backend'e işlem ekle
+        const selectedMaterialId = formData.get('transaction-material');
+        const selectedMaterial = getMaterials().find(m => String(m.id) === String(selectedMaterialId));
+
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'addTransaction',
+                materialId: selectedMaterialId,
+                materialName: selectedMaterial?.name || document.querySelector('#transaction-material option:checked')?.text.split(' - ')[1] || '',
+                transactionType: formData.get('transaction-type'),
+                transactionQuantity: formData.get('transaction-quantity'),
+                materialUnit: selectedMaterial?.unit || 'adet',
+                transactionDate: formData.get('transaction-date'),
+                transactionPerson: formData.get('transaction-person'),
+                transactionReason: formData.get('transaction-reason')
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Başarılı', result.message);
+            
+            // Formu temizle ve listeleri güncelle
+            e.target.reset();
+            document.getElementById('transaction-date').value = new Date().toISOString().split('T')[0];
+            clearBarcodeMatchInfo();
+            await loadStockList(true);
+            populateMaterialSelect(stockMaterialsCache);
+            await loadRecentTransactions();
+            await updateSummaryCards();
+        } else {
+            showNotification('error', 'Hata', result.error || 'İşlem kaydedilemedi!');
+        }
+        
+    } catch (error) {
+        console.error('Stok işlemi hatası:', error);
+        showNotification('error', 'Hata', 'Bağlantı hatası! Lütfen tekrar deneyin.');
+    }
+}
+
+// Malzeme select'ini doldur
+async function populateMaterialSelect(materials) {
+    const select = document.getElementById('transaction-material');
+    if (!select) return;
+    
+    try {
+        const items = Array.isArray(materials) ? materials : await fetchStockMaterials(false);
+        
+        select.innerHTML = '<option value="">Malzeme seçin</option>';
+        
+        items.forEach(material => {
+            const option = document.createElement('option');
+            option.value = material.id;
+            option.textContent = `${material.code} - ${material.name} (${material.quantity} ${material.unit})`;
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Malzeme select doldurma hatası:', error);
+        select.innerHTML = '<option value="">Malzemeler yüklenemedi</option>';
+    }
+}
+
+// Personel select'ini doldur
+function populatePersonnelSelect() {
+    const select = document.getElementById('transaction-person');
+    if (!select) return;
+    
+    // Mevcut kullanıcıları al
+    const users = getUsers();
+    
+    select.innerHTML = '<option value="">Personel seçin</option>';
+    
+    // Kullanıcıları listele
+    users.forEach(user => {
+        const option = document.createElement('option');
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Bilinmeyen Kullanıcı';
+        option.value = fullName;
+        option.textContent = fullName;
+        select.appendChild(option);
+    });
+}
+
+// Stok listesini yükle
+async function loadStockList(forceRefresh = false) {
+    const tbody = document.getElementById('stock-tbody');
+    if (!tbody) return;
+    
+    try {
+        // Backend'den malzemeleri getir
+        const materials = await fetchStockMaterials(forceRefresh);
+        
+        if (materials.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #7f8c8d;">Henüz malzeme eklenmemiş</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            materials.forEach(material => {
+                const row = createStockRow(material);
+                tbody.appendChild(row);
+            });
+        
+    } catch (error) {
+        console.error('Stok listesi yükleme hatası:', error);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #e74c3c;">Bağlantı hatası! Lütfen sayfayı yenileyin.</td></tr>';
+    }
+}
+
+// Stok satırı oluştur
+function createStockRow(material) {
+    const row = document.createElement('tr');
+    
+    const status = getStockStatus(material);
+    
+    row.innerHTML = `
+        <td><strong>${material.code}</strong></td>
+        <td>${material.name}</td>
+        <td>${getCategoryName(material.category)}</td>
+        <td>${material.quantity.toFixed(2)}</td>
+        <td>${material.unit}</td>
+        <td>${material.minStock.toFixed(2)}</td>
+        <td><span class="status-badge ${status.class}">${status.text}</span></td>
+        <td>
+            <button class="action-btn edit" onclick="editMaterial(${material.id})">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn delete" onclick="deleteMaterial(${material.id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    return row;
+}
+
+// Stok durumunu belirle
+function getStockStatus(material) {
+    if (material.quantity <= 0) {
+        return { class: 'status-low', text: 'Tükendi' };
+    } else if (material.quantity <= material.minStock) {
+        return { class: 'status-warning', text: 'Kritik' };
+    } else {
+        return { class: 'status-normal', text: 'Normal' };
+    }
+}
+
+// Kategori adını getir
+function getCategoryName(category) {
+    const categories = {
+        'yag': 'Yağ',
+        'filtre': 'Filtre',
+        'yedek-parca': 'Yedek Parça',
+        'kimyasal': 'Kimyasal',
+        'elektrik': 'Elektrik Malzemesi',
+        'sarf-malzeme': 'Sarf Malzeme',
+        'diger': 'Diğer'
+    };
+    return categories[category] || category;
+}
+
+// Stok listesini filtrele
+function filterStockList() {
+    const searchTerm = document.getElementById('stock-search').value.toLowerCase();
+    const categoryFilter = document.getElementById('category-filter').value;
+    
+    const materials = getMaterials();
+    
+    const filtered = materials.filter(material => {
+        const matchesSearch = material.name.toLowerCase().includes(searchTerm) || 
+                             material.code.toLowerCase().includes(searchTerm);
+        const matchesCategory = !categoryFilter || material.category === categoryFilter;
+        return matchesSearch && matchesCategory;
+    });
+    
+    const tbody = document.getElementById('stock-tbody');
+    tbody.innerHTML = '';
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #7f8c8d;">Filtreleme sonucu bulunamadı</td></tr>';
+        return;
+    }
+    
+    filtered.forEach(material => {
+        tbody.appendChild(createStockRow(material));
+    });
+}
+
+// Son işlemleri yükle
+async function loadRecentTransactions() {
+    const tbody = document.getElementById('transactions-tbody');
+    if (!tbody) return;
+    
+    try {
+        // Backend'den işlemleri getir
+        const response = await fetch(SCRIPT_URL + '?action=getTransactions');
+        
+        // Check if response is OK and is JSON
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const transactions = result.data || [];
+            
+            if (transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #7f8c8d;">Henüz işlem yapılmamış</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            transactions.forEach(transaction => {
+                const row = createTransactionRow(transaction);
+                tbody.appendChild(row);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #e74c3c;">İşlemler yüklenemedi: ' + (result.error || 'Bilinmeyen hata') + '</td></tr>';
+        }
+        
+    } catch (error) {
+        console.error('Son işlemler yükleme hatası:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #e74c3c;">Bağlantı hatası! Backend yanıt vermiyor veya yanlış format döndürüyor.</td></tr>';
+    }
+}
+
+// İşlem satırı oluştur
+function createTransactionRow(transaction) {
+    const row = document.createElement('tr');
+
+    const isIn = transaction.type === 'in' || transaction.type === 'GİRİŞ' || transaction.type === 'GIRIS';
+    const typeClass = isIn ? 'text-success' : 'text-danger';
+    const typeText = isIn ? 'Giriş' : 'Çıkış';
+    const typeIcon = isIn ? '↓' : '↑';
+    
+    row.innerHTML = `
+        <td>${formatDate(transaction.date)}</td>
+        <td>${transaction.materialName}</td>
+        <td class="${typeClass}"><strong>${typeIcon} ${typeText}</strong></td>
+        <td>${transaction.quantity.toFixed(2)}</td>
+        <td>${transaction.person}</td>
+        <td>${getReasonName(transaction.reason)}</td>
+    `;
+    
+    return row;
+}
+
+// İşlem nedenini getir
+function getReasonName(reason) {
+    const normalizedReason = String(reason || '').trim();
+    const reasons = {
+        'satin-alma': 'Satın Alma',
+        'kullanim': 'Kullanım',
+        'bakim': 'Bakım',
+        'degisim': 'Değişim',
+        'diger': 'Diğer'
+    };
+    return reasons[normalizedReason] || reason;
+}
+
+function normalizeBarcodeValue(value) {
+    if (typeof BarcodeScanner !== 'undefined' && BarcodeScanner.extractBarcodeCode) {
+        return BarcodeScanner.extractBarcodeCode(value);
+    }
+    return (value || '').trim();
+}
+
+function findMaterialByBarcode(code) {
+    const normalizedCode = normalizeBarcodeValue(code);
+    if (!normalizedCode) return null;
+
+    const materials = getMaterials();
+    return materials.find(function (material) {
+        return String(material.code || '').trim().toLowerCase() === normalizedCode.toLowerCase();
+    }) || null;
+}
+
+function showBarcodeMatchInfo(material) {
+    const infoBox = document.getElementById('barcode-match-info');
+    const infoText = document.getElementById('barcode-match-text');
+    if (!infoBox || !infoText || !material) return;
+
+    infoText.textContent = `${material.code} - ${material.name} (${material.quantity.toFixed(2)} ${material.unit})`;
+    infoBox.style.display = 'block';
+}
+
+function clearBarcodeMatchInfo() {
+    const infoBox = document.getElementById('barcode-match-info');
+    const infoText = document.getElementById('barcode-match-text');
+    const barcodeInput = document.getElementById('transaction-barcode');
+
+    if (infoBox) infoBox.style.display = 'none';
+    if (infoText) infoText.textContent = '';
+    if (barcodeInput) barcodeInput.value = '';
+}
+
+function applyBarcodeToTransaction(code) {
+    const normalizedCode = normalizeBarcodeValue(code);
+    const barcodeInput = document.getElementById('transaction-barcode');
+    const materialSelect = document.getElementById('transaction-material');
+
+    if (!normalizedCode) {
+        clearBarcodeMatchInfo();
+        return null;
+    }
+
+    if (barcodeInput) {
+        barcodeInput.value = normalizedCode;
+    }
+
+    const material = findMaterialByBarcode(normalizedCode);
+    if (!material) {
+        clearBarcodeMatchInfo();
+        if (barcodeInput) barcodeInput.value = normalizedCode;
+        showNotification('warning', 'Bulunamadı', `"${normalizedCode}" barkodlu malzeme kayıtlı değil. Yeni malzeme ekleyebilirsiniz.`);
+
+        const materialCodeInput = document.getElementById('material-code');
+        if (materialCodeInput) {
+            materialCodeInput.value = normalizedCode;
+            materialCodeInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return null;
+    }
+
+    if (materialSelect) {
+        materialSelect.value = material.id;
+        materialSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    showBarcodeMatchInfo(material);
+    showNotification('success', 'Malzeme Bulundu', `${material.name} seçildi.`);
+
+    const quantityInput = document.getElementById('transaction-quantity');
+    if (quantityInput) {
+        quantityInput.focus();
+    }
+
+    return material;
+}
+
+function setupBarcodeScanners() {
+    if (typeof BarcodeScanner === 'undefined') return;
+
+    BarcodeScanner.setNotificationFormat('type-first');
+    BarcodeScanner.initButton('material-code-scan-btn', 'material-code');
+    BarcodeScanner.initButton('transaction-barcode-scan-btn', 'transaction-barcode', function (code) {
+        applyBarcodeToTransaction(code);
+    });
+}
+
+// Malzeme düzenle
+function editMaterial(id) {
+    const materials = getMaterials();
+    const material = materials.find(m => m.id === id);
+    
+    if (!material) return;
+    
+    // Form alanlarını doldur
+    document.getElementById('material-code').value = material.code;
+    document.getElementById('material-name').value = material.name;
+    document.getElementById('material-category').value = material.category;
+    document.getElementById('material-quantity').value = material.quantity;
+    document.getElementById('material-unit').value = material.unit;
+    document.getElementById('min-stock').value = material.minStock;
+    document.getElementById('material-description').value = material.description || '';
+    
+    // Malzemeyi sil (düzenleme sonrası yeniden eklenecek)
+    deleteMaterial(id, false);
+    
+    showNotification('info', 'Düzenleme', 'Malzeme bilgileri forma yüklendi. Düzenlemeyi tamamlayıp kaydedin.');
+}
+
+// Malzeme sil
+function deleteMaterial(id, showConfirm = true) {
+    if (showConfirm && !confirm('Bu malzemeyi silmek istediğinizden emin misiniz?')) {
+        return;
+    }
+    
+    let materials = getMaterials();
+    materials = materials.filter(m => m.id !== id);
+    stockMaterialsCache = materials;
+    localStorage.setItem('stockMaterials', JSON.stringify(materials));
+    
+    if (showConfirm) {
+        showNotification('success', 'Başarılı', 'Malzeme silindi!');
+        loadStockList();
+        populateMaterialSelect();
+        updateSummaryCards();
+    }
+}
+
+// Excel'e aktar
+function exportToExcel() {
+    const materials = getMaterials();
+    
+    if (materials.length === 0) {
+        showNotification('warning', 'Uyarı', 'Aktarılacak malzeme bulunamadı!');
+        return;
+    }
+    
+    // CSV formatında hazırla
+    const headers = ['Kod', 'Ad', 'Kategori', 'Miktar', 'Birim', 'Min. Stok', 'Durum'];
+    const rows = materials.map(m => [
+        m.code,
+        m.name,
+        getCategoryName(m.category),
+        m.quantity,
+        m.unit,
+        m.minStock,
+        getStockStatus(m).text
+    ]);
+    
+    const csvContent = [headers, ...rows]
+        .map(row => row.join(';'))
+        .join('\n');
+    
+    // İndir
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `stok-listesi-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    showNotification('success', 'Başarılı', 'Stok listesi Excel\'e aktarıldı!');
+}
+
+// Çıkış işlemi
+function handleLogout() {
+    if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+        localStorage.removeItem('loggedInUser');
+        window.location.href = 'anasayfa.html';
+    }
+}
+
+// Kullanıcı adını göster
+function displayUserName() {
+    const updateUserName = () => {
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (!loggedInUser) {
+            window.location.href = 'anasayfa.html';
+            return;
+        }
+        
+        try {
+            const user = JSON.parse(loggedInUser);
+            const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            
+            // userNameDisplay elementini güncelle
+            const userNameElement = document.getElementById('userNameDisplay');
+            if (userNameElement) {
+                userNameElement.textContent = fullName || user.email || 'Kullanıcı';
+                console.log('Stok Takip - Kullanıcı adı ayarlandı:', fullName || user.email || 'Kullanıcı');
+            } else {
+                console.error('userNameDisplay elementi bulunamadı');
+            }
+        } catch (e) {
+            console.error('Stok Takip - Kullanıcı bilgileri okunamadı:', e);
+            const userNameElement = document.getElementById('userNameDisplay');
+            if (userNameElement) {
+                userNameElement.textContent = 'Kullanıcı';
+            }
+        }
+    };
+    
+    // Birden fazla deneme
+    updateUserName();
+    setTimeout(updateUserName, 100);
+    setTimeout(updateUserName, 500);
+    setTimeout(updateUserName, 1000);
+}
+
+// Yardımcı fonksiyonlar
+function getMaterials() {
+    if (Array.isArray(stockMaterialsCache)) {
+        return stockMaterialsCache;
+    }
+    return JSON.parse(localStorage.getItem('stockMaterials') || '[]');
+}
+
+function getTransactions() {
+    return JSON.parse(localStorage.getItem('stockTransactions') || '[]');
+}
+
+function getUsers() {
+    // Gerçek kullanıcı listesi
+    const realUsers = [
+        { firstName: 'admin', lastName: '', email: 'admin@sistem.com' },
+        { firstName: 'YAKUP CAN', lastName: 'CİN', email: 'yakup@sistem.com' },
+        { firstName: 'İBRAHİM OGÜN', lastName: 'ŞAHİN', email: 'i.ogun@sistem.com' },
+        { firstName: 'OGUZHAN', lastName: 'YAYLALI', email: 'o.yaylali@sistem.com' },
+        { firstName: 'ALTAN', lastName: 'HUNOĞLU', email: 'a.hunoglu@sistem.com' },
+        { firstName: 'KADİR', lastName: 'KORKMAZ', email: 'k.korkmaz@sistem.com' },
+        { firstName: 'MURAT', lastName: 'COŞKUN', email: 'mrtcsk0320@gmail.com' }
+    ];
+    
+    // Mevcut logged in kullanıcıyı kontrol et ve ekle
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    if (loggedInUser) {
+        try {
+            const user = JSON.parse(loggedInUser);
+            const exists = realUsers.some(realUser => 
+                realUser.email === user.email || 
+                `${realUser.firstName} ${realUser.lastName}`.trim() === `${user.firstName || ''} ${user.lastName || ''}`.trim()
+            );
+            if (!exists) {
+                realUsers.push(user);
+            }
+        } catch (e) {
+            console.error('Kullanıcı bilgileri okunamadı:', e);
+        }
+    }
+    
+    return realUsers;
+}
+
+function formatDate(dateString) {
+    // dd.MM.yyyy formatını parse et
+    if (!dateString) return '';
+    
+    // Eğer zaten dd.MM.yyyy formatındaysa
+    if (typeof dateString === 'string' && dateString.includes('.')) {
+        return dateString;
+    }
+    
+    // Diğer formatları dene
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return dateString; // Parse edilemezse orijinali döndür
+    }
+    
+    return date.toLocaleDateString('tr-TR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+// Bildirim göster
+function showNotification(type, title, message) {
+    const modal = document.getElementById('notification-modal');
+    const titleEl = document.getElementById('notification-title');
+    const messageEl = document.getElementById('notification-message');
+    
+    if (!modal || !titleEl || !messageEl) {
+        alert(message);
+        return;
+    }
+    
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    
+    modal.classList.add('show');
+    
+    setTimeout(() => {
+        closeNotification();
+    }, 5000);
+}
+
+// Bildirim kapat
+function closeNotification() {
+    const modal = document.getElementById('notification-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+// Özet kartları güncelle
+async function updateSummaryCards() {
+    try {
+        const response = await fetch(SCRIPT_URL + '?action=getStockSummary');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const data = result.data;
+            
+            // Toplam Malzeme
+            const totalMaterialsEl = document.getElementById('total-materials');
+            if (totalMaterialsEl) {
+                totalMaterialsEl.textContent = data.totalMaterials || 0;
+            }
+            
+            // Kritik Stok
+            const lowStockEl = document.getElementById('low-stock-count');
+            if (lowStockEl) {
+                lowStockEl.textContent = data.lowStockCount || 0;
+            }
+            
+            // Bu Ay Giriş
+            const monthlyInEl = document.getElementById('monthly-in');
+            if (monthlyInEl) {
+                monthlyInEl.textContent = data.monthlyIn || 0;
+            }
+            
+            // Bu Ay Çıkış
+            const monthlyOutEl = document.getElementById('monthly-out');
+            if (monthlyOutEl) {
+                monthlyOutEl.textContent = data.monthlyOut || 0;
+            }
+        } else {
+            console.error('Özet kartları güncellenemedi:', result.error);
+        }
+    } catch (error) {
+        console.error('Özet kartları güncelleme hatası:', error);
+    }
+}

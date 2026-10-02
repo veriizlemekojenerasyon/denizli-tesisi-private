@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kojenerasyon Kontrol Paneli - Ana Sayfa</title>
+    <link rel="stylesheet" href="css/anasayfa.css?v=4">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/mobile-system.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sol Navigasyon Menüsü -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="images/koruma_logo_1.png" alt="Logo" class="logo">
+                    <div class="company-name">KOJENERASYON</div>
+                </div>
+            </div>
+            <ul class="sidebar-menu"></ul>
+            <div class="sidebar-footer">
+                <div class="user-info" id="sidebarUserInfo" style="padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
+                    <span id="sidebarUserNameDisplay" style="color: white; font-size: 13px; font-weight: 500;">Yükleniyor...</span>
+                </div>
+                <button class="logout-btn" id="sidebarLogout">Çıkış Yap</button>
+            </div>
+        </nav>
+
+        <!-- Ana İçerik Alanı -->
+        <div class="main-content">
+            <!-- Üst Header -->
+            <header class="header">
+                <div class="header-top">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menüyü aç/kapa">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <div class="company-info">
+                        <h1>KORUMA KLOR ALKALİ ŞİRKETLER GRUBU</h1>
+                        <h2>KOJENERASYON BÖLÜMÜ</h2>
+                    </div>
+                    <div class="user-info">
+                        <span class="welcome-text">Hoşgeldin, <span id="userNameDisplay">Yükleniyor...</span></span>
+                        <button class="logout-btn" id="headerLogout">Çıkış Yap</button>
+                    </div>
+                </div>
+                <div class="header-bottom">
+                    <h3>Denizli Tesisi Kontrol Paneli</h3>
+                </div>
+            </header>
+
+            <!-- Dashboard İçeriği -->
+            <main class="dashboard-content">
+                <!-- Motor Durumları Bölümü -->
+                <section class="motor-status-section">
+                    <h2 class="section-title">Motor Kartları</h2>
+                    <div class="motor-cards">
+                        <div class="motor-card" data-motor="gm1">
+                            <div class="motor-header">
+                                <h3>GM-1</h3>
+                                <span class="motor-status stopped">--</span>
+                            </div>
+                            <div class="motor-info">
+                                <div class="info-row">
+                                    <span class="label">Motor Tipi:</span>
+                                    <span class="value">JENBACHER J-620</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Kapasite:</span>
+                                    <span class="value">3450 kWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Toplam Üretim:</span>
+                                    <span class="value" id="gm1-total-production">-- MWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Saatlik Üretim:</span>
+                                    <span class="value" id="gm1-hourly-production">-- MWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Toplam Çalışma:</span>
+                                    <span class="value" id="gm1-total-hours">-- saat</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Kalkış Sayısı:</span>
+                                    <span class="value" id="gm1-total-starts">-- adet</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Günlük Çalışma:</span>
+                                    <span class="value" id="gm1-hourly-hours">-- saat</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="motor-card" data-motor="gm2">
+                            <div class="motor-header">
+                                <h3>GM-2</h3>
+                                <span class="motor-status stopped">--</span>
+                            </div>
+                            <div class="motor-info">
+                                <div class="info-row">
+                                    <span class="label">Motor Tipi:</span>
+                                    <span class="value">JENBACHER J-620</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Kapasite:</span>
+                                    <span class="value">3450 kWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Toplam Üretim:</span>
+                                    <span class="value" id="gm2-total-production">-- MWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Saatlik Üretim:</span>
+                                    <span class="value" id="gm2-hourly-production">-- MWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Toplam Çalışma:</span>
+                                    <span class="value" id="gm2-total-hours">-- saat</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Kalkış Sayısı:</span>
+                                    <span class="value" id="gm2-total-starts">-- adet</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Günlük Çalışma:</span>
+                                    <span class="value" id="gm2-hourly-hours">-- saat</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="motor-card" data-motor="gm3">
+                            <div class="motor-header">
+                                <h3>GM-3</h3>
+                                <span class="motor-status stopped">--</span>
+                            </div>
+                            <div class="motor-info">
+                                <div class="info-row">
+                                    <span class="label">Motor Tipi:</span>
+                                    <span class="value">JENBACHER J-620</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Kapasite:</span>
+                                    <span class="value">3450 kWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Toplam Üretim:</span>
+                                    <span class="value" id="gm3-total-production">-- MWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Saatlik Üretim:</span>
+                                    <span class="value" id="gm3-hourly-production">-- MWh</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Toplam Çalışma:</span>
+                                    <span class="value" id="gm3-total-hours">-- saat</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Kalkış Sayısı:</span>
+                                    <span class="value" id="gm3-total-starts">-- adet</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Günlük Çalışma:</span>
+                                    <span class="value" id="gm3-hourly-hours">-- saat</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Elektroliz Ana Sayfa Bölümü -->
+                <section class="elz-mainpage-section" aria-labelledby="elzMainpageTitle">
+                    <div class="elz-section-header">
+                        <h2 class="section-title" id="elzMainpageTitle">Elektroliz Ana Sayfa Degerleri</h2>
+                        <span class="elz-refresh-status is-idle" id="elzRefreshStatus">Bekleniyor</span>
+                    </div>
+                    <div class="elz-mainpage-cards">
+                        <article class="elz-mainpage-card">
+                            <span class="elz-card-badge">ELZ</span>
+                            <h3>ELZ 116-117</h3>
+                            <p class="elz-card-value" id="elz116117Value">--</p>
+                            <div class="elz-card-meta elz-card-rows" id="elz116117Meta">Kaynak bekleniyor</div>
+                        </article>
+
+                        <article class="elz-mainpage-card">
+                            <span class="elz-card-badge">ELZ</span>
+                            <h3>ELZ 119/121</h3>
+                            <p class="elz-card-value" id="elz119121Value">--</p>
+                            <div class="elz-card-meta elz-card-rows" id="elz119121Meta">Kaynak bekleniyor</div>
+                        </article>
+
+                        <article class="elz-mainpage-card elz-mainpage-card--refresh">
+                            <span class="elz-card-badge">5 dk</span>
+                            <h3>Son Guncelleme</h3>
+                            <p class="elz-card-value elz-card-value--time" id="elzLastUpdate">--</p>
+                            <span class="elz-card-meta" id="elzSourceMeta">Otomatik yenilenir</span>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- Günlük Özet Bölümü -->
+                <section class="daily-summary-section">
+                    <h2 class="section-title">Günlük Özet</h2>
+                    <div class="summary-cards">
+                        <div class="summary-card production" data-target="monthly-energy-report" role="button" tabindex="0" aria-label="Aylik enerji motor raporunu ac">
+                            <div class="card-icon">⚡</div>
+                            <div class="card-content">
+                                <h3>GÜNLÜK ÜRETİM</h3>
+                                <p class="card-value" id="daily-production-value">-- MWh</p>
+                            </div>
+                        </div>
+
+                        <div class="summary-card steam" data-target="steam-records" role="button" tabindex="0" aria-label="Buhar kayitlarini ac">
+                            <div class="card-icon">💨</div>
+                            <div class="card-content">
+                                <h3>GÜNLÜK BUHAR</h3>
+                                <p class="card-value" id="daily-steam-value">-- Ton</p>
+                            </div>
+                        </div>
+
+                        <div class="summary-card maintenance" data-target="maintenance-history" role="button" tabindex="0" aria-label="Detayli bakim gecmisini ac">
+                            <div class="card-icon">🔧</div>
+                            <div class="card-content">
+                                <h3>DETAYLI BAKIM GEÇMİŞİ</h3>
+                                <p class="card-value" id="pending-maintenance-value">-- Form</p>
+                            </div>
+                        </div>
+
+                        <div class="summary-card faults announcements-card" data-target="announcements" role="button" tabindex="0" aria-label="Vardiya duyurularini ac">
+                            <div class="card-icon">📢</div>
+                            <div class="card-content">
+                                <h3>DUYURULAR</h3>
+                                <p class="card-value" id="active-faults-value">-- Duyuru</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="announcement-modal" id="announcementModal" aria-hidden="true">
+        <div class="announcement-modal__backdrop" data-close-announcements></div>
+        <div class="announcement-modal__panel" role="dialog" aria-modal="true" aria-labelledby="announcementModalTitle">
+            <div class="announcement-modal__header">
+                <h2 id="announcementModalTitle">Vardiya Duyuruları</h2>
+                <button type="button" class="announcement-modal__close" data-close-announcements aria-label="Kapat">×</button>
+            </div>
+            <div class="announcement-modal__body" id="announcementModalBody"></div>
+        </div>
+    </div>
+
+    <div class="energy-report-modal" id="monthlyEnergyModal" aria-hidden="true">
+        <div class="energy-report-modal__backdrop" data-close-monthly-energy></div>
+        <div class="energy-report-modal__panel" role="dialog" aria-modal="true" aria-labelledby="monthlyEnergyModalTitle">
+            <div class="energy-report-modal__header">
+                <div>
+                    <h2 id="monthlyEnergyModalTitle">Aylık Enerji Motor Raporu</h2>
+                    <p id="monthlyEnergyModalSubtitle">GM üretim, çalışma saati ve kalkış özeti</p>
+                </div>
+                <button type="button" class="energy-report-modal__close" data-close-monthly-energy aria-label="Kapat">×</button>
+            </div>
+            <div class="energy-report-modal__body" id="monthlyEnergyModalBody"></div>
+        </div>
+    </div>
+
+    <div class="energy-report-modal" id="steamDataModal" aria-hidden="true">
+        <div class="energy-report-modal__backdrop" data-close-steam-data></div>
+        <div class="energy-report-modal__panel steam-data-modal__panel" role="dialog" aria-modal="true" aria-labelledby="steamDataModalTitle">
+            <div class="energy-report-modal__header">
+                <div>
+                    <h2 id="steamDataModalTitle">Buhar Verileri</h2>
+                    <p id="steamDataModalSubtitle">Son buhar kayitlari</p>
+                </div>
+                <button type="button" class="energy-report-modal__close" data-close-steam-data aria-label="Kapat">×</button>
+            </div>
+            <div class="energy-report-modal__body" id="steamDataModalBody"></div>
+        </div>
+    </div>
+
+    <div class="energy-report-modal" id="maintenanceHistoryModal" aria-hidden="true">
+        <div class="energy-report-modal__backdrop" data-close-maintenance-history></div>
+        <div class="energy-report-modal__panel maintenance-history-modal__panel" role="dialog" aria-modal="true" aria-labelledby="maintenanceHistoryModalTitle">
+            <div class="energy-report-modal__header">
+                <div>
+                    <h2 id="maintenanceHistoryModalTitle">Detaylı Bakım Geçmişi</h2>
+                    <p id="maintenanceHistoryModalSubtitle">Son bakım kayıtları</p>
+                </div>
+                <button type="button" class="energy-report-modal__close" data-close-maintenance-history aria-label="Kapat">×</button>
+            </div>
+            <div class="energy-report-modal__body" id="maintenanceHistoryModalBody"></div>
+        </div>
+    </div>
+
+<script src="js/app-config.js?v=2"></script>
+<script src="js/session-auth.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/sidebar-menu.js"></script>
+<script src="js/elz-mainpage-reader.js"></script>
+    <script>
+        // Kullanıcı adını göster - ÖNCE çalıştır
+        (function displayUserName() {
+            const logged = localStorage.getItem('loggedInUser');
+            const display = document.getElementById('userNameDisplay');
+            const sidebarDisplay = document.getElementById('sidebarUserNameDisplay');
+            const adminMenuItems = document.querySelectorAll('.admin-menu-item');
+            let isAdmin = false;
+            if (logged) {
+                try {
+                    const user = JSON.parse(logged);
+                    isAdmin = user.role === 'admin';
+                    const firstName = user.firstName || user.ad || user['Ad'] || user.name || '';
+                    const lastName = user.lastName || user.soyad || user['Soyad'] || user.surname || '';
+                    const fullName = (firstName + ' ' + lastName).trim() || user.email || 'Kullanıcı';
+                    if (display) display.textContent = fullName;
+                    if (sidebarDisplay) sidebarDisplay.textContent = fullName;
+                } catch (e) {
+                    if (display) display.textContent = 'Kullanıcı';
+                    if (sidebarDisplay) sidebarDisplay.textContent = 'Kullanıcı';
+                }
+            } else {
+                if (display) display.textContent = 'Misafir';
+                if (sidebarDisplay) sidebarDisplay.textContent = 'Misafir';
+            }
+            adminMenuItems.forEach(item => {
+                item.style.display = isAdmin ? '' : 'none';
+            });
+        })();
+    </script>
+
+<script src="js/bildirim-sheets.js"></script>
+
+<script src="js/anasayfa.js?v=6"></script>
+
+<script src="js/global-duyurular.js"></script>
+
+<script src="js/logout-system.js"></script>
+<script>
+// Admin sayfalarına geçişte token kontrolü
+(function() {
+    var ADMIN_PAGES = [
+        'admin-kontrol.html', 'admin-bildirim.html', 'kullanici-yonetimi.html',
+        'enerji-rapor.html', 'kojen-maliyet-rapor.html', 'motor-enerji-karsilastirma.html',
+        'operator-verimlilik.html', 'veri-disa-aktarim.html', 'motor-takip.html',
+        'bakim-takibi.html', 'stok-takip.html'
+    ];
+    
+    // Admin sayfalarına geçişte token kontrolü
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('a[href]');
+        if (!link) return;
+        var href = (link.getAttribute('href') || '').replace(/^.*\//, '');
+        if (!ADMIN_PAGES.includes(href)) return;
+        var token = window.SessionAuth ? window.SessionAuth.getSessionToken() : localStorage.getItem('sessionToken');
+        if (!token) {
+            e.preventDefault();
+            var msg = 'Bu sayfaya erişmek için lütfen tekrar giriş yapın.';
+            if (window.Utils) { window.Utils.showToast(msg, 'warning', 5000); }
+            else { alert(msg); }
+        }
+    });
+})();
+</script>

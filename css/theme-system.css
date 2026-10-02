@@ -1,0 +1,1208 @@
+:root {
+    color-scheme: light;
+    --theme-page: #e8eef7;
+    --theme-page-soft: #f8fbff;
+    --theme-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.64));
+    --theme-surface-strong: rgba(255, 255, 255, 0.88);
+    --theme-surface-soft: rgba(241, 245, 249, 0.66);
+    --theme-text: #172033;
+    --theme-muted: #64748b;
+    --theme-line: rgba(71, 85, 105, 0.16);
+    --theme-line-strong: rgba(37, 99, 235, 0.24);
+    --theme-primary: #2563eb;
+    --theme-primary-soft: rgba(37, 99, 235, 0.12);
+    --theme-shadow: 0 18px 44px rgba(15, 23, 42, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    --theme-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.64);
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #070a12;
+    --panel: rgba(10, 16, 30, 0.86);
+    --text: #edf6ff;
+    --muted: #9fb0c6;
+    --line: rgba(125, 211, 252, 0.22);
+    --blue: #38bdf8;
+    --green: #2dd4bf;
+    --red: #fb7185;
+    --amber: #fbbf24;
+    --theme-page: #050815;
+    --theme-page-soft: #08111f;
+    --theme-surface: linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(6, 13, 24, 0.76));
+    --theme-surface-strong: rgba(9, 16, 30, 0.94);
+    --theme-surface-soft: rgba(8, 13, 24, 0.72);
+    --theme-text: #edf6ff;
+    --theme-muted: #a6b6cc;
+    --theme-line: rgba(125, 211, 252, 0.22);
+    --theme-line-strong: rgba(45, 212, 191, 0.34);
+    --theme-primary: #38bdf8;
+    --theme-primary-soft: rgba(56, 189, 248, 0.16);
+    --theme-shadow: 0 22px 55px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    --theme-shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+html[data-theme="light"] body {
+    background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.13), transparent 42%),
+        linear-gradient(225deg, rgba(20, 184, 166, 0.11), transparent 48%),
+        linear-gradient(180deg, #f8fbff 0%, #edf4fb 48%, #e6f4f1 100%),
+        var(--theme-page) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="light"] .dashboard-container,
+html[data-theme="light"] .main-content,
+html[data-theme="light"] .dashboard-content,
+html[data-theme="light"] .container,
+html[data-theme="light"] .admin-shell,
+html[data-theme="light"] main {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="light"] .header,
+html[data-theme="light"] .page-header,
+html[data-theme="light"] .admin-header,
+html[data-theme="light"] .panel,
+html[data-theme="light"] .status-card,
+html[data-theme="light"] .motor-card,
+html[data-theme="light"] .summary-card,
+html[data-theme="light"] .data-card,
+html[data-theme="light"] .stat-card,
+html[data-theme="light"] .content-area,
+html[data-theme="light"] .editor-panel,
+html[data-theme="light"] .list-panel,
+html[data-theme="light"] .login-card {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-line) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(18px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+    background: rgba(255, 255, 255, 0.88) !important;
+    border-color: var(--theme-line-strong) !important;
+    color: var(--theme-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+html[data-theme="light"] input:focus,
+html[data-theme="light"] select:focus,
+html[data-theme="light"] textarea:focus {
+    border-color: var(--theme-primary) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+html[data-theme="dark"] body {
+    background:
+        linear-gradient(135deg, rgba(8, 145, 178, 0.18), transparent 42%),
+        linear-gradient(225deg, rgba(45, 212, 191, 0.10), transparent 46%),
+        linear-gradient(180deg, #050815 0%, #08111f 48%, #06130f 100%),
+        var(--theme-page) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .dashboard-container,
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] .dashboard-content,
+html[data-theme="dark"] .container,
+html[data-theme="dark"] .admin-shell,
+html[data-theme="dark"] main,
+html[data-theme="dark"] .main-content-area,
+html[data-theme="dark"] .layout,
+html[data-theme="dark"] .page-content {
+    background: transparent !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .sidebar {
+    background: linear-gradient(180deg, rgba(5, 8, 21, 0.98) 0%, rgba(8, 17, 31, 0.96) 55%, rgba(4, 47, 46, 0.88) 100%) !important;
+    border-right-color: rgba(125, 211, 252, 0.18) !important;
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.32) !important;
+}
+
+html[data-theme="dark"] .header,
+html[data-theme="dark"] .page-header,
+html[data-theme="dark"] .admin-header,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .status-card,
+html[data-theme="dark"] .motor-card,
+html[data-theme="dark"] .summary-card,
+html[data-theme="dark"] .data-card,
+html[data-theme="dark"] .form-card,
+html[data-theme="dark"] .form-section,
+html[data-theme="dark"] .records-section,
+html[data-theme="dark"] .report-panel,
+html[data-theme="dark"] .content-area,
+html[data-theme="dark"] .editor-panel,
+html[data-theme="dark"] .list-panel,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .announcement-modal,
+html[data-theme="dark"] .comparison-record-modal,
+html[data-theme="dark"] .login-card,
+html[data-theme="dark"] .input-section,
+html[data-theme="dark"] .table-section,
+html[data-theme="dark"] .table-container,
+html[data-theme="dark"] .records-container,
+html[data-theme="dark"] .records-table-container,
+html[data-theme="dark"] .form-container,
+html[data-theme="dark"] .input-container,
+html[data-theme="dark"] .report-container,
+html[data-theme="dark"] .modal-container,
+html[data-theme="dark"] .filter-section,
+html[data-theme="dark"] .control-section,
+html[data-theme="dark"] .actions-panel,
+html[data-theme="dark"] .settings-panel,
+html[data-theme="dark"] .maintenance-calendar-panel,
+html[data-theme="dark"] .active-records-panel,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] [class$="-panel"],
+html[data-theme="dark"] [class$="-card"] {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow) !important;
+    backdrop-filter: blur(18px) saturate(132%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(132%) !important;
+}
+
+html[data-theme="dark"] .header-bottom,
+html[data-theme="dark"] .toolbar,
+html[data-theme="dark"] .form-group,
+html[data-theme="dark"] .search-filters,
+html[data-theme="dark"] .quick-links a,
+html[data-theme="dark"] .current-user,
+html[data-theme="dark"] .user-info,
+html[data-theme="dark"] .record-card,
+html[data-theme="dark"] .announcement-item,
+html[data-theme="dark"] .global-announcement-ticker,
+html[data-theme="dark"] .form-row,
+html[data-theme="dark"] .input-row,
+html[data-theme="dark"] .info-row,
+html[data-theme="dark"] .table-filters,
+html[data-theme="dark"] .filter-row,
+html[data-theme="dark"] .check-list,
+html[data-theme="dark"] .quick-links a,
+html[data-theme="dark"] .motor-selector,
+html[data-theme="dark"] .date-selector,
+html[data-theme="dark"] .vardiya-selector,
+html[data-theme="dark"] .saat-selector {
+    background: var(--theme-surface-soft) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(14px) saturate(125%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] .section-title,
+html[data-theme="dark"] .card-title,
+html[data-theme="dark"] .stat-number,
+html[data-theme="dark"] .value,
+html[data-theme="dark"] .label,
+html[data-theme="dark"] .welcome-text,
+html[data-theme="dark"] .company-info,
+html[data-theme="dark"] .company-name,
+html[data-theme="dark"] .announcement-text,
+html[data-theme="dark"] .announcement-item__text,
+html[data-theme="dark"] .card-content,
+html[data-theme="dark"] .record-value {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] p,
+html[data-theme="dark"] small,
+html[data-theme="dark"] label,
+html[data-theme="dark"] .subtitle,
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] .card-label,
+html[data-theme="dark"] .stat-label,
+html[data-theme="dark"] .announcement-item__meta,
+html[data-theme="dark"] .panel-header p,
+html[data-theme="dark"] .admin-header p,
+html[data-theme="dark"] .meta,
+html[data-theme="dark"] .help-text,
+html[data-theme="dark"] .description {
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .search-input,
+html[data-theme="dark"] .filter-select,
+html[data-theme="dark"] .modal-input,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-input,
+html[data-theme="dark"] .end-of-day-input {
+    background: rgba(2, 6, 23, 0.82) !important;
+    border-color: var(--theme-line-strong) !important;
+    color: var(--theme-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 0 0 1px rgba(56, 189, 248, 0.02) !important;
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+    border-color: var(--theme-primary) !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16) !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] table,
+html[data-theme="dark"] thead,
+html[data-theme="dark"] tbody,
+html[data-theme="dark"] tr,
+html[data-theme="dark"] td,
+html[data-theme="dark"] th,
+html[data-theme="dark"] .table-container,
+html[data-theme="dark"] .records-table,
+html[data-theme="dark"] .vardiya-table,
+html[data-theme="dark"] .stock-table,
+html[data-theme="dark"] .transactions-table {
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] th,
+html[data-theme="dark"] thead td,
+html[data-theme="dark"] .sticky-col {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.94), rgba(15, 23, 42, 0.94) 58%, rgba(19, 78, 74, 0.86)) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] td,
+html[data-theme="dark"] tbody tr,
+html[data-theme="dark"] .kojen-table-cell,
+html[data-theme="dark"] .kojen-enerji-table-cell {
+    background: #0f172a !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] tbody tr:nth-child(even) td,
+html[data-theme="dark"] .kojen-table-row:nth-child(even) .kojen-table-cell,
+html[data-theme="dark"] .kojen-enerji-table-row:nth-child(even) .kojen-enerji-table-cell {
+    background: #111827 !important;
+}
+
+html[data-theme="dark"] tbody tr:hover td,
+html[data-theme="dark"] .kojen-table-row:hover .kojen-table-cell,
+html[data-theme="dark"] .kojen-enerji-table-row:hover .kojen-enerji-table-cell {
+    background: #1e293b !important;
+}
+
+html[data-theme="dark"] a {
+    color: #93c5fd;
+}
+
+html[data-theme="dark"] .btn.ghost,
+html[data-theme="dark"] .btn-secondary,
+html[data-theme="dark"] .logout-btn {
+    background: rgba(15, 23, 42, 0.82) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-line-strong) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
+}
+
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] .submit-btn,
+html[data-theme="dark"] .btn-kaydet,
+html[data-theme="dark"] .quick-action-btn.primary,
+html[data-theme="dark"] .btn-export {
+    background: linear-gradient(135deg, #0891b2, #0f766e) !important;
+    border-color: rgba(125, 211, 252, 0.38) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 14px 30px rgba(8, 145, 178, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .btn-primary:hover,
+html[data-theme="dark"] .submit-btn:hover,
+html[data-theme="dark"] .btn-kaydet:hover,
+html[data-theme="dark"] .quick-action-btn.primary:hover,
+html[data-theme="dark"] .btn-export:hover {
+    background: linear-gradient(135deg, #0ea5e9, #14b8a6) !important;
+    transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .logo {
+    background: #f8fafc !important;
+}
+
+html[data-theme="dark"] .status-card.ok,
+html[data-theme="dark"] .check-item.ok,
+html[data-theme="dark"] .alarm-card.ok {
+    background: rgba(22, 163, 74, 0.12) !important;
+    border-color: rgba(52, 211, 153, 0.34) !important;
+}
+
+html[data-theme="dark"] .status-card.warn,
+html[data-theme="dark"] .check-item.warn,
+html[data-theme="dark"] .alarm-card.warn {
+    background: rgba(217, 119, 6, 0.14) !important;
+    border-color: rgba(251, 191, 36, 0.36) !important;
+}
+
+html[data-theme="dark"] .status-card.error,
+html[data-theme="dark"] .check-item.error,
+html[data-theme="dark"] .alarm-card.critical,
+html[data-theme="dark"] .announcement-card.high {
+    background: rgba(220, 38, 38, 0.14) !important;
+    border-color: rgba(248, 113, 113, 0.38) !important;
+}
+
+html[data-theme="dark"] [style*="background: white"],
+html[data-theme="dark"] [style*="background:white"],
+html[data-theme="dark"] [style*="background: #fff"],
+html[data-theme="dark"] [style*="background:#fff"],
+html[data-theme="dark"] [style*="background-color: white"],
+html[data-theme="dark"] [style*="background-color:white"],
+html[data-theme="dark"] [style*="background-color: #fff"],
+html[data-theme="dark"] [style*="background-color:#fff"] {
+    background: var(--theme-surface) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-line) !important;
+}
+
+html[data-theme="dark"] [style*="color: #333"],
+html[data-theme="dark"] [style*="color:#333"],
+html[data-theme="dark"] [style*="color: #666"],
+html[data-theme="dark"] [style*="color:#666"],
+html[data-theme="dark"] [style*="color: black"],
+html[data-theme="dark"] [style*="color:black"] {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="light"] .data-entry-section,
+html[data-theme="light"] .data-form,
+html[data-theme="light"] .recent-records,
+html[data-theme="light"] .vardiya-section,
+html[data-theme="light"] .vardiya-form,
+html[data-theme="light"] .temizlik-gorevleri,
+html[data-theme="light"] .temizlik-aylik-listesi,
+html[data-theme="light"] .haftalik-vardiya-kayitlari,
+html[data-theme="light"] .islem-kaydetme,
+html[data-theme="light"] .yardimci-operator-section,
+html[data-theme="light"] .motor-tracking-container,
+html[data-theme="light"] .tracking-form,
+html[data-theme="light"] .recent-records,
+html[data-theme="light"] .camera-modal-content,
+html[data-theme="light"] .kojen-selector-section,
+html[data-theme="light"] .selector-form,
+html[data-theme="light"] .kojen-motor-section,
+html[data-theme="light"] .kojen-table-container,
+html[data-theme="light"] .kojen-enerji-table-container,
+html[data-theme="light"] .end-of-day-section,
+html[data-theme="light"] .end-of-day-form,
+html[data-theme="light"] .content-section,
+html[data-theme="light"] .content-container,
+html[data-theme="light"] .vardiya-verileri-section,
+html[data-theme="light"] .maintenance-container,
+html[data-theme="light"] .form-selector,
+html[data-theme="light"] .maintenance-form,
+html[data-theme="light"] .maintenance-form-content,
+html[data-theme="light"] .modern-record-form,
+html[data-theme="light"] .form-step,
+html[data-theme="light"] .chart-panel,
+html[data-theme="light"] .stats-panel,
+html[data-theme="light"] .report-panel,
+html[data-theme="light"] .active-records-panel,
+html[data-theme="light"] .report-summary,
+html[data-theme="light"] .report-table-container,
+html[data-theme="light"] .table-wrapper,
+html[data-theme="light"] .file-upload-container,
+html[data-theme="light"] .stock-form-container,
+html[data-theme="light"] .stock-transaction-container,
+html[data-theme="light"] .stock-list-container,
+html[data-theme="light"] .stock-table-wrapper,
+html[data-theme="light"] .transactions-table-wrapper,
+html[data-theme="light"] .recent-transactions,
+html[data-theme="light"] .temizlik-checklist,
+html[data-theme="light"] .mevcut-vardiya,
+html[data-theme="light"] .personel-listesi,
+html[data-theme="light"] .vardiya-table-container,
+html[data-theme="light"] .maintenance-calendar-panel,
+html[data-theme="light"] .notification-content {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.64)) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(18px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
+}
+
+html[data-theme="light"] .form-section,
+html[data-theme="light"] .form-row,
+html[data-theme="light"] .form-group,
+html[data-theme="light"] .checkbox-wrapper,
+html[data-theme="light"] .checkbox-label,
+html[data-theme="light"] .motor-card,
+html[data-theme="light"] .motor-checkbox,
+html[data-theme="light"] .saat-checkbox,
+html[data-theme="light"] .temizlik-gorev,
+html[data-theme="light"] .islem-card,
+html[data-theme="light"] .islem-item,
+html[data-theme="light"] .info-item,
+html[data-theme="light"] .measurement-item,
+html[data-theme="light"] .oil-sample-item,
+html[data-theme="light"] .oil-filter-item,
+html[data-theme="light"] .ht-lt-jacket-item,
+html[data-theme="light"] .technician-input-group,
+html[data-theme="light"] .control-group,
+html[data-theme="light"] .report-controls,
+html[data-theme="light"] .summary-item,
+html[data-theme="light"] .file-item,
+html[data-theme="light"] .maintenance-calendar-item,
+html[data-theme="light"] .active-records-controls,
+html[data-theme="light"] .table-controls,
+html[data-theme="light"] .records-header,
+html[data-theme="light"] .record-counter {
+    background: rgba(255, 255, 255, 0.56) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(12px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(120%) !important;
+}
+
+html[data-theme="light"] .records-table thead,
+html[data-theme="light"] .vardiya-table thead,
+html[data-theme="light"] .personel-table thead,
+html[data-theme="light"] .temizlik-table thead,
+html[data-theme="light"] .vardiya-kayitlari-table thead,
+html[data-theme="light"] .maintenance-table thead,
+html[data-theme="light"] .stock-table thead,
+html[data-theme="light"] .transactions-table thead {
+    background: linear-gradient(135deg, rgba(219, 234, 254, 0.92), rgba(240, 253, 250, 0.88)) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="light"] .records-table th,
+html[data-theme="light"] .vardiya-table th,
+html[data-theme="light"] .personel-table th,
+html[data-theme="light"] .temizlik-table th,
+html[data-theme="light"] .vardiya-kayitlari-table th,
+html[data-theme="light"] .maintenance-table th,
+html[data-theme="light"] .stock-table th,
+html[data-theme="light"] .transactions-table th {
+    background: transparent !important;
+    border-color: rgba(71, 85, 105, 0.14) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="light"] .btn-primary,
+html[data-theme="light"] .submit-btn,
+html[data-theme="light"] .btn-kaydet,
+html[data-theme="light"] .quick-action-btn.primary,
+html[data-theme="light"] .btn-export {
+    background: linear-gradient(135deg, #2563eb, #0f766e) !important;
+    border-color: rgba(37, 99, 235, 0.28) !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+html[data-theme="light"] .btn-secondary,
+html[data-theme="light"] .reset-btn,
+html[data-theme="light"] .form-btn,
+html[data-theme="light"] .motor-btn,
+html[data-theme="light"] .chart-btn {
+    background: rgba(255, 255, 255, 0.72) !important;
+    border-color: var(--theme-line-strong) !important;
+    color: var(--theme-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+html[data-theme="light"] .form-btn.active,
+html[data-theme="light"] .motor-btn.active,
+html[data-theme="light"] .motor-btn.selected,
+html[data-theme="light"] .chart-btn.active {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(20, 184, 166, 0.12)) !important;
+    border-color: rgba(37, 99, 235, 0.36) !important;
+    color: #172033 !important;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
+}
+
+html[data-theme="dark"] .data-entry-section,
+html[data-theme="dark"] .data-form,
+html[data-theme="dark"] .recent-records,
+html[data-theme="dark"] .mobile-quick-panel,
+html[data-theme="dark"] .quick-panel-header,
+html[data-theme="dark"] .missing-hours-box,
+html[data-theme="dark"] .vardiya-section,
+html[data-theme="dark"] .vardiya-form,
+html[data-theme="dark"] .temizlik-gorevleri,
+html[data-theme="dark"] .temizlik-aylik-listesi,
+html[data-theme="dark"] .haftalik-vardiya-kayitlari,
+html[data-theme="dark"] .islem-kaydetme,
+html[data-theme="dark"] .yardimci-operator-section,
+html[data-theme="dark"] .motor-tracking-container,
+html[data-theme="dark"] .tracking-form,
+html[data-theme="dark"] .camera-modal-content,
+html[data-theme="dark"] .kojen-selector-section,
+html[data-theme="dark"] .selector-form,
+html[data-theme="dark"] .kojen-motor-section,
+html[data-theme="dark"] .kojen-table-container,
+html[data-theme="dark"] .kojen-enerji-table-container,
+html[data-theme="dark"] .end-of-day-section,
+html[data-theme="dark"] .end-of-day-form,
+html[data-theme="dark"] .content-section,
+html[data-theme="dark"] .content-container,
+html[data-theme="dark"] .vardiya-verileri-section,
+html[data-theme="dark"] .maintenance-container,
+html[data-theme="dark"] .form-selector,
+html[data-theme="dark"] .maintenance-form,
+html[data-theme="dark"] .maintenance-form-content,
+html[data-theme="dark"] .modern-record-form,
+html[data-theme="dark"] .form-step,
+html[data-theme="dark"] .chart-panel,
+html[data-theme="dark"] .stats-panel,
+html[data-theme="dark"] .report-panel,
+html[data-theme="dark"] .active-records-panel,
+html[data-theme="dark"] .report-summary,
+html[data-theme="dark"] .report-table-container,
+html[data-theme="dark"] .table-wrapper,
+html[data-theme="dark"] .file-upload-container,
+html[data-theme="dark"] .stock-form-container,
+html[data-theme="dark"] .stock-transaction-container,
+html[data-theme="dark"] .stock-list-container,
+html[data-theme="dark"] .stock-table-wrapper,
+html[data-theme="dark"] .transactions-table-wrapper,
+html[data-theme="dark"] .recent-transactions,
+html[data-theme="dark"] .temizlik-checklist,
+html[data-theme="dark"] .mevcut-vardiya,
+html[data-theme="dark"] .personel-listesi,
+html[data-theme="dark"] .vardiya-table-container,
+html[data-theme="dark"] .maintenance-calendar-panel,
+html[data-theme="dark"] .maintenance-calendar-day,
+html[data-theme="dark"] .notification-content {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(6, 13, 24, 0.76)) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow) !important;
+    backdrop-filter: blur(18px) saturate(132%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(132%) !important;
+}
+
+html[data-theme="dark"] .form-section,
+html[data-theme="dark"] .form-row,
+html[data-theme="dark"] .form-group,
+html[data-theme="dark"] .checkbox-wrapper,
+html[data-theme="dark"] .checkbox-label,
+html[data-theme="dark"] .motor-card,
+html[data-theme="dark"] .motor-checkbox,
+html[data-theme="dark"] .saat-checkbox,
+html[data-theme="dark"] .temizlik-gorev,
+html[data-theme="dark"] .islem-card,
+html[data-theme="dark"] .islem-item,
+html[data-theme="dark"] .info-item,
+html[data-theme="dark"] .measurement-item,
+html[data-theme="dark"] .oil-sample-item,
+html[data-theme="dark"] .oil-filter-item,
+html[data-theme="dark"] .ht-lt-jacket-item,
+html[data-theme="dark"] .technician-input-group,
+html[data-theme="dark"] .control-group,
+html[data-theme="dark"] .report-controls,
+html[data-theme="dark"] .summary-item,
+html[data-theme="dark"] .file-item,
+html[data-theme="dark"] .maintenance-calendar-item,
+html[data-theme="dark"] .active-records-controls,
+html[data-theme="dark"] .table-controls,
+html[data-theme="dark"] .records-header,
+html[data-theme="dark"] .record-counter {
+    background: rgba(8, 13, 24, 0.68) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+    backdrop-filter: blur(12px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(120%) !important;
+}
+
+html[data-theme="dark"] .kojen-table-header,
+html[data-theme="dark"] .kojen-enerji-table-header,
+html[data-theme="dark"] .records-table thead,
+html[data-theme="dark"] .vardiya-table thead,
+html[data-theme="dark"] .personel-table thead,
+html[data-theme="dark"] .temizlik-table thead,
+html[data-theme="dark"] .vardiya-kayitlari-table thead,
+html[data-theme="dark"] .maintenance-table thead,
+html[data-theme="dark"] .stock-table thead,
+html[data-theme="dark"] .transactions-table thead {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.96), rgba(30, 41, 59, 0.94) 52%, rgba(13, 148, 136, 0.76)) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .kojen-table-header .kojen-table-cell,
+html[data-theme="dark"] .kojen-enerji-table-header .kojen-enerji-table-cell,
+html[data-theme="dark"] .header-cell,
+html[data-theme="dark"] .records-table th,
+html[data-theme="dark"] .vardiya-table th,
+html[data-theme="dark"] .personel-table th,
+html[data-theme="dark"] .temizlik-table th,
+html[data-theme="dark"] .vardiya-kayitlari-table th,
+html[data-theme="dark"] .maintenance-table th,
+html[data-theme="dark"] .stock-table th,
+html[data-theme="dark"] .transactions-table th {
+    background: transparent !important;
+    color: #f8fafc !important;
+    border-color: rgba(226, 232, 240, 0.18) !important;
+}
+
+html[data-theme="dark"] .data-input,
+html[data-theme="dark"] .kojen-input,
+html[data-theme="dark"] .quick-action-btn,
+html[data-theme="dark"] .quick-refresh-btn,
+html[data-theme="dark"] .missing-hour-chip,
+html[data-theme="dark"] .form-btn,
+html[data-theme="dark"] .motor-btn,
+html[data-theme="dark"] .chart-btn,
+html[data-theme="dark"] .active-records-controls select,
+html[data-theme="dark"] .technician-input-group select,
+html[data-theme="dark"] .motor-checkbox,
+html[data-theme="dark"] .saat-checkbox {
+    background: rgba(2, 6, 23, 0.82) !important;
+    border-color: var(--theme-line-strong) !important;
+    color: var(--theme-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
+}
+
+html[data-theme="dark"] .data-input:focus,
+html[data-theme="dark"] .kojen-input:focus,
+html[data-theme="dark"] .modal-input:focus,
+html[data-theme="dark"] .end-of-day-input:focus,
+html[data-theme="dark"] .form-group textarea:focus {
+    border-color: var(--theme-primary) !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18) !important;
+}
+
+html[data-theme="dark"] .modal-header,
+html[data-theme="dark"] .modal-body,
+html[data-theme="dark"] .modal-footer,
+html[data-theme="dark"] .camera-body,
+html[data-theme="dark"] .notification-body {
+    background: var(--theme-surface-strong) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .maintenance-form > h3,
+html[data-theme="dark"] .maintenance-form .record-form-title h3,
+html[data-theme="dark"] #periodic-form > div > h3,
+html[data-theme="dark"] #normal-form > div > h3,
+html[data-theme="dark"] #fault-form > div > h3 {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(45, 212, 191, 0.08)) !important;
+    border: 1px solid rgba(125, 211, 252, 0.28) !important;
+    color: #f8fafc !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055) !important;
+}
+
+html[data-theme="dark"] .kojen-table-body .kojen-table-row,
+html[data-theme="dark"] .kojen-enerji-table-body .kojen-enerji-table-row,
+html[data-theme="dark"] .input-row .kojen-table-cell,
+html[data-theme="dark"] .input-row .kojen-enerji-table-cell,
+html[data-theme="dark"] .vardiya-table td,
+html[data-theme="dark"] .personel-table td,
+html[data-theme="dark"] .temizlik-table td,
+html[data-theme="dark"] .vardiya-kayitlari-table td,
+html[data-theme="dark"] .maintenance-table td,
+html[data-theme="dark"] .stock-table td,
+html[data-theme="dark"] .transactions-table td {
+    background: rgba(8, 13, 24, 0.82) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .kojen-table-body .kojen-table-row:nth-child(even),
+html[data-theme="dark"] .kojen-enerji-table-body .kojen-enerji-table-row:nth-child(even),
+html[data-theme="dark"] .vardiya-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .personel-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .temizlik-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .vardiya-kayitlari-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .maintenance-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .stock-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .transactions-table tbody tr:nth-child(even) td {
+    background: rgba(15, 23, 42, 0.86) !important;
+}
+
+html[data-theme="dark"] .vardiya-table-container {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(6, 13, 24, 0.82)) !important;
+}
+
+html[data-theme="dark"] .vardiya-verileri-section {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(6, 13, 24, 0.78)) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow) !important;
+}
+
+html[data-theme="dark"] .vardiya-title {
+    color: var(--theme-text) !important;
+    border-bottom-color: rgba(248, 113, 113, 0.62) !important;
+}
+
+html[data-theme="dark"] .vardiya-info {
+    background: rgba(8, 13, 24, 0.7) !important;
+    border-left-color: var(--theme-primary) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .saat-araligi {
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .saat-araligi span {
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .no-data-message {
+    background: rgba(8, 13, 24, 0.72) !important;
+    border: 1px solid var(--theme-line) !important;
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .vardiya-table {
+    background: rgba(2, 6, 23, 0.72) !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr:hover td {
+    background: rgba(30, 41, 59, 0.94) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .vardiya-table td:first-child {
+    background: linear-gradient(135deg, rgba(127, 29, 29, 0.46), rgba(69, 10, 10, 0.58)) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .vardiya-table td:nth-child(2) {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.62), rgba(12, 74, 110, 0.44)) !important;
+    color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr:nth-child(even) td:first-child,
+html[data-theme="dark"] .vardiya-table tbody tr:hover td:first-child {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.5), rgba(69, 10, 10, 0.66)) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr:nth-child(even) td:nth-child(2),
+html[data-theme="dark"] .vardiya-table tbody tr:hover td:nth-child(2) {
+    background: linear-gradient(135deg, rgba(12, 74, 110, 0.66), rgba(8, 47, 73, 0.54)) !important;
+    color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr.motor-calismiyor td {
+    background: rgba(127, 29, 29, 0.42) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .vardiya-table tbody tr.motor-calismiyor td:first-child {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.62), rgba(69, 10, 10, 0.74)) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .vardiya-table td.durum-normal {
+    background: linear-gradient(135deg, rgba(20, 83, 45, 0.62), rgba(22, 101, 52, 0.42)) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .vardiya-table td.durum-calismiyor {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.68), rgba(127, 29, 29, 0.5)) !important;
+    color: #fecaca !important;
+}
+
+/* Dark mode cleanup for report, analysis, control and dashboard surfaces. */
+html[data-theme="dark"] .report-header,
+html[data-theme="dark"] .toolbar,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .kpi-card,
+html[data-theme="dark"] .notice,
+html[data-theme="dark"] .report-export-panel,
+html[data-theme="dark"] .chart-detail,
+html[data-theme="dark"] .insight-item,
+html[data-theme="dark"] .lock-panel,
+html[data-theme="dark"] .locked-card,
+html[data-theme="dark"] .comparison-record-modal__panel,
+html[data-theme="dark"] .comparison-record-modal__header,
+html[data-theme="dark"] .record-modal-section,
+html[data-theme="dark"] .record-detail-grid div,
+html[data-theme="dark"] .motor-card,
+html[data-theme="dark"] .signal-card,
+html[data-theme="dark"] .issue-card,
+html[data-theme="dark"] .unmatched-card,
+html[data-theme="dark"] .score-row,
+html[data-theme="dark"] .motor-row,
+html[data-theme="dark"] .module-row,
+html[data-theme="dark"] .motor-meta span,
+html[data-theme="dark"] .module-meta span,
+html[data-theme="dark"] .admin-header,
+html[data-theme="dark"] .status-card,
+html[data-theme="dark"] .health-card,
+html[data-theme="dark"] .quality-item,
+html[data-theme="dark"] .activity-item,
+html[data-theme="dark"] .operator-action-card,
+html[data-theme="dark"] .backup-result,
+html[data-theme="dark"] .test-result,
+html[data-theme="dark"] .quick-links a,
+html[data-theme="dark"] .alarm-summary-card,
+html[data-theme="dark"] .alarm-item,
+html[data-theme="dark"] .daily-report-preview,
+html[data-theme="dark"] .report-mini-card,
+html[data-theme="dark"] .report-row,
+html[data-theme="dark"] .elz-mainpage-card,
+html[data-theme="dark"] .elz-card-row,
+html[data-theme="dark"] .elz-refresh-status,
+html[data-theme="dark"] .announcement-item,
+html[data-theme="dark"] .maintenance-history-badge,
+html[data-theme="dark"] .current-user,
+html[data-theme="dark"] .backup-format {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--theme-shadow-soft) !important;
+}
+
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] .comparison-record-modal__close {
+    background: rgba(2, 6, 23, 0.84) !important;
+    border-color: var(--theme-line-strong) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .segmented {
+    background: rgba(2, 6, 23, 0.72) !important;
+    border-color: var(--theme-line) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+html[data-theme="dark"] .segment {
+    background: transparent !important;
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .segment:hover,
+html[data-theme="dark"] .segment:focus-visible {
+    background: rgba(30, 41, 59, 0.82) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .segment.active {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.96), rgba(13, 148, 136, 0.72)) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.18), 0 10px 24px rgba(8, 145, 178, 0.18) !important;
+}
+
+html[data-theme="dark"] .report-table,
+html[data-theme="dark"] .operator-table,
+html[data-theme="dark"] .comparison-table,
+html[data-theme="dark"] .log-table,
+html[data-theme="dark"] .steam-data-table,
+html[data-theme="dark"] .maintenance-history-table,
+html[data-theme="dark"] .table-wrap,
+html[data-theme="dark"] .log-table-wrap,
+html[data-theme="dark"] .comparison-table-wrap,
+html[data-theme="dark"] .operator-table-wrap {
+    background: rgba(2, 6, 23, 0.62) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .report-table th,
+html[data-theme="dark"] .operator-table th,
+html[data-theme="dark"] .comparison-table th,
+html[data-theme="dark"] .log-table th,
+html[data-theme="dark"] .steam-data-table th,
+html[data-theme="dark"] .maintenance-history-table th {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.96), rgba(30, 41, 59, 0.94)) !important;
+    border-color: var(--theme-line) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .report-table td,
+html[data-theme="dark"] .operator-table td,
+html[data-theme="dark"] .comparison-table td,
+html[data-theme="dark"] .log-table td,
+html[data-theme="dark"] .steam-data-table td,
+html[data-theme="dark"] .maintenance-history-table td {
+    background: rgba(8, 13, 24, 0.82) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .report-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .operator-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .comparison-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .log-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .steam-data-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .maintenance-history-table tbody tr:nth-child(even) td {
+    background: rgba(15, 23, 42, 0.86) !important;
+}
+
+html[data-theme="dark"] .report-table tbody tr:hover td,
+html[data-theme="dark"] .operator-table tbody tr:hover td,
+html[data-theme="dark"] .comparison-table tbody tr:hover td,
+html[data-theme="dark"] .log-table tbody tr:hover td,
+html[data-theme="dark"] .steam-data-table tbody tr:hover td,
+html[data-theme="dark"] .maintenance-history-table tbody tr:hover td {
+    background: rgba(30, 41, 59, 0.94) !important;
+}
+
+html[data-theme="dark"] .bar-track,
+html[data-theme="dark"] .bar-track.stacked,
+html[data-theme="dark"] .mix-track,
+html[data-theme="dark"] .score-track,
+html[data-theme="dark"] .signal-bar,
+html[data-theme="dark"] .efficiency-track,
+html[data-theme="dark"] .module-track {
+    background: rgba(2, 6, 23, 0.78) !important;
+    border: 1px solid rgba(125, 211, 252, 0.16) !important;
+}
+
+html[data-theme="dark"] .motor-metrics > span,
+html[data-theme="dark"] .note-chip,
+html[data-theme="dark"] .record-modal-summary > span:not(.status-pill) {
+    background: rgba(2, 6, 23, 0.74) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .motor-card.critical,
+html[data-theme="dark"] .signal-card.critical,
+html[data-theme="dark"] .issue-card.critical,
+html[data-theme="dark"] .comparison-table tr.critical-row td,
+html[data-theme="dark"] .quality-item.danger,
+html[data-theme="dark"] .alarm-summary-card.danger,
+html[data-theme="dark"] .alarm-item.danger,
+html[data-theme="dark"] .report-mini-card.danger,
+html[data-theme="dark"] .report-row.danger,
+html[data-theme="dark"] .announcement-item.high,
+html[data-theme="dark"] .maintenance-history-badge--fault,
+html[data-theme="dark"] .badge.danger,
+html[data-theme="dark"] .note-chip.critical,
+html[data-theme="dark"] .score-pill.risk,
+html[data-theme="dark"] .level-pill.risk {
+    background: rgba(127, 29, 29, 0.42) !important;
+    border-color: rgba(248, 113, 113, 0.42) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .motor-card.warn,
+html[data-theme="dark"] .signal-card.warn,
+html[data-theme="dark"] .issue-card.warn,
+html[data-theme="dark"] .comparison-table tr.warn-row td,
+html[data-theme="dark"] .quality-item.warn,
+html[data-theme="dark"] .alarm-summary-card.warn,
+html[data-theme="dark"] .alarm-item.warn,
+html[data-theme="dark"] .report-mini-card.warn,
+html[data-theme="dark"] .report-row.warn,
+html[data-theme="dark"] .announcement-item.medium,
+html[data-theme="dark"] .maintenance-history-badge--periodic,
+html[data-theme="dark"] .badge.warn,
+html[data-theme="dark"] .note-chip.warn,
+html[data-theme="dark"] .score-pill.warn,
+html[data-theme="dark"] .level-pill.warn {
+    background: rgba(120, 53, 15, 0.42) !important;
+    border-color: rgba(251, 191, 36, 0.42) !important;
+    color: #fde68a !important;
+}
+
+html[data-theme="dark"] .motor-card.good,
+html[data-theme="dark"] .quality-item.ok,
+html[data-theme="dark"] .operator-action-card.ok,
+html[data-theme="dark"] .health-card.ok,
+html[data-theme="dark"] .alarm-summary-card.ok,
+html[data-theme="dark"] .alarm-item.ok,
+html[data-theme="dark"] .report-mini-card.ok,
+html[data-theme="dark"] .report-row.ok,
+html[data-theme="dark"] .badge.ok,
+html[data-theme="dark"] .score-pill,
+html[data-theme="dark"] .level-pill.good {
+    background: rgba(20, 83, 45, 0.34) !important;
+    border-color: rgba(52, 211, 153, 0.34) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .risk-pill.good,
+html[data-theme="dark"] .status-pill.good {
+    background: rgba(20, 83, 45, 0.52) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .risk-pill.warn,
+html[data-theme="dark"] .status-pill.warn {
+    background: rgba(120, 53, 15, 0.52) !important;
+    color: #fde68a !important;
+}
+
+html[data-theme="dark"] .risk-pill.critical,
+html[data-theme="dark"] .status-pill.critical {
+    background: rgba(127, 29, 29, 0.52) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .panel-chip,
+html[data-theme="dark"] .elz-card-badge,
+html[data-theme="dark"] .score-rank,
+html[data-theme="dark"] .level-pill.watch {
+    background: rgba(8, 47, 73, 0.72) !important;
+    border-color: rgba(125, 211, 252, 0.24) !important;
+    color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .elz-refresh-status.is-loading {
+    background: rgba(8, 47, 73, 0.7) !important;
+    color: #bae6fd !important;
+}
+
+html[data-theme="dark"] .elz-refresh-status.is-success {
+    background: rgba(20, 83, 45, 0.48) !important;
+    color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .elz-refresh-status.is-warning {
+    background: rgba(120, 53, 15, 0.48) !important;
+    color: #fde68a !important;
+}
+
+html[data-theme="dark"] .elz-refresh-status.is-error {
+    background: rgba(127, 29, 29, 0.48) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .elz-mainpage-card h3,
+html[data-theme="dark"] .elz-card-row__label,
+html[data-theme="dark"] .bar-value,
+html[data-theme="dark"] .report-table td,
+html[data-theme="dark"] .log-table td {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .elz-card-value,
+html[data-theme="dark"] .elz-card-row__value,
+html[data-theme="dark"] .motor-metrics b,
+html[data-theme="dark"] .record-detail-grid b,
+html[data-theme="dark"] .score-main strong,
+html[data-theme="dark"] .motor-row strong,
+html[data-theme="dark"] .module-row strong,
+html[data-theme="dark"] .chart-detail strong,
+html[data-theme="dark"] .export-summary strong,
+html[data-theme="dark"] .alarm-item strong,
+html[data-theme="dark"] .report-row strong {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .elz-card-meta,
+html[data-theme="dark"] .score-main span,
+html[data-theme="dark"] .motor-row span,
+html[data-theme="dark"] .module-row span,
+html[data-theme="dark"] .signal-meta,
+html[data-theme="dark"] .issue-meta,
+html[data-theme="dark"] .unmatched-meta,
+html[data-theme="dark"] .insight-item span,
+html[data-theme="dark"] .chart-detail span,
+html[data-theme="dark"] .export-summary span,
+html[data-theme="dark"] .alarm-item p,
+html[data-theme="dark"] .report-row p {
+    color: var(--theme-muted) !important;
+}
+
+html[data-theme="dark"] .motor-btn:hover,
+html[data-theme="dark"] .motor-btn.active,
+html[data-theme="dark"] .motor-btn.selected,
+html[data-theme="dark"] .chart-btn.active,
+html[data-theme="dark"] .form-btn.active {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.96), rgba(13, 148, 136, 0.72)) !important;
+    border-color: var(--theme-primary) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.16), 0 12px 28px rgba(8, 145, 178, 0.18) !important;
+}
+
+.theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #172033;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    box-shadow: var(--theme-shadow-soft);
+}
+
+.theme-toggle-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.5);
+}
+
+.theme-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.theme-toggle-btn .theme-icon-sun {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-toggle-btn {
+    background: #1e293b;
+    color: #f8fafc;
+    border-color: #475569;
+}
+
+html[data-theme="dark"] .theme-toggle-btn .theme-icon-moon {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-toggle-btn .theme-icon-sun {
+    display: block;
+}
+
+.sidebar-footer .theme-toggle-btn {
+    width: 100%;
+    margin: 0 0 10px;
+}
+
+.theme-toggle-floating {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 10000;
+    padding: 10px 12px;
+}
+
+.header-actions .theme-toggle-btn,
+.user-info .theme-toggle-btn {
+    padding: 10px 12px;
+}
+
+@media (max-width: 768px) {
+    .theme-toggle-floating {
+        top: 10px;
+        right: 10px;
+    }
+
+    .theme-toggle-btn .theme-toggle-text {
+        display: none;
+    }
+}
