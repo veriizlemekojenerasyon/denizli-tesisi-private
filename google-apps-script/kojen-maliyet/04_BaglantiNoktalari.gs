@@ -186,8 +186,8 @@ function _baglantiSayfayaYaz(ss, tablo, isoTarih) {
     var sebeke = (typeof tuketim === 'number') ? tuketim - kojenToplam : '';
 
     var satirDeger = [saat, tuketim].concat(uretimler).concat([
-      kojenToplam > 0 ? kojenToplam : '',
-      sebeke !== '' ? sebeke : ''
+      kojenToplam,
+      sebeke !== '' ? sebeke : 0
     ]);
     sheet.getRange(satirNo, 1, 1, sutunSayisi).setValues([satirDeger]);
 
