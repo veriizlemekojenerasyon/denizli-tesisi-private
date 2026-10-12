@@ -1,20 +1,27 @@
 /**
  * 05_YillikUretimVerisi.gs
  * ─────────────────────────────────────────────────────────────────────────────
- * Harici Sheets'teki YillikEnerjiToplam-2026 sayfasından
- * belirtilen Türkiye tarihine ait toplam üretim (MWh) değerini çeker.
+ * EnerjiGunSonu-Toplam sayfasından belirtilen tarihe ait
+ * toplam kojen üretim değerini (MWh) çeker.
+ *
+ * Kaynak Sheets: 1ncEnE6vG76HIXFzJRRWz2yehiN2oolg4t2pzfbKt2vI
+ * Sayfa adı    : EnerjiGunSonu-Toplam
  *
  * Sayfa yapısı:
- *   Satır 1: Tarihler (UTC, her 4 sütunda bir) — 2026-07-30T21:00:00.000Z
- *   Satır 2: Motor başlıkları — GM1 | GM2 | GM3 | TOPLAM
- *   Satır 3: Üretim değerleri (MWh)
+ *   A sütunu → Tarih (gg.aa.yyyy formatında, satır 3'ten başlar)
+ *   J sütunu → TOPLAM Aktif Enerji (kWh)
  *
- * Tarih eşleştirme:
- *   UTC gece 21:00 = Türkiye sabahı 00:00 (ertesi gün)
- *   Yani TR tarih X için UTC'de (X-1) 21:00 aranır.
+ * Not: Değer kWh cinsinden gelir, 1000'e bölünerek MWh'a çevrilir.
  *
- * Bağımlılıklar: 01_VGenConfig.gs (CFG_YILLIK_SS_ID, CFG_YILLIK_SAYFA)
+ * Bağımlılıklar: —
  */
+
+// ─── SABİTLER ─────────────────────────────────────────────────────────────────
+
+var URETIM_SS_ID  = '1ncEnE6vG76HIXFzJRRWz2yehiN2oolg4t2pzfbKt2vI';
+var URETIM_SAYFA  = 'EnerjiGunSonu-Toplam';
+var URETIM_SUTUN  = 10;  // J sütunu = TOPLAM Aktif Enerji (kWh)
+var URETIM_BASLIK = 3;   // Veri 3. satırdan başlar
 
 // ─── ANA FONKSİYON ────────────────────────────────────────────────────────────
 
@@ -26,63 +33,49 @@
  * @returns {number} Toplam üretim MWh, bulunamazsa 0
  */
 function yillikToplamUretimCek(gun, ay, yil) {
-  // ID ve sayfa adı burada sabit — CFG_ değişkeni farklı bir dosyada ezildiği için
-  var YILLIK_SS_ID = '1ncEnE6vG76HIXFzJRRWz2yehiN2oolg4t2pzfbKt2vI';
-  var YILLIK_SAYFA = 'YillikEnerjiToplam-2026';
   try {
-    var ss    = SpreadsheetApp.openById(YILLIK_SS_ID);
-    var sheet = ss.getSheetByName(YILLIK_SAYFA);
+    var ss    = SpreadsheetApp.openById(URETIM_SS_ID);
+    var sheet = ss.getSheetByName(URETIM_SAYFA);
+
     if (!sheet) {
-      Logger.log('❌ Yıllık üretim sayfası bulunamadı: ' + CFG_YILLIK_SAYFA);
+      Logger.log('❌ Üretim sayfası bulunamadı: ' + URETIM_SAYFA);
       return 0;
     }
 
-    // 1. satırı oku (tarih başlıkları)
-    var lastCol    = sheet.getLastColumn();
-    var tarihSatir = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-
-    // TR gün X → UTC gün (X-1) saat 21:00
-    var utcGun = gun - 1;
-    var utcAy  = ay;
-    var utcYil = yil;
-    if (utcGun === 0) {
-      utcAy = ay - 1;
-      if (utcAy === 0) { utcAy = 12; utcYil = yil - 1; }
-      utcGun = new Date(utcYil, utcAy, 0).getDate();
+    var lastRow = sheet.getLastRow();
+    if (lastRow < URETIM_BASLIK) {
+      Logger.log('⚠️ Üretim sayfası boş.');
+      return 0;
     }
 
-    // Hedef sütunu bul
-    var hedefSutun = -1;
-    for (var c = 0; c < tarihSatir.length; c++) {
-      var hucre = tarihSatir[c];
-      if (!hucre) continue;
+    // A ve J sütunlarını oku
+    var satirSayisi = lastRow - URETIM_BASLIK + 1;
+    var veriler = sheet.getRange(URETIM_BASLIK, 1, satirSayisi, URETIM_SUTUN).getValues();
 
-      var d = (hucre instanceof Date) ? hucre : new Date(String(hucre));
-      if (isNaN(d.getTime())) continue;
+    // Hedef tarihi gg.aa.yyyy formatında oluştur
+    var hedefTarih = _uretimPad2(gun) + '.' + _uretimPad2(ay) + '.' + yil;
 
-      if (d.getUTCFullYear() === utcYil &&
-          d.getUTCMonth() + 1 === utcAy &&
-          d.getUTCDate()       === utcGun &&
-          d.getUTCHours()      === 21) {
-        hedefSutun = c;
-        break;
+    for (var i = 0; i < veriler.length; i++) {
+      var satirTarih = String(veriler[i][0]).trim();
+
+      // Tarih hücresi Date objesi olabilir
+      if (veriler[i][0] instanceof Date) {
+        var d = veriler[i][0];
+        satirTarih = _uretimPad2(d.getDate()) + '.' +
+                     _uretimPad2(d.getMonth() + 1) + '.' +
+                     d.getFullYear();
+      }
+
+      if (satirTarih === hedefTarih) {
+        var khDeger  = parseFloat(String(veriler[i][URETIM_SUTUN - 1]).replace(',', '.')) || 0;
+        var mwhDeger = Math.round(khDeger / 1000 * 1000) / 1000; // kWh → MWh, 3 ondalık
+        Logger.log('✅ Üretim ' + hedefTarih + ' → ' + khDeger + ' kWh → ' + mwhDeger + ' MWh');
+        return mwhDeger;
       }
     }
 
-    if (hedefSutun === -1) {
-      Logger.log('⚠️ Yıllık üretim: tarih bulunamadı → ' + gun + '/' + ay + '/' + yil +
-                 ' (UTC aranan: ' + utcGun + '/' + utcAy + '/' + utcYil + ' 21:00)');
-      return 0;
-    }
-
-    // TOPLAM sütunu = hedefSutun + 4 (1-indexed: +1, GM1+GM2+GM3+TOPLAM: +3 = +4)
-    var toplamSutun = hedefSutun + 4;
-    var deger       = sheet.getRange(3, toplamSutun).getValue(); // 3. satır = üretim
-    var sonuc       = Math.round((parseFloat(deger) || 0) * 1000) / 1000; // 3 ondalık
-
-    Logger.log('✅ Yıllık üretim ' + gun + '/' + ay + '/' + yil +
-               ' → sütun ' + toplamSutun + ' → ' + sonuc + ' MWh');
-    return sonuc;
+    Logger.log('⚠️ Üretim verisi bulunamadı: ' + hedefTarih);
+    return 0;
 
   } catch(e) {
     Logger.log('❌ yillikToplamUretimCek hata: ' + e.toString());
@@ -90,11 +83,15 @@ function yillikToplamUretimCek(gun, ay, yil) {
   }
 }
 
+// ─── YARDIMCI ────────────────────────────────────────────────────────────────
+
+function _uretimPad2(n) {
+  return n < 10 ? '0' + n : String(n);
+}
+
 /**
  * BaglantiNoktalari sayfasındaki "Veri Tarihi"ni okuyarak o güne ait üretimi döner.
  * FaturaDetay.gs'den çağrılır.
- * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss  Ana spreadsheet
- * @returns {number} MWh
  */
 function yillikUretimHesaplananGun(ss) {
   try {
@@ -119,7 +116,7 @@ function yillikUretimHesaplananGun(ss) {
 // ─── TEST ─────────────────────────────────────────────────────────────────────
 
 function yillikUretimTest() {
-  var sonuc = yillikToplamUretimCek(30, 7, 2026);  // ← gün/ay/yıl değiştirin
+  var sonuc = yillikToplamUretimCek(30, 9, 2026);  // ← gün/ay/yıl değiştirin
   Logger.log('Toplam Üretim: ' + sonuc + ' MWh');
   return sonuc;
 }
