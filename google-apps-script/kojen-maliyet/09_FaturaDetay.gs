@@ -45,7 +45,9 @@ function faturaDetaySayfasiOlustur(ay, yil, gun) {
     _fdToplamSatirYaz(sheet);
     _fdOzetSatirlariYaz(sheet, ay, yil, ss);
 
-    var hesaplananGun = _fdHesaplananGunuBul(ss, ay, yil);
+    var hesaplananGun = gun
+      ? new Date(yil, ay - 1, gun)
+      : _fdHesaplananGunuBul(ss, ay, yil);
     _fdAylikTablolariYaz(sheet, ay, yil, hesaplananGun);
 
     SpreadsheetApp.flush();

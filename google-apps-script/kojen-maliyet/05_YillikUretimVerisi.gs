@@ -20,7 +20,7 @@
 
 var URETIM_SS_ID  = '1ncEnE6vG76HIXFzJRRWz2yehiN2oolg4t2pzfbKt2vI';
 var URETIM_SAYFA  = 'EnerjiGunSonu-Toplam';
-var URETIM_SUTUN  = 10;  // J sütunu = TOPLAM Aktif Enerji (kWh)
+var URETIM_SUTUN  = 11;  // K sütunu = TOPLAM Aktif Enerji (kWh)
 var URETIM_BASLIK = 3;   // Veri 3. satırdan başlar
 
 // ─── ANA FONKSİYON ────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ function yillikToplamUretimCek(gun, ay, yil) {
     var satirSayisi = lastRow - URETIM_BASLIK + 1;
     var veriler = sheet.getRange(URETIM_BASLIK, 1, satirSayisi, URETIM_SUTUN).getValues();
 
-    // Hedef tarihi gg.aa.yyyy formatında oluştur
+    // Gelen tarih doğrudan aranır
     var hedefTarih = _uretimPad2(gun) + '.' + _uretimPad2(ay) + '.' + yil;
 
     for (var i = 0; i < veriler.length; i++) {
@@ -67,9 +67,8 @@ function yillikToplamUretimCek(gun, ay, yil) {
       }
 
       if (satirTarih === hedefTarih) {
-        var khDeger  = parseFloat(String(veriler[i][URETIM_SUTUN - 1]).replace(',', '.')) || 0;
-        var mwhDeger = Math.round(khDeger / 1000 * 1000) / 1000; // kWh → MWh, 3 ondalık
-        Logger.log('✅ Üretim ' + hedefTarih + ' → ' + khDeger + ' kWh → ' + mwhDeger + ' MWh');
+        var mwhDeger = Math.round((parseFloat(String(veriler[i][URETIM_SUTUN - 1]).replace(',', '.')) || 0) * 1000) / 1000;
+        Logger.log('✅ Üretim ' + hedefTarih + ' → ' + mwhDeger + ' MWh');
         return mwhDeger;
       }
     }
@@ -116,7 +115,7 @@ function yillikUretimHesaplananGun(ss) {
 // ─── TEST ─────────────────────────────────────────────────────────────────────
 
 function yillikUretimTest() {
-  var sonuc = yillikToplamUretimCek(30, 9, 2026);  // ← gün/ay/yıl değiştirin
+  var sonuc = yillikToplamUretimCek(1, 10, 2026);  // ← gün/ay/yıl değiştirin
   Logger.log('Toplam Üretim: ' + sonuc + ' MWh');
   return sonuc;
 }
