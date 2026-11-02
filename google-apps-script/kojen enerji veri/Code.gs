@@ -1,4 +1,4 @@
-﻿var window = typeof window === 'undefined' ? {} : window;
+var window = typeof window === 'undefined' ? {} : window;
 
 /**
  * KOJEN ENERJİ VERİLERİ - Google Apps Script Kodu
@@ -15,7 +15,7 @@
  * 8. URL'i kopyalayın ve kojen-enerji-sheets-config.js'e yapıştırın
  */
 
-var KOJEN_ENERJI_DEPLOY_MARKER = 'kojen-enerji-veri-2026-06-05';
+var KOJEN_ENERJI_DEPLOY_MARKER = 'kojen-enerji-veri-2026-11-02-fix-gm3-duplicate';
 var KOJEN_ENERJI_WRITE_LOCK_WAIT_MS = 5000;
 var KOJEN_ENERJI_SPREADSHEET_ID = '1ncEnE6vG76HIXFzJRRWz2yehiN2oolg4t2pzfbKt2vI';
 
@@ -527,16 +527,19 @@ function addRecord(data) {
     if (insertInfo.exists) {
       return { success: false, error: 'Bu tarih, saat ve motor icin kayit zaten var!' };
     }
+    // Not: findEnerjiInsertInfoByDateTime tablo sıralı olmadığında sadece son satıra bakıp
+    // yanıltıcı sonuç verebilir. Aşağıdaki tam tarama her zaman çalışır ve saat değerlerini
+    // normalizeEnerjiSaat ile karşılaştırır (örn. "8:00" ile "08:00" eşleşmeli).
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       var allData = sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
       var inputTarih = normalizeDateTR(data.tarih);
-      var inputSaat = String(data.saat || '').trim();
+      var inputSaat = normalizeEnerjiSaat(data.saat);  // ← düzeltildi: normalize edilmiş saat
 
       for (var i = 0; i < allData.length; i++) {
         var row = allData[i];
-        var rowTarih = String(row[0] || '').trim();
-        var rowSaat = String(row[2] || '').trim();
+        var rowTarih = normalizeDateTR(String(row[0] || '').trim());  // ← düzeltildi
+        var rowSaat = normalizeEnerjiSaat(String(row[2] || '').trim()); // ← düzeltildi
 
         if (rowTarih === inputTarih && rowSaat === inputSaat) {
           return { success: false, error: 'Bu tarih, saat ve motor için kayıt zaten var!' };
@@ -1304,33 +1307,30 @@ function findEnerjiInsertInfoByDateTime(sheet, tarih, saat) {
 
   var targetTime = parseDateTimeTR(tarih, saat).getTime();
   var normalizedSaat = normalizeEnerjiSaat(saat);
-  var lastValues = sheet.getRange(lastRow, 1, 1, 3).getDisplayValues()[0];
-  var lastTarih = normalizeDateTR(lastValues[0] || '');
-  var lastSaat = normalizeEnerjiSaat(lastValues[2] || '');
-  var lastTime = parseDateTimeTR(lastTarih, lastSaat).getTime();
 
-  if (lastTarih === tarih && lastSaat === normalizedSaat) {
-    return { exists: true, insertRow: lastRow };
-  }
-
-  if (!isNaN(targetTime) && !isNaN(lastTime) && targetTime > lastTime) {
-    return { exists: false, insertRow: lastRow + 1 };
-  }
-
+  // Tablo sıralı olmayabileceği için (örn. sonradan eklenen veya bozulmuş sıra)
+  // "son satır > hedef zaman ise direkt sona ekle" optimizasyonu GÜVENLİ DEĞİL.
+  // Her zaman tam tarama yaparak hem duplicate kontrolü hem doğru insert pozisyonunu buluyoruz.
   var data = sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
   var insertRow = lastRow + 1;
+  var foundInsertPos = false;
 
   for (var i = 0; i < data.length; i++) {
     var rowTarih = normalizeDateTR(data[i][0] || '');
     var rowSaat = normalizeEnerjiSaat(data[i][2] || '');
 
+    // Duplicate kontrolü — tam eşleşme
     if (rowTarih === tarih && rowSaat === normalizedSaat) {
       return { exists: true, insertRow: i + 2 };
     }
 
-    var rowTime = parseDateTimeTR(rowTarih, rowSaat).getTime();
-    if (insertRow === lastRow + 1 && !isNaN(rowTime) && rowTime > targetTime) {
-      insertRow = i + 2;
+    // İlk kez hedef zamandan büyük bir satır bulunduğunda insert pozisyonunu kaydet
+    if (!foundInsertPos) {
+      var rowTime = parseDateTimeTR(rowTarih, rowSaat).getTime();
+      if (!isNaN(rowTime) && !isNaN(targetTime) && rowTime > targetTime) {
+        insertRow = i + 2;
+        foundInsertPos = true;
+      }
     }
   }
 
@@ -1637,11 +1637,12 @@ function checkHourlyMissingRecordTarget(target) {
     var existingErrors = [];
     for (var i = 0; i < motors.length; i++) {
       var exists = checkExistingRecord(motors[i], tarih, saat);
-      if (!exists.success || !exists.exists) {
+      if (!exists.success) {
+        // Kontrol hatası — otomatik kayıt EKLEME, sadece logla
+        existingErrors.push(motors[i] + ': kontrol hatasi - ' + (exists.error || 'bilinmiyor'));
+        Logger.log('checkHourlyMissing: ' + motors[i] + ' kontrol hatasi, missing listesine EKLENMEDI: ' + (exists.error || ''));
+      } else if (!exists.exists) {
         missing.push(motors[i]);
-        if (!exists.success) {
-          existingErrors.push(motors[i] + ': ' + exists.error);
-        }
       }
     }
 
